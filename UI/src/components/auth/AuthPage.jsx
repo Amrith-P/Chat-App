@@ -151,37 +151,37 @@ const AuthPage = () => {
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-950 text-white font-sans overflow-hidden">
       
       {/* LEFT SECTION - Hero Branding & Features */}
-      <div className="w-full md:w-1/2 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 p-8 lg:p-16 flex flex-col justify-between relative overflow-hidden">
+      <div className="w-full md:w-1/2 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 p-6 sm:p-8 lg:p-16 flex flex-col justify-between relative overflow-hidden shrink-0">
         
         {/* Glow Spheres */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Header */}
-        <div className="relative z-10 flex items-center space-x-3 mb-10 md:mb-0">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <FaComments className="text-2xl text-slate-950" />
+        <div className="relative z-10 flex items-center space-x-3 mb-6 md:mb-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+            <FaComments className="text-xl sm:text-2xl text-slate-950" />
           </div>
-          <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
+          <span className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
             ChatApp Pro
           </span>
         </div>
 
         {/* Hero Middle Feature Presentation */}
-        <div className="relative z-10 my-auto py-8">
-          <h1 className="text-4xl lg:text-5xl font-black leading-tight mb-6">
-            Real-time conversations, <br />
+        <div className="relative z-10 my-auto py-4 sm:py-8">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight mb-3 sm:mb-6">
+            Real-time conversations, <br className="hidden sm:block" />
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
               Elevated Experience.
             </span>
           </h1>
 
-          <p className="text-slate-400 text-lg mb-8 max-w-md">
+          <p className="text-slate-400 text-xs sm:text-lg mb-4 sm:mb-8 max-w-md">
             Connect instantly with friends, family, and colleagues in a modern, secure environment.
           </p>
 
           {/* Feature List */}
-          <div className="space-y-4 max-w-md">
+          <div className="hidden sm:space-y-4 max-w-md sm:block">
             <div className="flex items-center space-x-4 bg-slate-900/60 backdrop-blur-md p-4 rounded-xl border border-slate-800/80">
               <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400">
                 <FaBolt className="text-xl" />
@@ -205,7 +205,7 @@ const AuthPage = () => {
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 text-xs text-slate-500 pt-6 border-t border-slate-800/60">
+        <div className="relative z-10 text-xs text-slate-500 pt-4 sm:pt-6 border-t border-slate-800/60 hidden sm:block">
           © 2026 ChatApp Pro. All rights reserved.
         </div>
       </div>

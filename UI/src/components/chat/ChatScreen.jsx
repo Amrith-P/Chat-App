@@ -65,6 +65,9 @@ const ChatScreen = () => {
   const [activeChatId, setActiveChatId] = useState('chat_1');
   const [messagesMap, setMessagesMap] = useState(initialMessages);
   
+  // Mobile View Toggle ('sidebar' | 'chat')
+  const [mobileView, setMobileView] = useState('sidebar');
+
   // Modals & Drawers
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -87,7 +90,6 @@ const ChatScreen = () => {
       [activeChatId]: [...(prev[activeChatId] || []), newMsg]
     }));
 
-    // Update conversation last message snippet
     setConversations((prev) =>
       prev.map((c) =>
         c.id === activeChatId
@@ -103,6 +105,7 @@ const ChatScreen = () => {
     
     if (existingIndex !== -1) {
       setActiveChatId(conversations[existingIndex].id);
+      setMobileView('chat');
     } else {
       const newChatId = `chat_${Date.now()}`;
       const newConv = {
@@ -119,6 +122,7 @@ const ChatScreen = () => {
 
       setConversations((prev) => [newConv, ...prev]);
       setActiveChatId(newChatId);
+      setMobileView('chat');
       setMessagesMap((prev) => ({
         ...prev,
         [newChatId]: [
@@ -135,43 +139,58 @@ const ChatScreen = () => {
   };
 
   return (
-    <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden">
+    <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden relative">
       
-      {/* 1. Slim Vertical Navigation Dock */}
+      {/* 1. Vertical Dock (Desktop Sidebar + Mobile Bottom Navigation) */}
       <NavDock activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* 2. Chat Sidebar Panel */}
-      <div className="w-80 lg:w-96 shrink-0 h-full">
-        <ChatSidebar
-          conversations={conversations}
-          activeChatId={activeChatId}
-          onSelectChat={(id) => {
-            setActiveChatId(id);
-            // Clear unread count when opening
-            setConversations((prev) =>
-              prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-            );
-          }}
-          onOpenNewChat={() => setIsSearchOpen(true)}
-        />
+      {/* 2. Main Chat Area Container */}
+      <div className="flex-1 flex h-full overflow-hidden">
+        
+        {/* Chat Sidebar Panel: Shown on desktop always; on mobile only when mobileView === 'sidebar' */}
+        <div className={`w-full md:w-80 lg:w-96 shrink-0 h-full ${
+          mobileView === 'sidebar' ? 'block' : 'hidden md:block'
+        }`}>
+          <ChatSidebar
+            conversations={conversations}
+            activeChatId={activeChatId}
+            onSelectChat={(id) => {
+              setActiveChatId(id);
+              setMobileView('chat');
+              setConversations((prev) =>
+                prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
+              );
+            }}
+            onOpenNewChat={() => setIsSearchOpen(true)}
+          />
+        </div>
+
+        {/* Active Chat Window: Shown on desktop always; on mobile only when mobileView === 'chat' */}
+        <div className={`flex-1 h-full ${
+          mobileView === 'chat' ? 'block' : 'hidden md:block'
+        }`}>
+          <ChatWindow
+            activeChat={activeChat}
+            messages={activeMessages}
+            onSendMessage={handleSendMessage}
+            onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
+            onBackToSidebar={() => setMobileView('sidebar')}
+          />
+        </div>
+
+        {/* Slide-Out Contact Detail Drawer */}
+        <div className={`fixed md:relative inset-y-0 right-0 z-50 md:z-auto transition-transform duration-300 transform ${
+          isDrawerOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+        }`}>
+          <ContactDrawer
+            contact={activeChat}
+            isOpen={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+          />
+        </div>
       </div>
 
-      {/* 3. Main Chat Window */}
-      <ChatWindow
-        activeChat={activeChat}
-        messages={activeMessages}
-        onSendMessage={handleSendMessage}
-        onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
-      />
-
-      {/* 4. Slide-Out Contact Detail Drawer */}
-      <ContactDrawer
-        contact={activeChat}
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
-
-      {/* 5. User Search Modal */}
+      {/* 3. User Search Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
