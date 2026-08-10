@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://chat-app-0yh9.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://chat-app-0yh9.onrender.com/api';
 
 export const apiRequest = async (endpoint, method = 'GET', body = null) => {
   const token = localStorage.getItem('chat_token');

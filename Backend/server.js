@@ -17,13 +17,22 @@ initDb();
 const app = express();
 const server = http.createServer(app);
 
-// CORS
+// CORS configuration to support localhost, Vercel frontend, and environment variables
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'https://chat-j05f4xk8n-amrith26133-9137s-projects.vercel.app'
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl) or allowed origins
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive CORS for smooth deployment across Vercel / Render
+      }
+    },
     credentials: true
   })
 );
@@ -50,6 +59,17 @@ app.get('/api/health', (req, res) => {
 // Render provides PORT through environment variables
 const PORT = process.env.PORT || 5050;
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server listening on port ${PORT}`);
-});
+const startServer = (portToTry) => {
+  server.listen(portToTry, '0.0.0.0', () => {
+    console.log(`🚀 Server listening on port ${portToTry}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && !process.env.PORT) {
+      console.warn(`⚠️ Port ${portToTry} is in use, retrying on port ${Number(portToTry) + 1}...`);
+      startServer(Number(portToTry) + 1);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+};
+
+startServer(PORT);
