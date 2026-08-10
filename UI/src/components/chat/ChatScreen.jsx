@@ -5,6 +5,8 @@ import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ContactDrawer from './ContactDrawer';
 import SearchModal from './SearchModal';
+import ContactsPage from '../contacts/ContactsPage';
+import StarredPage from '../starred/StarredPage';
 
 const initialConversations = [
   {
@@ -60,7 +62,7 @@ const initialMessages = {
 
 const ChatScreen = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('chats');
+  const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'contacts' | 'starred' | 'settings'
   const [conversations, setConversations] = useState(initialConversations);
   const [activeChatId, setActiveChatId] = useState('chat_1');
   const [messagesMap, setMessagesMap] = useState(initialMessages);
@@ -99,30 +101,28 @@ const ChatScreen = () => {
     );
   };
 
-  // Handle selecting a user from Search Modal
-  const handleSelectUserFromSearch = (searchedUser) => {
-    const existingIndex = conversations.findIndex((c) => c.email === searchedUser.email);
+  // Handle starting chat from Contacts or Search
+  const handleStartChatWithContact = (contact) => {
+    const existingIndex = conversations.findIndex((c) => c.name === contact.name || c.email === contact.email);
     
     if (existingIndex !== -1) {
       setActiveChatId(conversations[existingIndex].id);
-      setMobileView('chat');
     } else {
       const newChatId = `chat_${Date.now()}`;
       const newConv = {
         id: newChatId,
-        name: searchedUser.fullName,
-        email: searchedUser.email,
-        avatar: searchedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(searchedUser.fullName)}`,
+        name: contact.fullName || contact.name,
+        email: contact.email,
+        avatar: contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact.name)}`,
         lastMessage: 'Started a new conversation',
         time: 'Just now',
         unreadCount: 0,
         isOnline: true,
-        status: searchedUser.status || 'Hey there! I am using ChatApp.'
+        status: contact.status || 'Hey there! I am using ChatApp.'
       };
 
       setConversations((prev) => [newConv, ...prev]);
       setActiveChatId(newChatId);
-      setMobileView('chat');
       setMessagesMap((prev) => ({
         ...prev,
         [newChatId]: [
@@ -130,71 +130,108 @@ const ChatScreen = () => {
             id: Date.now(),
             senderId: 'system',
             isMe: false,
-            text: `Conversation started with ${searchedUser.fullName}. Say hi! 👋`,
+            text: `Conversation started with ${contact.name || contact.fullName}. Say hi! 👋`,
             time: 'Just now'
           }
         ]
       }));
     }
+
+    setActiveTab('chats');
+    setMobileView('chat');
   };
 
   return (
     <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden relative">
       
-      {/* 1. Vertical Dock (Desktop Sidebar + Mobile Bottom Navigation) */}
+      {/* 1. Vertical Navigation Dock */}
       <NavDock activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* 2. Main Chat Area Container */}
-      <div className="flex-1 flex h-full overflow-hidden">
-        
-        {/* Chat Sidebar Panel: Shown on desktop always; on mobile only when mobileView === 'sidebar' */}
-        <div className={`w-full md:w-80 lg:w-96 shrink-0 h-full ${
-          mobileView === 'sidebar' ? 'block' : 'hidden md:block'
-        }`}>
-          <ChatSidebar
-            conversations={conversations}
-            activeChatId={activeChatId}
-            onSelectChat={(id) => {
-              setActiveChatId(id);
-              setMobileView('chat');
-              setConversations((prev) =>
-                prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-              );
-            }}
-            onOpenNewChat={() => setIsSearchOpen(true)}
-          />
-        </div>
+      {/* 2. Main Content Area depending on activeTab */}
+      {activeTab === 'chats' && (
+        <div className="flex-1 flex h-full overflow-hidden">
+          {/* Chat Sidebar */}
+          <div className={`w-full md:w-80 lg:w-96 shrink-0 h-full ${
+            mobileView === 'sidebar' ? 'block' : 'hidden md:block'
+          }`}>
+            <ChatSidebar
+              conversations={conversations}
+              activeChatId={activeChatId}
+              onSelectChat={(id) => {
+                setActiveChatId(id);
+                setMobileView('chat');
+                setConversations((prev) =>
+                  prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
+                );
+              }}
+              onOpenNewChat={() => setIsSearchOpen(true)}
+            />
+          </div>
 
-        {/* Active Chat Window: Shown on desktop always; on mobile only when mobileView === 'chat' */}
-        <div className={`flex-1 h-full ${
-          mobileView === 'chat' ? 'block' : 'hidden md:block'
-        }`}>
-          <ChatWindow
-            activeChat={activeChat}
-            messages={activeMessages}
-            onSendMessage={handleSendMessage}
-            onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
-            onBackToSidebar={() => setMobileView('sidebar')}
-          />
-        </div>
+          {/* Active Chat Window */}
+          <div className={`flex-1 h-full ${
+            mobileView === 'chat' ? 'block' : 'hidden md:block'
+          }`}>
+            <ChatWindow
+              activeChat={activeChat}
+              messages={activeMessages}
+              onSendMessage={handleSendMessage}
+              onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
+              onBackToSidebar={() => setMobileView('sidebar')}
+            />
+          </div>
 
-        {/* Slide-Out Contact Detail Drawer */}
-        <div className={`fixed md:relative inset-y-0 right-0 z-50 md:z-auto transition-transform duration-300 transform ${
-          isDrawerOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
-        }`}>
-          <ContactDrawer
-            contact={activeChat}
-            isOpen={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-          />
+          {/* Slide-Out Contact Detail Drawer */}
+          <div className={`fixed md:relative inset-y-0 right-0 z-50 md:z-auto transition-transform duration-300 transform ${
+            isDrawerOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
+          }`}>
+            <ContactDrawer
+              contact={activeChat}
+              isOpen={isDrawerOpen}
+              onClose={() => setIsDrawerOpen(false)}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Contacts Tab View */}
+      {activeTab === 'contacts' && (
+        <ContactsPage
+          onStartChat={handleStartChatWithContact}
+          onOpenNewChat={() => setIsSearchOpen(true)}
+        />
+      )}
+
+      {/* Starred Messages Tab View */}
+      {activeTab === 'starred' && (
+        <StarredPage
+          onJumpToChat={(contactName) => {
+            const found = conversations.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase()));
+            if (found) setActiveChatId(found.id);
+            setActiveTab('chats');
+            setMobileView('chat');
+          }}
+        />
+      )}
+
+      {/* Settings Tab View */}
+      {activeTab === 'settings' && (
+        <div className="flex-1 h-full bg-slate-950 p-8 flex flex-col justify-center items-center text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mb-4">
+            ⚙️
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Account Settings</h2>
+          <p className="text-slate-400 text-sm max-w-sm">
+            Manage your profile details, notification preferences, dark theme customization, and security options.
+          </p>
+        </div>
+      )}
 
       {/* 3. User Search Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onSelectUser={handleSelectUserFromSearch}
+        onSelectUser={handleStartChatWithContact}
       />
 
     </div>

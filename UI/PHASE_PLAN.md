@@ -32,10 +32,10 @@ This document serves as the master execution plan for building a full-stack, rea
   - [x] Write Auth Middleware (`Backend/middleware/auth.js`) to protect routes using Bearer token verification.
   - [x] Implement `/api/auth/me` to get active user session details.
 - **Day 3: User Search, Chat & Message Endpoints + Socket.IO Setup**
-  - Implement `/api/users/search?q=` endpoint to discover other registered users.
-  - Implement `/api/chats` endpoints to fetch user conversations or initiate a 1-on-1 chat.
-  - Implement `/api/messages/:chatId` to fetch historical chat messages.
-  - Setup Socket.IO server (`Backend/socket/socketHandler.js`) with JWT handshake authentication, connection tracking, typing notifications, and real-time message broadcasting.
+  - [x] Implement `/api/users/search?q=` endpoint to discover other registered users (`userController.js`).
+  - [x] Implement `/api/chats` endpoints to fetch user conversations or initiate a 1-on-1 chat (`chatController.js`).
+  - [x] Implement `/api/messages/:chatId` to fetch historical chat messages (`messageController.js`).
+  - [x] Setup Socket.IO server (`Backend/socket/socketHandler.js`) with JWT handshake authentication, connection tracking, typing notifications, and real-time message broadcasting.
 
 ### Phase 3: Next-Gen 2-Sectioned Auth UI (Days 4 - 5)
 - **Day 4: Two-Section Split Authentication Screen**

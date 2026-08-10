@@ -75,26 +75,36 @@ const SearchModal = ({ isOpen, onClose, onSelectUser }) => {
                   onSelectUser(u);
                   onClose();
                 }}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/80 cursor-pointer transition border border-transparent hover:border-slate-700/60"
+                className="p-3 rounded-xl bg-slate-950/60 hover:bg-slate-800/90 border border-slate-800/80 hover:border-emerald-500/40 cursor-pointer transition space-y-2 group"
               >
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <img
-                      src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.fullName)}`}
-                      alt={u.fullName}
-                      className="w-10 h-10 rounded-full border border-slate-700 object-cover"
-                    />
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <img
+                        src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.fullName)}`}
+                        alt={u.fullName}
+                        className="w-10 h-10 rounded-full border border-slate-700 object-cover group-hover:border-emerald-400 transition"
+                      />
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm text-white group-hover:text-emerald-300 transition">{u.fullName}</h4>
+                      <p className="text-xs text-slate-400">{u.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-white">{u.fullName}</h4>
-                    <p className="text-xs text-slate-400">{u.email}</p>
-                  </div>
+
+                  <button className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 text-xs font-bold rounded-lg transition border border-emerald-500/20 shrink-0">
+                    Chat
+                  </button>
                 </div>
 
-                <button className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 text-xs font-bold rounded-lg transition border border-emerald-500/20">
-                  Chat
-                </button>
+                {/* Additional User Details */}
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/60">
+                  <span className="italic truncate max-w-[200px]">"{u.status || 'Hey there! I am using ChatApp.'}"</span>
+                  <span className="text-slate-500 shrink-0 font-medium">
+                    {u.createdAt ? `Joined ${new Date(u.createdAt).toLocaleDateString([], { month: 'short', year: 'numeric' })}` : 'Member'}
+                  </span>
+                </div>
               </div>
             ))
           )}
