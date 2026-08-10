@@ -22,7 +22,7 @@ initSocket(server);
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
+  origin: ['https://chat-j05f4xk8n-amrith26133-9137s-projects.vercel.app/'],
   credentials: true
 }));
 app.use(express.json());
