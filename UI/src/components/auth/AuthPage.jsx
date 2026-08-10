@@ -13,8 +13,12 @@ import {
   FaArrowLeft, 
   FaShieldAlt, 
   FaBolt, 
-  FaMagic 
+  FaMagic,
+  FaCheck,
+  FaSyncAlt
 } from 'react-icons/fa';
+
+const defaultSeeds = ['Alex', 'Sarah', 'Felix', 'Mimi', 'Jack', 'Luna', 'Zack', 'Maya'];
 
 const AuthPage = () => {
   const { login, register, forgotPassword, resetPassword, error, setError } = useAuth();
@@ -23,6 +27,19 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Avatar Selection State
+  const [avatarSeeds, setAvatarSeeds] = useState(defaultSeeds);
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${defaultSeeds[0]}`
+  );
+
+  const handleRandomizeAvatars = () => {
+    const randomSuffix = Math.floor(Math.random() * 1000);
+    const newSeeds = defaultSeeds.map((seed) => `${seed}_${randomSuffix}`);
+    setAvatarSeeds(newSeeds);
+    setSelectedAvatar(`https://api.dicebear.com/7.x/avataaars/svg?seed=${newSeeds[0]}`);
+  };
 
   // Form States
   const [formData, setFormData] = useState({
@@ -67,7 +84,6 @@ const AuthPage = () => {
     setIsSubmitting(true);
     setError(null);
     try {
-      // Try demo user or register demo user on the fly if not exists
       try {
         await login('alex.demo@chatapp.com', 'password123');
       } catch (loginErr) {
@@ -94,7 +110,7 @@ const AuthPage = () => {
 
     setIsSubmitting(true);
     try {
-      await register(formData.fullName, formData.email, formData.password);
+      await register(formData.fullName, formData.email, formData.password, selectedAvatar);
     } catch (err) {
       // Handled in context
     } finally {
@@ -349,6 +365,60 @@ const AuthPage = () => {
           {/* REGISTER FORM */}
           {mode === 'register' && (
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              
+              {/* AVATAR SELECTION PICKER */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    Select Profile Avatar
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleRandomizeAvatars}
+                    className="flex items-center space-x-1.5 text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg transition border border-emerald-500/20"
+                  >
+                    <FaSyncAlt className="text-[10px]" />
+                    <span>Randomize</span>
+                  </button>
+                </div>
+
+                {/* Selected Avatar Preview + Grid */}
+                <div className="flex items-center space-x-3">
+                  <div className="relative shrink-0">
+                    <img
+                      src={selectedAvatar}
+                      alt="Selected Avatar"
+                      className="w-14 h-14 rounded-full border-2 border-emerald-500 bg-slate-950 object-cover shadow-lg shadow-emerald-500/20"
+                    />
+                    <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 rounded-full p-1 shadow">
+                      <FaCheck className="text-[9px]" />
+                    </span>
+                  </div>
+
+                  {/* Thumbnail Choices Grid */}
+                  <div className="grid grid-cols-4 gap-1.5 flex-1">
+                    {avatarSeeds.slice(0, 8).map((seed) => {
+                      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+                      const isSelected = selectedAvatar === avatarUrl;
+                      return (
+                        <button
+                          key={seed}
+                          type="button"
+                          onClick={() => setSelectedAvatar(avatarUrl)}
+                          className={`w-9 h-9 rounded-full overflow-hidden border-2 transition transform hover:scale-110 flex items-center justify-center bg-slate-950 ${
+                            isSelected
+                              ? 'border-emerald-400 ring-2 ring-emerald-500/50 scale-105'
+                              : 'border-slate-800 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <img src={avatarUrl} alt={seed} className="w-full h-full object-cover" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Full Name</label>
                 <div className="relative">

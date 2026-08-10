@@ -14,7 +14,7 @@ const generateToken = (user) => {
 // @desc    Register a new user
 // @route   POST /api/auth/register
 export const register = async (req, res) => {
-  const { fullName, email, password } = req.body;
+  const { fullName, email, password, avatar } = req.body;
 
   if (!fullName || !email || !password) {
     return res.status(400).json({ message: 'Please provide full name, email, and password' });
@@ -36,10 +36,11 @@ export const register = async (req, res) => {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
       const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`;
+      const finalAvatar = (avatar && avatar.trim()) ? avatar.trim() : defaultAvatar;
 
       db.run(
         'INSERT INTO users (fullName, email, password, avatar) VALUES (?, ?, ?, ?)',
-        [fullName.trim(), normalizedEmail, hashedPassword, defaultAvatar],
+        [fullName.trim(), normalizedEmail, hashedPassword, finalAvatar],
         function (insertErr) {
           if (insertErr) {
             return res.status(500).json({ message: 'Failed to create user', error: insertErr.message });
@@ -49,7 +50,7 @@ export const register = async (req, res) => {
             id: this.lastID,
             fullName: fullName.trim(),
             email: normalizedEmail,
-            avatar: defaultAvatar,
+            avatar: finalAvatar,
             status: 'Hey there! I am using ChatApp.'
           };
 

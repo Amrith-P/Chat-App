@@ -48,10 +48,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (fullName, email, password) => {
+  const register = async (fullName, email, password, avatar) => {
     setError(null);
     try {
-      const data = await apiRequest('/auth/register', 'POST', { fullName, email, password });
+      const data = await apiRequest('/auth/register', 'POST', { fullName, email, password, avatar });
       localStorage.setItem('chat_token', data.token);
       setToken(data.token);
       setUser(data.user);
