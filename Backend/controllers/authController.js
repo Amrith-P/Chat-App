@@ -6,7 +6,7 @@ import db from '../config/db.js';
 const generateToken = (user) => {
   return jwt.sign(
     { id: user.id, email: user.email, fullName: user.fullName },
-    process.env.JWT_SECRET || 'fallback_secret',
+    process.env.JWT_SECRET || 'super_secret_jwt_key_chat_app_2026_xyz',
     { expiresIn: '7d' }
   );
 };

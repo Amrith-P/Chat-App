@@ -13,7 +13,7 @@ export const protect = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_chat_app_2026_xyz');
     req.user = decoded; // { id, email, fullName }
     next();
   } catch (error) {

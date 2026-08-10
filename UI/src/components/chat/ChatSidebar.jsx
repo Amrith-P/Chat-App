@@ -65,10 +65,13 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
         const data = await apiRequest(`/users/search?q=${encodeURIComponent(term)}`);
         setSearchResults((prev) => ({
           ...prev,
-          users: data.users || []
+          users: data?.users || []
         }));
       } catch (err) {
-        console.error('Grouped search user query failed:', err);
+        setSearchResults((prev) => ({
+          ...prev,
+          users: []
+        }));
       } finally {
         setIsSearchingDb(false);
       }
