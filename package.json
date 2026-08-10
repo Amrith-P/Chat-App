@@ -4,6 +4,7 @@
   "private": true,
   "description": "Real-Time Chat App Fullstack Workspace",
   "scripts": {
+    "build": "cd UI && npm run build",
     "start": "npm run start:backend",
     "start:backend": "cd Backend && npm start",
     "dev:backend": "cd Backend && npm run dev",
