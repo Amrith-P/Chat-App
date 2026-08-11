@@ -15,13 +15,36 @@ import {
   FaTrash,
   FaImage,
   FaFileAlt,
-  FaArrowLeft
+  FaArrowLeft,
+  FaTimes,
+  FaStar,
+  FaCheck,
+  FaStop
 } from 'react-icons/fa';
+import CallModal from './CallModal';
 
 const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBackToSidebar }) => {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  
+  // Header Search in Chat State
+  const [isSearchInChatOpen, setIsSearchInChatOpen] = useState(false);
+  const [chatSearchTerm, setChatSearchTerm] = useState('');
+
+  // Call Modal State
+  const [isCallOpen, setIsCallOpen] = useState(false);
+  const [callType, setCallType] = useState('audio');
+
+  // Reply & Notification Toast State
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [starredMsgIds, setStarredMsgIds] = useState(new Set());
+
+  // Voice Recording State
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
   const messagesEndRef = useRef(null);
 
   // Auto scroll to latest message
@@ -29,13 +52,44 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Voice recording timer effect
+  useEffect(() => {
+    let timer;
+    if (isRecordingVoice) {
+      timer = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingTime(0);
+    }
+    return () => clearInterval(timer);
+  }, [isRecordingVoice]);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 2500);
+  };
+
   const handleSend = (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-    onSendMessage(inputText.trim());
+
+    let textToSend = inputText.trim();
+    if (replyingTo) {
+      textToSend = `[Replying to "${replyingTo.text}"]: ${textToSend}`;
+    }
+
+    onSendMessage(textToSend);
     setInputText('');
+    setReplyingTo(null);
     setShowEmojiPicker(false);
     setShowAttachmentMenu(false);
+  };
+
+  const handleSendVoiceNote = () => {
+    setIsRecordingVoice(false);
+    onSendMessage(`🎤 Voice Note (${recordingTime}s)`);
+    showToast('Voice note sent!');
   };
 
   const handleKeyDown = (e) => {
@@ -47,6 +101,30 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
 
   const addEmoji = (emoji) => {
     setInputText((prev) => prev + emoji);
+  };
+
+  const handleCopyMessage = (text) => {
+    navigator.clipboard.writeText(text);
+    showToast('Message copied to clipboard! 📋');
+  };
+
+  const handleToggleStar = (msgId) => {
+    setStarredMsgIds((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(msgId)) {
+        updated.delete(msgId);
+        showToast('Unstarred message');
+      } else {
+        updated.add(msgId);
+        showToast('Starred message! ⭐');
+      }
+      return updated;
+    });
+  };
+
+  const handleStartCall = (type) => {
+    setCallType(type);
+    setIsCallOpen(true);
   };
 
   if (!activeChat) {
@@ -63,17 +141,28 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
     );
   }
 
-  const emojis = ['😊', '😂', '🔥', '👍', '❤️', '🎉', '🚀', '💯', '✨', '🙌'];
+  const emojis = ['😊', '😂', '🔥', '👍', '❤️', '🎉', '🚀', '💯', '✨', '🙌', '😍', '😎'];
+
+  const filteredMessages = chatSearchTerm
+    ? messages.filter((m) => (m.text || m.message || '').toLowerCase().includes(chatSearchTerm.toLowerCase()))
+    : messages;
 
   return (
     <div className="flex-1 h-full bg-slate-950 flex flex-col overflow-hidden relative">
       
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-40 bg-slate-900 border border-emerald-500/40 text-emerald-400 px-4 py-2 rounded-xl text-xs font-bold shadow-2xl flex items-center space-x-2 animate-bounce">
+          <FaCheck />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 1. CHAT HEADER */}
       <header className="h-16 bg-slate-900 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between shrink-0 select-none z-10">
         
-        {/* Contact Info & Back Arrow for Mobile */}
+        {/* Contact Info & Mobile Back Button */}
         <div className="flex items-center space-x-3">
-          {/* Mobile Back Button */}
           <button
             onClick={onBackToSidebar}
             className="md:hidden p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition -ml-1"
@@ -98,7 +187,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
                 {activeChat.name}
               </h3>
               <p className="text-[11px] md:text-xs text-emerald-400 font-medium truncate">
-                {activeChat.isOnline ? 'Online • Typing...' : 'Last seen recently'}
+                {activeChat.isOnline ? 'Online • Available' : 'Last seen recently'}
               </p>
             </div>
           </div>
@@ -106,16 +195,62 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
 
         {/* Header Action Icons */}
         <div className="flex items-center space-x-1 md:space-x-2 text-slate-400">
-          <button className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition" title="Audio Call">
+          
+          {/* In-Chat Search Bar Toggle */}
+          {isSearchInChatOpen ? (
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                value={chatSearchTerm}
+                onChange={(e) => setChatSearchTerm(e.target.value)}
+                placeholder="Search in chat..."
+                className="bg-slate-950 border border-slate-800 rounded-xl py-1.5 pl-3 pr-7 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition w-36 sm:w-48"
+                autoFocus
+              />
+              <button
+                onClick={() => {
+                  setIsSearchInChatOpen(false);
+                  setChatSearchTerm('');
+                }}
+                className="absolute right-2 text-slate-400 hover:text-white text-xs"
+              >
+                <FaTimes />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsSearchInChatOpen(true)}
+              className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition"
+              title="Search in Chat"
+            >
+              <FaSearch className="text-xs md:text-sm" />
+            </button>
+          )}
+
+          {/* Audio Call */}
+          <button
+            onClick={() => handleStartCall('audio')}
+            className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition"
+            title="Audio Call"
+          >
             <FaPhoneAlt className="text-xs md:text-sm" />
           </button>
-          <button className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition" title="Video Call">
+
+          {/* Video Call */}
+          <button
+            onClick={() => handleStartCall('video')}
+            className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition"
+            title="Video Call"
+          >
             <FaVideo className="text-xs md:text-sm" />
           </button>
-          <button className="hidden sm:block p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition" title="Search in Chat">
-            <FaSearch className="text-xs md:text-sm" />
-          </button>
-          <button onClick={onToggleDrawer} className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition" title="Contact Info">
+
+          {/* Contact Drawer */}
+          <button
+            onClick={onToggleDrawer}
+            className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition"
+            title="Contact Info"
+          >
             <FaInfoCircle className="text-xs md:text-sm" />
           </button>
         </div>
@@ -124,7 +259,6 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
       {/* 2. MESSAGES CONTAINER */}
       <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 custom-scrollbar bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900/60 pb-20 md:pb-6">
         
-        {/* Date Divider */}
         <div className="flex justify-center my-2">
           <span className="px-3 py-1 bg-slate-900 border border-slate-800 text-[11px] font-semibold text-slate-400 rounded-full">
             Today
@@ -132,8 +266,11 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
         </div>
 
         {/* Message Thread */}
-        {messages.map((msg) => {
+        {filteredMessages.map((msg) => {
           const isMe = msg.senderId === 'me' || msg.isMe;
+          const msgText = msg.text || msg.message || '';
+          const isStarred = starredMsgIds.has(msg.id);
+
           return (
             <div
               key={msg.id}
@@ -144,45 +281,89 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-none shadow-lg shadow-emerald-500/10'
                   : 'bg-slate-900 border border-slate-800 text-slate-100 rounded-tl-none shadow-md'
               }`}>
-                <p className="leading-relaxed break-words text-xs sm:text-sm">{msg.text || msg.message}</p>
 
-                {/* Footer Time & Read Receipt */}
+                {/* Starred Badge */}
+                {isStarred && (
+                  <span className="absolute -top-2 -right-2 p-1 bg-amber-500 text-slate-950 rounded-full text-[10px] shadow">
+                    <FaStar />
+                  </span>
+                )}
+
+                <p className="leading-relaxed break-words text-xs sm:text-sm">{msgText}</p>
+
+                {/* Footer Time & Status */}
                 <div className={`flex items-center justify-end space-x-1 text-[10px] mt-1.5 ${
                   isMe ? 'text-emerald-200' : 'text-slate-500'
                 }`}>
                   <span>{msg.time || '10:45 AM'}</span>
                   {isMe && <FaCheckDouble className="text-xs text-cyan-300" />}
                 </div>
+
+                {/* BUBBLE HOVER ACTIONS MENU */}
+                <div className={`absolute top-2 opacity-0 group-hover:opacity-100 transition duration-200 flex items-center space-x-1 bg-slate-900 border border-slate-800 p-1 rounded-xl shadow-xl z-20 ${
+                  isMe ? '-left-24' : '-right-24'
+                }`}>
+                  <button
+                    onClick={() => setReplyingTo({ id: msg.id, text: msgText })}
+                    className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition"
+                    title="Reply"
+                  >
+                    <FaReply className="text-xs" />
+                  </button>
+                  <button
+                    onClick={() => handleCopyMessage(msgText)}
+                    className="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition"
+                    title="Copy Text"
+                  >
+                    <FaCopy className="text-xs" />
+                  </button>
+                  <button
+                    onClick={() => handleToggleStar(msg.id)}
+                    className={`p-1.5 rounded-lg hover:bg-slate-800 transition ${
+                      isStarred ? 'text-amber-400' : 'text-slate-400 hover:text-amber-400'
+                    }`}
+                    title="Star Message"
+                  >
+                    <FaStar className="text-xs" />
+                  </button>
+                </div>
+
               </div>
             </div>
           );
         })}
 
-        {/* Typing Bubble */}
-        <div className="flex items-center space-x-2 text-xs text-slate-500 pl-2">
-          <div className="flex space-x-1 items-center bg-slate-900 border border-slate-800 py-1.5 px-3 rounded-full">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" />
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-          </div>
-          <span className="text-[11px] italic font-medium">{activeChat.name} is typing...</span>
-        </div>
-
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. INPUT BAR */}
+      {/* 3. INPUT BAR & REPLIED BAR */}
       <footer className="p-3 md:p-4 bg-slate-900 border-t border-slate-800 shrink-0 relative mb-16 md:mb-0">
         
+        {/* Reply Bar Overlay */}
+        {replyingTo && (
+          <div className="mb-2 p-2 bg-slate-950 border-l-4 border-emerald-500 rounded-r-xl flex items-center justify-between text-xs">
+            <div className="truncate pr-2">
+              <span className="text-emerald-400 font-bold block">Replying to message:</span>
+              <span className="text-slate-300 italic truncate block">"{replyingTo.text}"</span>
+            </div>
+            <button
+              onClick={() => setReplyingTo(null)}
+              className="text-slate-400 hover:text-white p-1"
+            >
+              <FaTimes />
+            </button>
+          </div>
+        )}
+
         {/* Emoji Picker Popover */}
         {showEmojiPicker && (
-          <div className="absolute bottom-20 left-2 sm:left-4 bg-slate-900 border border-slate-800 rounded-2xl p-2 sm:p-3 shadow-2xl z-30 flex gap-1.5 sm:gap-2">
+          <div className="absolute bottom-20 left-2 sm:left-4 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl z-30 grid grid-cols-6 gap-2">
             {emojis.map((e) => (
               <button
                 key={e}
                 type="button"
                 onClick={() => addEmoji(e)}
-                className="text-lg sm:text-xl hover:scale-125 transition transform p-1"
+                className="text-xl hover:scale-125 transition transform p-1"
               >
                 {e}
               </button>
@@ -192,63 +373,121 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
 
         {/* Attachment Menu Popover */}
         {showAttachmentMenu && (
-          <div className="absolute bottom-20 left-10 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-30 space-y-1 min-w-[140px]">
-            <button className="w-full flex items-center space-x-2 p-2 hover:bg-slate-800 rounded-xl text-xs text-slate-300">
-              <FaImage className="text-emerald-400" />
-              <span>Image / Photo</span>
+          <div className="absolute bottom-20 left-10 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-30 space-y-1 min-w-[150px]">
+            <button
+              onClick={() => {
+                onSendMessage('📷 Shared Image Attachment: photo_sample.png');
+                setShowAttachmentMenu(false);
+              }}
+              className="w-full flex items-center space-x-2 p-2 hover:bg-slate-800 rounded-xl text-xs text-slate-300 transition"
+            >
+              <FaImage className="text-emerald-400 text-sm" />
+              <span>Photo / Image</span>
             </button>
-            <button className="w-full flex items-center space-x-2 p-2 hover:bg-slate-800 rounded-xl text-xs text-slate-300">
-              <FaFileAlt className="text-teal-400" />
-              <span>Document</span>
+            <button
+              onClick={() => {
+                onSendMessage('📄 Shared Document: project_specs.pdf');
+                setShowAttachmentMenu(false);
+              }}
+              className="w-full flex items-center space-x-2 p-2 hover:bg-slate-800 rounded-xl text-xs text-slate-300 transition"
+            >
+              <FaFileAlt className="text-teal-400 text-sm" />
+              <span>Document File</span>
             </button>
           </div>
         )}
 
-        <form onSubmit={handleSend} className="flex items-center space-x-2 md:space-x-3">
-          
-          {/* Controls */}
-          <div className="flex items-center space-x-0.5 text-slate-400">
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-2 sm:p-2.5 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition"
-              title="Add Emoji"
-            >
-              <FaSmile className="text-base sm:text-lg" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-              className="p-2 sm:p-2.5 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition"
-              title="Attach File"
-            >
-              <FaPaperclip className="text-base sm:text-lg" />
-            </button>
-          </div>
+        {/* Input Form / Voice Recording Bar */}
+        {isRecordingVoice ? (
+          <div className="flex items-center justify-between bg-slate-950 border border-red-500/40 rounded-xl p-2.5 px-4 text-xs">
+            <div className="flex items-center space-x-3 text-red-400 font-bold animate-pulse">
+              <span className="w-2.5 h-2.5 bg-red-500 rounded-full" />
+              <span>Recording Voice Note... ({recordingTime}s)</span>
+            </div>
 
-          {/* Text Input */}
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message...`}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 sm:px-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-            />
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setIsRecordingVoice(false)}
+                className="p-1.5 text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendVoiceNote}
+                className="px-3 py-1.5 bg-emerald-500 text-slate-950 font-bold rounded-lg flex items-center space-x-1"
+              >
+                <FaPaperPlane className="text-xs" />
+                <span>Send</span>
+              </button>
+            </div>
           </div>
+        ) : (
+          <form onSubmit={handleSend} className="flex items-center space-x-2 md:space-x-3">
+            
+            {/* Controls */}
+            <div className="flex items-center space-x-0.5 text-slate-400">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="p-2 sm:p-2.5 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition"
+                title="Add Emoji"
+              >
+                <FaSmile className="text-base sm:text-lg" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                className="p-2 sm:p-2.5 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition"
+                title="Attach File"
+              >
+                <FaPaperclip className="text-base sm:text-lg" />
+              </button>
+            </div>
 
-          {/* Action Send Button */}
-          <button
-            type="submit"
-            disabled={!inputText.trim()}
-            className="p-2.5 sm:p-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 rounded-xl transition shadow-lg shadow-emerald-500/20 flex items-center justify-center font-bold"
-          >
-            <FaPaperPlane className="text-xs sm:text-sm" />
-          </button>
-        </form>
+            {/* Input Field */}
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={`Message ${activeChat.name}...`}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 sm:px-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+
+            {/* Mic / Send Button */}
+            {inputText.trim() ? (
+              <button
+                type="submit"
+                className="p-2.5 sm:p-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl transition shadow-lg shadow-emerald-500/20 flex items-center justify-center font-bold"
+                title="Send Message"
+              >
+                <FaPaperPlane className="text-xs sm:text-sm" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsRecordingVoice(true)}
+                className="p-2.5 sm:p-3 bg-slate-800 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 rounded-xl transition flex items-center justify-center font-bold"
+                title="Record Voice Note"
+              >
+                <FaMicrophone className="text-xs sm:text-sm" />
+              </button>
+            )}
+
+          </form>
+        )}
 
       </footer>
+
+      {/* Audio / Video Call Modal */}
+      <CallModal
+        isOpen={isCallOpen}
+        onClose={() => setIsCallOpen(false)}
+        contact={activeChat}
+        callType={callType}
+      />
 
     </div>
   );

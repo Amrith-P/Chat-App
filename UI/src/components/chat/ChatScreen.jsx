@@ -9,6 +9,7 @@ import ContactDrawer from './ContactDrawer';
 import SearchModal from './SearchModal';
 import ContactsPage from '../contacts/ContactsPage';
 import StarredPage from '../starred/StarredPage';
+import SettingsPage from '../settings/SettingsPage';
 
 const initialConversations = [
   {
@@ -378,15 +379,7 @@ const ChatScreen = () => {
 
       {/* Settings Tab View */}
       {activeTab === 'settings' && (
-        <div className="flex-1 h-full bg-slate-950 p-8 flex flex-col justify-center items-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mb-4">
-            ⚙️
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Account Settings</h2>
-          <p className="text-slate-400 text-sm max-w-sm">
-            Manage your profile details, notification preferences, dark theme customization, and security options.
-          </p>
-        </div>
+        <SettingsPage />
       )}
 
       {/* 3. User Search Modal */}
