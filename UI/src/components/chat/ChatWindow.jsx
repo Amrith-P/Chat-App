@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import InputEmoji from 'react-input-emoji';
 import { 
   FaPhoneAlt, 
   FaVideo, 
   FaSearch, 
   FaInfoCircle, 
-  FaEllipsisV, 
-  FaSmile, 
   FaPaperclip, 
   FaMicrophone, 
   FaPaperPlane, 
@@ -18,14 +17,12 @@ import {
   FaArrowLeft,
   FaTimes,
   FaStar,
-  FaCheck,
-  FaStop
+  FaCheck
 } from 'react-icons/fa';
 import CallModal from './CallModal';
 
 const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBackToSidebar }) => {
   const [inputText, setInputText] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   
   // Header Search in Chat State
@@ -70,11 +67,10 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
     setTimeout(() => setToastMessage(''), 2500);
   };
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
+  const handleSendText = (text) => {
+    if (!text || !text.trim()) return;
 
-    let textToSend = inputText.trim();
+    let textToSend = text.trim();
     if (replyingTo) {
       textToSend = `[Replying to "${replyingTo.text}"]: ${textToSend}`;
     }
@@ -82,7 +78,6 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
     onSendMessage(textToSend);
     setInputText('');
     setReplyingTo(null);
-    setShowEmojiPicker(false);
     setShowAttachmentMenu(false);
   };
 
@@ -90,17 +85,6 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
     setIsRecordingVoice(false);
     onSendMessage(`🎤 Voice Note (${recordingTime}s)`);
     showToast('Voice note sent!');
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(e);
-    }
-  };
-
-  const addEmoji = (emoji) => {
-    setInputText((prev) => prev + emoji);
   };
 
   const handleCopyMessage = (text) => {
@@ -140,8 +124,6 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
       </div>
     );
   }
-
-  const emojis = ['😊', '😂', '🔥', '👍', '❤️', '🎉', '🚀', '💯', '✨', '🙌', '😍', '😎'];
 
   const filteredMessages = chatSearchTerm
     ? messages.filter((m) => (m.text || m.message || '').toLowerCase().includes(chatSearchTerm.toLowerCase()))
@@ -336,7 +318,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. INPUT BAR & REPLIED BAR */}
+      {/* 3. INPUT BAR WITH REACT-INPUT-EMOJI */}
       <footer className="p-3 md:p-4 bg-slate-900 border-t border-slate-800 shrink-0 relative mb-16 md:mb-0">
         
         {/* Reply Bar Overlay */}
@@ -355,25 +337,9 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
           </div>
         )}
 
-        {/* Emoji Picker Popover */}
-        {showEmojiPicker && (
-          <div className="absolute bottom-20 left-2 sm:left-4 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl z-30 grid grid-cols-6 gap-2">
-            {emojis.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => addEmoji(e)}
-                className="text-xl hover:scale-125 transition transform p-1"
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Attachment Menu Popover */}
         {showAttachmentMenu && (
-          <div className="absolute bottom-20 left-10 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-30 space-y-1 min-w-[150px]">
+          <div className="absolute bottom-20 left-4 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-30 space-y-1 min-w-[150px]">
             <button
               onClick={() => {
                 onSendMessage('📷 Shared Image Attachment: photo_sample.png');
@@ -397,7 +363,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
           </div>
         )}
 
-        {/* Input Form / Voice Recording Bar */}
+        {/* Voice Recording / Input Emoji Bar */}
         {isRecordingVoice ? (
           <div className="flex items-center justify-between bg-slate-950 border border-red-500/40 rounded-xl p-2.5 px-4 text-xs">
             <div className="flex items-center space-x-3 text-red-400 font-bold animate-pulse">
@@ -422,45 +388,41 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSend} className="flex items-center space-x-2 md:space-x-3">
+          <div className="flex items-center space-x-2">
             
-            {/* Controls */}
-            <div className="flex items-center space-x-0.5 text-slate-400">
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-2 sm:p-2.5 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition"
-                title="Add Emoji"
-              >
-                <FaSmile className="text-base sm:text-lg" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                className="p-2 sm:p-2.5 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition"
-                title="Attach File"
-              >
-                <FaPaperclip className="text-base sm:text-lg" />
-              </button>
-            </div>
+            {/* Attachment Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+              className="p-2 sm:p-2.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition shrink-0"
+              title="Attach File"
+            >
+              <FaPaperclip className="text-base sm:text-lg" />
+            </button>
 
-            {/* Input Field */}
-            <div className="flex-1 relative">
-              <input
-                type="text"
+            {/* REACT-INPUT-EMOJI COMPONENT */}
+            <div className="flex-1 min-w-0 text-white">
+              <InputEmoji
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onChange={setInputText}
+                cleanOnEnter
+                onEnter={handleSendText}
                 placeholder={`Message ${activeChat.name}...`}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 sm:px-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                background="#020617"
+                color="#ffffff"
+                borderColor="#1e293b"
+                borderRadius={12}
+                fontSize={14}
+                fontFamily="sans-serif"
               />
             </div>
 
-            {/* Mic / Send Button */}
+            {/* Mic / Send Action Button */}
             {inputText.trim() ? (
               <button
-                type="submit"
-                className="p-2.5 sm:p-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl transition shadow-lg shadow-emerald-500/20 flex items-center justify-center font-bold"
+                type="button"
+                onClick={() => handleSendText(inputText)}
+                className="p-2.5 sm:p-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl transition shadow-lg shadow-emerald-500/20 flex items-center justify-center font-bold shrink-0"
                 title="Send Message"
               >
                 <FaPaperPlane className="text-xs sm:text-sm" />
@@ -469,14 +431,14 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
               <button
                 type="button"
                 onClick={() => setIsRecordingVoice(true)}
-                className="p-2.5 sm:p-3 bg-slate-800 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 rounded-xl transition flex items-center justify-center font-bold"
+                className="p-2.5 sm:p-3 bg-slate-800 hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-400 rounded-xl transition flex items-center justify-center font-bold shrink-0"
                 title="Record Voice Note"
               >
                 <FaMicrophone className="text-xs sm:text-sm" />
               </button>
             )}
 
-          </form>
+          </div>
         )}
 
       </footer>
