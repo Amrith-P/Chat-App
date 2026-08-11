@@ -1,6 +1,6 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost'))
-  ? import.meta.env.VITE_API_URL
-  : (import.meta.env.DEV ? 'http://localhost:5050/api' : 'https://chat-app-0yh9.onrender.com/api');
+const API_BASE_URL = import.meta.env.MODE === 'development'
+  ? 'http://localhost:5050/api'
+  : 'https://chat-app-0yh9.onrender.com/api';
 
 export const apiRequest = async (endpoint, method = 'GET', body = null) => {
   const token = localStorage.getItem('chat_token');

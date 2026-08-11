@@ -30,11 +30,9 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Determine Backend Host URL for WebSocket
-    const defaultHost = import.meta.env.DEV ? 'http://localhost:5050' : 'https://chat-app-0yh9.onrender.com';
-    const rawApiUrl = (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost'))
-      ? import.meta.env.VITE_API_URL
-      : defaultHost;
-    const socketHost = rawApiUrl.replace(/\/api\/?$/, '');
+    const socketHost = import.meta.env.MODE === 'development'
+      ? 'http://localhost:5050'
+      : 'https://chat-app-0yh9.onrender.com';
 
     const newSocket = io(socketHost, {
       auth: { token },
