@@ -472,6 +472,33 @@ const AuthPage = () => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
+
+                {/* Password Strength Indicator Bar */}
+                {formData.password && (
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="text-slate-400">Password Strength:</span>
+                      <span className={`font-bold ${
+                        formData.password.length < 6
+                          ? 'text-red-400'
+                          : formData.password.length < 10
+                          ? 'text-amber-400'
+                          : 'text-emerald-400'
+                      }`}>
+                        {formData.password.length < 6
+                          ? 'Weak (min 6 chars)'
+                          : formData.password.length < 10
+                          ? 'Good'
+                          : 'Strong 💪'}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden flex space-x-1 p-0.5 border border-slate-800">
+                      <div className={`h-full rounded-full transition-all duration-300 ${
+                        formData.password.length > 0 ? (formData.password.length < 6 ? 'w-1/3 bg-red-500' : formData.password.length < 10 ? 'w-2/3 bg-amber-500' : 'w-full bg-emerald-500') : 'w-0'
+                      }`} />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
