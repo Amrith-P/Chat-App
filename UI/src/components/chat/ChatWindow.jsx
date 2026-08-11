@@ -363,22 +363,6 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
           </div>
         )}
 
-         <div className="flex-1 min-w-0 text-white">
-              <InputEmoji
-                value={inputText}
-                onChange={setInputText}
-                cleanOnEnter
-                onEnter={handleSendText}
-                placeholder={`Message ${activeChat.name}...`}
-                background="#020617"
-                color="#ffffff"
-                borderColor="#1e293b"
-                borderRadius={12}
-                fontSize={14}
-                fontFamily="sans-serif"
-              />
-            </div>
-
         {/* Voice Recording / Input Emoji Bar */}
         {isRecordingVoice ? (
           <div className="flex items-center justify-between bg-slate-950 border border-red-500/40 rounded-xl p-2.5 px-4 text-xs">
@@ -417,7 +401,21 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
             </button>
 
             {/* REACT-INPUT-EMOJI COMPONENT */}
-           
+            <div className="flex-1 min-w-0 text-white">
+              <InputEmoji
+                value={inputText}
+                onChange={setInputText}
+                cleanOnEnter
+                onEnter={handleSendText}
+                placeholder={`Message ${activeChat.name}...`}
+                background="#020617"
+                color="#ffffff"
+                borderColor="#1e293b"
+                borderRadius={12}
+                fontSize={14}
+                fontFamily="sans-serif"
+              />
+            </div>
 
             {/* Mic / Send Action Button */}
             {inputText.trim() ? (

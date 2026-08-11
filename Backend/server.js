@@ -63,7 +63,7 @@ const startServer = (portToTry) => {
   server.listen(portToTry, '0.0.0.0', () => {
     console.log(`🚀 Server listening on port ${portToTry}`);
   }).on('error', (err) => {
-    if (err.code === 'EADDRINUSE' && !process.env.PORT) {
+    if (err.code === 'EADDRINUSE') {
       console.warn(`⚠️ Port ${portToTry} is in use, retrying on port ${Number(portToTry) + 1}...`);
       startServer(Number(portToTry) + 1);
     } else {
