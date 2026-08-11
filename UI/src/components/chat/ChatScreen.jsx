@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
+import { apiRequest } from '../../api/client';
 import NavDock from '../layout/NavDock';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -62,11 +64,13 @@ const initialMessages = {
 
 const ChatScreen = () => {
   const { user } = useAuth();
+  const { socket, isConnected, onlineUsers, emitSendMessage, emitTyping } = useSocket();
+
   const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'contacts' | 'starred' | 'settings'
   const [conversations, setConversations] = useState(initialConversations);
   const [activeChatId, setActiveChatId] = useState('chat_1');
   const [messagesMap, setMessagesMap] = useState(initialMessages);
-  
+
   // Mobile View Toggle ('sidebar' | 'chat')
   const [mobileView, setMobileView] = useState('sidebar');
 
@@ -74,19 +78,122 @@ const ChatScreen = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Fetch Real Conversations from SQLite Backend
+  useEffect(() => {
+    const fetchDbConversations = async () => {
+      try {
+        const data = await apiRequest('/chats');
+        if (data && data.chats && data.chats.length > 0) {
+          const formatted = data.chats.map((c) => ({
+            id: c.id,
+            name: c.recipientName,
+            email: c.recipientEmail,
+            avatar: c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.recipientName)}`,
+            recipientId: c.recipientId,
+            lastMessage: c.lastMessage || 'No messages yet',
+            time: c.lastMessageTime ? new Date(c.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New',
+            unreadCount: 0,
+            isOnline: onlineUsers.has(c.recipientId),
+            status: c.recipientStatus || 'Available'
+          }));
+
+          setConversations(formatted);
+          setActiveChatId(formatted[0].id);
+        }
+      } catch (err) {
+        console.log('Using default demo conversations (fallback or unauthenticated DB query)');
+      }
+    };
+
+    fetchDbConversations();
+  }, [user]);
+
+  // Fetch Message History for Active Database Chat
+  useEffect(() => {
+    if (!activeChatId) return;
+
+    const fetchMessages = async () => {
+      // If it's a numeric database chat ID
+      if (typeof activeChatId === 'number' || !activeChatId.toString().startsWith('chat_')) {
+        try {
+          const data = await apiRequest(`/messages/${activeChatId}`);
+          if (data && data.messages) {
+            const formattedMsgs = data.messages.map((m) => ({
+              id: m.id,
+              senderId: m.senderId,
+              isMe: m.senderId === user?.id,
+              text: m.content,
+              time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
+
+            setMessagesMap((prev) => ({
+              ...prev,
+              [activeChatId]: formattedMsgs
+            }));
+          }
+        } catch (err) {
+          console.log('Failed to fetch backend message history for chat:', activeChatId);
+        }
+      }
+    };
+
+    fetchMessages();
+  }, [activeChatId, user]);
+
+  // Listen to Real-Time Socket.IO Incoming Messages
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleReceiveMessage = (msg) => {
+      const chatKey = msg.conversationId || activeChatId;
+      const formattedMsg = {
+        id: msg.id || Date.now(),
+        senderId: msg.senderId,
+        isMe: msg.senderId === user?.id,
+        text: msg.content,
+        time: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessagesMap((prev) => ({
+        ...prev,
+        [chatKey]: [...(prev[chatKey] || []), formattedMsg]
+      }));
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === chatKey
+            ? {
+                ...c,
+                lastMessage: msg.content,
+                time: 'Just now',
+                unreadCount: activeChatId === chatKey ? 0 : (c.unreadCount || 0) + 1
+              }
+            : c
+        )
+      );
+    };
+
+    socket.on('receive_message', handleReceiveMessage);
+
+    return () => {
+      socket.off('receive_message', handleReceiveMessage);
+    };
+  }, [socket, activeChatId, user]);
+
   const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
   const activeMessages = messagesMap[activeChatId] || [];
 
-  // Handle Send Message
-  const handleSendMessage = (text) => {
+  // Handle Send Message (Persist to Backend REST + Socket.IO Broadcast)
+  const handleSendMessage = async (text) => {
     const newMsg = {
       id: Date.now(),
-      senderId: 'me',
+      senderId: user?.id || 'me',
       isMe: true,
       text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    // Update local state instantly for zero-latency UX
     setMessagesMap((prev) => ({
       ...prev,
       [activeChatId]: [...(prev[activeChatId] || []), newMsg]
@@ -99,12 +206,67 @@ const ChatScreen = () => {
           : c
       )
     );
+
+    // Emit Real-Time Socket.IO event
+    emitSendMessage({
+      conversationId: activeChatId,
+      recipientId: activeChat?.recipientId,
+      content: text
+    });
+
+    // Also persist via REST API if numeric DB chat ID
+    if (typeof activeChatId === 'number' || !activeChatId.toString().startsWith('chat_')) {
+      try {
+        await apiRequest('/messages', 'POST', {
+          conversationId: activeChatId,
+          content: text
+        });
+      } catch (err) {
+        console.error('Failed to persist message via REST:', err);
+      }
+    }
   };
 
-  // Handle starting chat from Contacts or Search
-  const handleStartChatWithContact = (contact) => {
+  // Handle starting a 1-on-1 chat from Contacts or Search
+  const handleStartChatWithContact = async (contact) => {
+    try {
+      // Create or fetch direct conversation from SQLite backend if real user
+      if (contact.id) {
+        const res = await apiRequest('/chats', 'POST', { recipientId: contact.id });
+        if (res && res.conversation) {
+          const convId = res.conversation.id;
+          const existingIndex = conversations.findIndex((c) => c.id === convId);
+
+          if (existingIndex === -1) {
+            const newConv = {
+              id: convId,
+              name: contact.fullName || contact.name,
+              email: contact.email,
+              avatar: contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact.fullName || contact.name)}`,
+              recipientId: contact.id,
+              lastMessage: 'Started a new conversation',
+              time: 'Just now',
+              unreadCount: 0,
+              isOnline: onlineUsers.has(contact.id),
+              status: contact.status || 'Hey there! I am using ChatApp.'
+            };
+
+            setConversations((prev) => [newConv, ...prev]);
+          }
+
+          setActiveChatId(convId);
+          setActiveTab('chats');
+          setMobileView('chat');
+          return;
+        }
+      }
+    } catch (err) {
+      console.log('Falling back to local state chat creation');
+    }
+
+    // Local fallback
     const existingIndex = conversations.findIndex((c) => c.name === contact.name || c.email === contact.email);
-    
+
     if (existingIndex !== -1) {
       setActiveChatId(conversations[existingIndex].id);
     } else {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import AuthPage from './components/auth/AuthPage';
 import ChatScreen from './components/chat/ChatScreen';
 
@@ -21,7 +22,9 @@ const MainContent = () => {
 const App = () => {
   return (
     <AuthProvider>
-      <MainContent />
+      <SocketProvider>
+        <MainContent />
+      </SocketProvider>
     </AuthProvider>
   );
 };

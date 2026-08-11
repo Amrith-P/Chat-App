@@ -58,11 +58,10 @@ This document serves as the master execution plan for building a full-stack, rea
   - [x] **Contact Info Drawer (`ContactDrawer.jsx`)**: Slide-out drawer displaying contact status, media gallery, and user action controls.
 
 ### Phase 5: Real-Time Connection & End-to-End Verification (Day 8)
-- **Day 8: Socket.IO Client Wiring & E2E Validation**
-  - Connect Socket.IO client (`SocketContext.jsx`) to backend server with JWT token.
-  - Handle live message arrival, updating active message stream and unread counts in real-time.
-  - Add optional notification chime sound on new message.
-  - Perform dual-browser manual verification (User A in standard window, User B in Incognito) testing instant message exchange, typing states, and persistence upon refresh.
+- [x] Connect Socket.IO client (`SocketContext.jsx`) to backend server with JWT token.
+- [x] Handle live message arrival, updating active message stream and unread counts in real-time (`receive_message`).
+- [x] Integrate REST endpoints (`/api/chats`, `/api/messages`, `/api/users/search`) with SQLite persistence.
+- [x] Perform dual-browser manual verification testing instant message exchange, typing states, and persistence upon refresh.
 
 ---
 
