@@ -23,6 +23,27 @@ if (isPostgres) {
     return sql.replace(/\?/g, () => `$${index++}`);
   };
 
+  // Map PostgreSQL lowercase column keys to camelCase for full JS compatibility
+  const normalizeRow = (row) => {
+    if (!row || typeof row !== 'object') return row;
+    const normalized = {};
+    for (const key of Object.keys(row)) {
+      normalized[key] = row[key];
+      if (key === 'fullname') normalized.fullName = row[key];
+      if (key === 'resettoken') normalized.resetToken = row[key];
+      if (key === 'resettokenexpiry') normalized.resetTokenExpiry = row[key];
+      if (key === 'createdat') normalized.createdAt = row[key];
+      if (key === 'conversationid') normalized.conversationId = row[key];
+      if (key === 'userid') normalized.userId = row[key];
+      if (key === 'senderid') normalized.senderId = row[key];
+      if (key === 'messagetype') normalized.messageType = row[key];
+      if (key === 'contactid') normalized.contactId = row[key];
+      if (key === 'lastmessage') normalized.lastMessage = row[key];
+      if (key === 'lastmessagetime') normalized.lastMessageTime = row[key];
+    }
+    return normalized;
+  };
+
   dbWrapper = {
     isPostgres: true,
     get: (sql, params = [], cb) => {
@@ -31,7 +52,8 @@ if (isPostgres) {
       const pgSql = convertPlaceholders(sql);
 
       pool.query(pgSql, queryParams, (err, res) => {
-        if (callback) callback(err, res ? res.rows[0] : null);
+        const row = res && res.rows ? normalizeRow(res.rows[0]) : null;
+        if (callback) callback(err, row);
       });
     },
 
@@ -41,7 +63,8 @@ if (isPostgres) {
       const pgSql = convertPlaceholders(sql);
 
       pool.query(pgSql, queryParams, (err, res) => {
-        if (callback) callback(err, res ? res.rows : []);
+        const rows = res && res.rows ? res.rows.map(normalizeRow) : [];
+        if (callback) callback(err, rows);
       });
     },
 

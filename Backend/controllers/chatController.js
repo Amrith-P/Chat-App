@@ -18,18 +18,18 @@ export const getUserChats = (req, res) => {
       (
         SELECT content FROM messages 
         WHERE conversationId = c.id 
-        ORDER BY createdAt DESC LIMIT 1
+        ORDER BY id DESC LIMIT 1
       ) AS lastMessage,
       (
         SELECT createdAt FROM messages 
         WHERE conversationId = c.id 
-        ORDER BY createdAt DESC LIMIT 1
+        ORDER BY id DESC LIMIT 1
       ) AS lastMessageTime
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversationId AND cm1.userId = ?
     JOIN conversation_members cm2 ON c.id = cm2.conversationId AND cm2.userId != ?
     JOIN users u ON cm2.userId = u.id
-    ORDER BY COALESCE(lastMessageTime, c.createdAt) DESC
+    ORDER BY c.id DESC
   `;
 
   db.all(query, [currentUserId, currentUserId], (err, chats) => {
@@ -38,7 +38,7 @@ export const getUserChats = (req, res) => {
       return res.status(500).json({ message: 'Failed to fetch conversations', error: err.message });
     }
 
-    const formattedChats = chats.map((chat) => ({
+    const formattedChats = (chats || []).map((chat) => ({
       id: chat.id,
       contactId: chat.contactId,
       name: chat.name,
@@ -93,11 +93,11 @@ export const createOrGetDirectChat = (req, res) => {
           message: 'Existing chat found',
           chat: {
             id: existingChat.id,
-            contactId: recipient.id,
-            name: recipient.fullName,
-            email: recipient.email,
-            avatar: recipient.avatar,
-            status: recipient.status,
+            contactId: recipient ? recipient.id : recipientId,
+            name: recipient ? recipient.fullName : 'User',
+            email: recipient ? recipient.email : '',
+            avatar: recipient ? recipient.avatar : '',
+            status: recipient ? recipient.status : '',
             lastMessage: 'Say hi!',
             time: 'Just now',
             unreadCount: 0,
@@ -111,33 +111,32 @@ export const createOrGetDirectChat = (req, res) => {
     // Create new conversation
     db.run("INSERT INTO conversations (type) VALUES ('direct')", function (createErr) {
       if (createErr) {
-        return res.status(500).json({ message: 'Failed to create conversation' });
+        return res.status(500).json({ message: 'Failed to create conversation', error: createErr.message });
       }
 
       const newChatId = this.lastID;
 
-      // Add both participants
-      const memberStmt = db.prepare('INSERT INTO conversation_members (conversationId, userId) VALUES (?, ?)');
-      memberStmt.run(newChatId, currentUserId);
-      memberStmt.run(newChatId, recipientId);
-      memberStmt.finalize();
-
-      // Return new chat details with recipient info
-      db.get('SELECT id, fullName, email, avatar, status FROM users WHERE id = ?', [recipientId], (uErr, recipient) => {
-        res.status(201).json({
-          message: 'Chat created successfully',
-          chat: {
-            id: newChatId,
-            contactId: recipient.id,
-            name: recipient.fullName,
-            email: recipient.email,
-            avatar: recipient.avatar,
-            status: recipient.status,
-            lastMessage: 'Conversation started',
-            time: 'Just now',
-            unreadCount: 0,
-            isOnline: true
-          }
+      // Add both participants using unified db.run
+      db.run('INSERT INTO conversation_members (conversationId, userId) VALUES (?, ?)', [newChatId, currentUserId], (m1Err) => {
+        db.run('INSERT INTO conversation_members (conversationId, userId) VALUES (?, ?)', [newChatId, recipientId], (m2Err) => {
+          // Return new chat details with recipient info
+          db.get('SELECT id, fullName, email, avatar, status FROM users WHERE id = ?', [recipientId], (uErr, recipient) => {
+            res.status(201).json({
+              message: 'Chat created successfully',
+              chat: {
+                id: newChatId,
+                contactId: recipient ? recipient.id : recipientId,
+                name: recipient ? recipient.fullName : 'User',
+                email: recipient ? recipient.email : '',
+                avatar: recipient ? recipient.avatar : '',
+                status: recipient ? recipient.status : '',
+                lastMessage: 'Conversation started',
+                time: 'Just now',
+                unreadCount: 0,
+                isOnline: true
+              }
+            });
+          });
         });
       });
     });
