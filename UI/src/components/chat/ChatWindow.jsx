@@ -112,17 +112,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
   };
 
   if (!activeChat) {
-    return (
-      <div className="flex-1 h-full bg-slate-950 flex flex-col items-center justify-center p-8 text-center select-none">
-        <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-3xl mb-4 shadow-xl">
-          💬
-        </div>
-        <h2 className="text-2xl font-extrabold text-white mb-2">Welcome to ChatApp Pro</h2>
-        <p className="text-slate-400 text-sm max-w-sm">
-          Select a contact from the sidebar or click the <span className="text-emerald-400 font-bold">+</span> button to start a new 1-on-1 real-time conversation.
-        </p>
-      </div>
-    );
+    return <div className="flex-1 h-full bg-slate-950" />;
   }
 
   const filteredMessages = chatSearchTerm
@@ -342,7 +332,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onToggleDrawer, onBac
           <div className="absolute bottom-20 left-4 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-30 space-y-1 min-w-[150px]">
             <button
               onClick={() => {
-                onSendMessage('📷 Shared Image Attachment: photo_sample.png');
+                onSendMessage('📷 Shared Image Attachment: photo.png');
                 setShowAttachmentMenu(false);
               }}
               className="w-full flex items-center space-x-2 p-2 hover:bg-slate-800 rounded-xl text-xs text-slate-300 transition"

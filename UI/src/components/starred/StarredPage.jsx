@@ -1,38 +1,8 @@
 import React, { useState } from 'react';
-import { FaStar, FaSearch, FaArrowRight, FaTrash, FaCopy, FaComments } from 'react-icons/fa';
-
-const initialStarredMessages = [
-  {
-    id: 101,
-    chatName: 'Sarah Jenkins',
-    chatAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-    sender: 'Sarah Jenkins',
-    text: "Sounds great! Let's touch base tomorrow morning 🚀",
-    time: '10:45 AM',
-    date: 'Today'
-  },
-  {
-    id: 102,
-    chatName: 'David Chen',
-    chatAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
-    sender: 'David Chen',
-    text: 'Did you check the new backend API endpoints for SQLite integration?',
-    time: '09:20 AM',
-    date: 'Today'
-  },
-  {
-    id: 103,
-    chatName: 'Emma Watson',
-    chatAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
-    sender: 'Emma Watson',
-    text: 'Thanks for sending over the documentation! Everything looks super clean.',
-    time: '4:30 PM',
-    date: 'Yesterday'
-  }
-];
+import { FaStar, FaSearch, FaArrowRight, FaTrash, FaCopy } from 'react-icons/fa';
 
 const StarredPage = ({ onJumpToChat }) => {
-  const [starredMessages, setStarredMessages] = useState(initialStarredMessages);
+  const [starredMessages, setStarredMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleUnstar = (id) => {
@@ -82,9 +52,9 @@ const StarredPage = ({ onJumpToChat }) => {
             <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-400 text-2xl mx-auto">
               ⭐
             </div>
-            <p className="text-sm font-medium">No starred messages found.</p>
+            <p className="text-sm font-medium">No starred messages saved yet.</p>
             <p className="text-xs text-slate-600 max-w-xs mx-auto">
-              Star important messages in any chat to keep them saved here for quick reference.
+              Hover over any message in your chat threads and click the Star icon to bookmark important messages here.
             </p>
           </div>
         ) : (

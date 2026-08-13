@@ -11,12 +11,12 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 
-const NavDock = ({ activeTab, setActiveTab }) => {
+const NavDock = ({ activeTab, setActiveTab, unreadCount = 0 }) => {
   const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(true);
 
   const navItems = [
-    { id: 'chats', label: 'Chats', icon: FaCommentAlt, badge: 3 },
+    { id: 'chats', label: 'Chats', icon: FaCommentAlt, badge: unreadCount > 0 ? unreadCount : null },
     { id: 'contacts', label: 'Contacts', icon: FaUserFriends, badge: null },
     { id: 'starred', label: 'Starred', icon: FaStar, badge: null },
     { id: 'settings', label: 'Settings', icon: FaCog, badge: null },

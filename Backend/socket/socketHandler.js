@@ -92,16 +92,16 @@ export const initSocket = (server) => {
           // Send confirmation back to sender
           socket.emit('message_sent', messageObj);
 
-          // Emit to recipient's personal user room
+          // Emit to recipient's personal user room (excluding sender)
           if (recipientId) {
-            io.to(`user_${recipientId}`).emit('receive_message', {
+            socket.to(`user_${recipientId}`).emit('receive_message', {
               ...messageObj,
               isMe: false
             });
           }
 
-          // Emit to conversation room
-          io.to(`chat_${targetChatId}`).emit('receive_message', messageObj);
+          // Emit to conversation room (excluding sender)
+          socket.to(`chat_${targetChatId}`).emit('receive_message', messageObj);
         }
       );
     });

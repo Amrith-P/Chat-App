@@ -12,12 +12,6 @@ import {
 } from 'react-icons/fa';
 import { apiRequest } from '../../api/client';
 
-const sampleMessagesHistory = [
-  { id: 1, chatName: 'Sarah Jenkins', sender: 'Sarah', text: "Sounds great! Let's touch base tomorrow morning 🚀", time: '10:45 AM' },
-  { id: 2, chatName: 'David Chen', sender: 'David', text: 'Did you check the new backend API endpoints for SQLite?', time: '09:20 AM' },
-  { id: 3, chatName: 'Emma Watson', sender: 'Emma', text: 'Thanks for sending over the documentation!', time: 'Yesterday' }
-];
-
 const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'favorites'
@@ -43,14 +37,20 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
     const matchedContacts = conversations.filter(
       (c) =>
         c.name.toLowerCase().includes(term) ||
-        c.email.toLowerCase().includes(term) ||
-        c.lastMessage.toLowerCase().includes(term)
+        c.email.toLowerCase().includes(term)
     );
 
-    // 2. Grouped Messages matching
-    const matchedMessages = sampleMessagesHistory.filter(
-      (m) => m.text.toLowerCase().includes(term) || m.sender.toLowerCase().includes(term)
-    );
+    // 2. Grouped Messages matching from active conversation streams
+    const matchedMessages = conversations
+      .filter((c) => c.lastMessage && c.lastMessage.toLowerCase().includes(term))
+      .map((c) => ({
+        id: c.id,
+        chatId: c.id,
+        chatName: c.name,
+        sender: c.name,
+        text: c.lastMessage,
+        time: c.time
+      }));
 
     setSearchResults((prev) => ({
       ...prev,
@@ -301,7 +301,9 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
             </div>
           ) : (
             conversations.map((chat) => {
-              const isActive = chat.id === activeChatId;
+              const isActive = String(chat.id) === String(activeChatId);
+              const isUnread = (chat.unreadCount > 0 || chat.hasUnread) && !isActive;
+
               return (
                 <div
                   key={chat.id}
@@ -329,9 +331,14 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className={`text-sm truncate ${isActive ? 'font-bold text-white' : 'font-semibold text-slate-200'}`}>
-                        {chat.name}
-                      </h3>
+                      <div className="flex items-center space-x-2 truncate pr-2">
+                        <h3 className={`text-sm truncate ${isActive ? 'font-bold text-white' : 'font-semibold text-slate-200'}`}>
+                          {chat.name}
+                        </h3>
+                        {isUnread && (
+                          <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-lg shadow-blue-500/50 animate-pulse shrink-0" title="Unread Message" />
+                        )}
+                      </div>
                       <span className="text-[11px] text-slate-500 shrink-0">{chat.time}</span>
                     </div>
 
