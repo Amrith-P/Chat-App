@@ -141,31 +141,66 @@ const ChatScreen = () => {
     fetchMessages();
   }, [activeChatId, user]);
 
+  // Join active conversation room on Socket.IO
+  useEffect(() => {
+    if (socket && activeChatId) {
+      socket.emit('join_chat', { chatId: activeChatId, conversationId: activeChatId });
+    }
+  }, [socket, activeChatId]);
+
   // Listen to Real-Time Socket.IO Incoming Messages
   useEffect(() => {
     if (!socket) return;
 
     const handleReceiveMessage = (msg) => {
-      const chatKey = msg.conversationId || activeChatId;
+      const chatKey = msg.conversationId || msg.chatId || activeChatId;
+      const msgContent = msg.content || msg.text || '';
+      const isMyMessage = msg.senderId === user?.id;
+
+      // Play audio notification chime for incoming messages from recipient
+      if (!isMyMessage) {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.1, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {}
+      }
+
       const formattedMsg = {
         id: msg.id || Date.now(),
         senderId: msg.senderId,
-        isMe: msg.senderId === user?.id,
-        text: msg.content,
+        isMe: isMyMessage,
+        text: msgContent,
         time: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
-      setMessagesMap((prev) => ({
-        ...prev,
-        [chatKey]: [...(prev[chatKey] || []), formattedMsg]
-      }));
+      setMessagesMap((prev) => {
+        const existing = prev[chatKey] || [];
+        // Prevent duplicate append if already added locally
+        if (existing.some((m) => m.id === formattedMsg.id)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [chatKey]: [...existing, formattedMsg]
+        };
+      });
 
       setConversations((prev) =>
         prev.map((c) =>
           c.id === chatKey
             ? {
                 ...c,
-                lastMessage: msg.content,
+                lastMessage: msgContent,
                 time: 'Just now',
                 unreadCount: activeChatId === chatKey ? 0 : (c.unreadCount || 0) + 1
               }

@@ -47,36 +47,49 @@ export const initSocket = (server) => {
     io.emit('user_online', { userId });
 
     // Handle joining a specific chat room
-    socket.on('join_chat', ({ chatId }) => {
-      socket.join(`chat_${chatId}`);
+    socket.on('join_chat', ({ chatId, conversationId }) => {
+      const targetRoom = chatId || conversationId;
+      if (targetRoom) {
+        socket.join(`chat_${targetRoom}`);
+      }
     });
 
     // Handle real-time sending of messages
-    socket.on('send_message', ({ chatId, recipientId, text }) => {
-      if (!chatId || !text || !text.trim()) return;
+    socket.on('send_message', (data = {}) => {
+      const targetChatId = data.chatId || data.conversationId;
+      const targetText = data.text || data.content;
+      const recipientId = data.recipientId;
 
-      const trimmedText = text.trim();
+      if (!targetChatId || !targetText || !targetText.trim()) {
+        console.warn('⚠️ Invalid send_message payload received:', data);
+        return;
+      }
 
-      // Store in SQLite database
+      const trimmedText = targetText.trim();
+
+      // Store in database (SQLite or PostgreSQL)
       db.run(
         'INSERT INTO messages (conversationId, senderId, content) VALUES (?, ?, ?)',
-        [chatId, userId, trimmedText],
+        [targetChatId, userId, trimmedText],
         function (err) {
           if (err) {
-            console.error('Failed to save real-time message:', err.message);
+            console.error('Failed to save real-time message to DB:', err.message);
             return;
           }
 
           const messageObj = {
-            id: this.lastID,
-            chatId,
+            id: this.lastID || Date.now(),
+            chatId: targetChatId,
+            conversationId: targetChatId,
             senderId: userId,
             senderName: socket.user.fullName,
             text: trimmedText,
+            content: trimmedText,
+            createdAt: new Date().toISOString(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
 
-          // Send back to sender
+          // Send confirmation back to sender
           socket.emit('message_sent', messageObj);
 
           // Emit to recipient's personal user room
@@ -87,17 +100,22 @@ export const initSocket = (server) => {
             });
           }
 
-          // Emit to room
-          io.to(`chat_${chatId}`).emit('receive_message', messageObj);
+          // Emit to conversation room
+          io.to(`chat_${targetChatId}`).emit('receive_message', messageObj);
         }
       );
     });
 
     // Handle typing notifications
-    socket.on('typing', ({ chatId, recipientId, isTyping }) => {
+    socket.on('typing', (data = {}) => {
+      const targetChatId = data.chatId || data.conversationId;
+      const recipientId = data.recipientId;
+      const isTyping = data.isTyping;
+
       if (recipientId) {
         io.to(`user_${recipientId}`).emit('user_typing', {
-          chatId,
+          chatId: targetChatId,
+          conversationId: targetChatId,
           userId,
           isTyping
         });
