@@ -10,13 +10,13 @@ export const getUserChats = (req, res) => {
       c.id AS id,
       c.type,
       c.createdAt,
-      u.id AS "contactId",
+      u.id AS contactId,
       u.fullName AS name,
       u.email AS email,
       u.avatar AS avatar,
       u.status AS status,
-      m.content AS "lastMessage",
-      m.createdAt AS "lastMessageTime"
+      m.content AS lastMessage,
+      m.createdAt AS lastMessageTime
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversationId AND cm1.userId = ?
     JOIN conversation_members cm2 ON c.id = cm2.conversationId AND cm2.userId != ?
@@ -37,14 +37,14 @@ export const getUserChats = (req, res) => {
 
     const formattedChats = (chats || []).map((chat) => ({
       id: chat.id,
-      contactId: chat.contactId,
+      contactId: chat.contactId ?? chat.contactid,
       name: chat.name,
       email: chat.email,
       avatar: chat.avatar,
       status: chat.status,
-      lastMessage: chat.lastMessage || 'No messages yet. Say hi!',
-      lastMessageTime: chat.lastMessageTime || null,
-      time: chat.lastMessageTime || 'New',
+      lastMessage: chat.lastMessage ?? chat.lastmessage ?? 'No messages yet. Say hi!',
+      lastMessageTime: chat.lastMessageTime ?? chat.lastmessagetime ?? null,
+      time: chat.lastMessageTime ?? chat.lastmessagetime ?? 'New',
       unreadCount: 0,
       isOnline: true
     }));
