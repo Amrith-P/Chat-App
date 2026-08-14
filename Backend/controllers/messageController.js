@@ -8,7 +8,7 @@ export const getMessagesByChatId = (req, res) => {
 
   // Verify user is a member of the conversation
   db.get(
-    'SELECT * FROM conversation_members WHERE conversationId = ? AND userId = ?',
+    'SELECT * FROM conversation_members WHERE conversationid = ? AND userid = ?',
     [chatId, currentUserId],
     (err, member) => {
       if (err || !member) {
@@ -16,11 +16,11 @@ export const getMessagesByChatId = (req, res) => {
       }
 
       db.all(
-        `SELECT m.id, m.conversationId, m.senderId, m.content AS text, m.messageType, m.replyToId, m.isForwarded, m.isEdited, m.isDeleted, m.readAt, m.createdAt, u.fullName AS senderName 
+        `SELECT m.id AS "id", m.conversationid AS "conversationId", m.senderid AS "senderId", m.content AS "text", m.messagetype AS "messageType", m.replytoid AS "replyToId", m.isforwarded AS "isForwarded", m.isedited AS "isEdited", m.isdeleted AS "isDeleted", m.readat AS "readAt", m.createdat AS "createdAt", u.fullname AS "senderName" 
          FROM messages m
-         JOIN users u ON m.senderId = u.id
-         WHERE m.conversationId = ?
-         ORDER BY m.createdAt ASC`,
+         JOIN users u ON m.senderid = u.id
+         WHERE m.conversationid = ?
+         ORDER BY m.id ASC`,
         [chatId],
         (mErr, messages) => {
           if (mErr) {
@@ -29,18 +29,21 @@ export const getMessagesByChatId = (req, res) => {
 
           // Fetch all reactions for this conversation
           db.all(
-            `SELECT r.id, r.messageId, r.userId, r.emoji, u.fullName AS userName
+            `SELECT r.id AS "id", r.messageid AS "messageId", r.userid AS "userId", r.emoji AS "emoji", u.fullname AS "userName"
              FROM message_reactions r
-             JOIN messages m ON r.messageId = m.id
-             JOIN users u ON r.userId = u.id
-             WHERE m.conversationId = ?`,
+             JOIN messages m ON r.messageid = m.id
+             JOIN users u ON r.userid = u.id
+             WHERE m.conversationid = ?`,
             [chatId],
             (rErr, reactionsRows) => {
               const reactionsMap = {};
               if (!rErr && reactionsRows) {
                 reactionsRows.forEach(r => {
-                  if (!reactionsMap[r.messageId]) reactionsMap[r.messageId] = [];
-                  reactionsMap[r.messageId].push({ id: r.id, userId: r.userId, userName: r.userName, emoji: r.emoji });
+                  const mId = r.messageId || r.messageid;
+                  const uId = r.userId || r.userid;
+                  const uName = r.userName || r.username;
+                  if (!reactionsMap[mId]) reactionsMap[mId] = [];
+                  reactionsMap[mId].push({ id: r.id, userId: uId, userName: uName, emoji: r.emoji });
                 });
               }
 

@@ -7,23 +7,23 @@ export const getUserChats = (req, res) => {
 
   const query = `
     SELECT 
-      c.id AS id,
-      c.type,
-      c.createdAt,
-      u.id AS contactId,
-      u.fullName AS name,
-      u.email AS email,
-      u.avatar AS avatar,
-      u.status AS status,
-      m.content AS lastMessage,
-      m.createdAt AS lastMessageTime
+      c.id AS "id",
+      c.type AS "type",
+      c.createdat AS "createdAt",
+      u.id AS "contactId",
+      u.fullname AS "name",
+      u.email AS "email",
+      u.avatar AS "avatar",
+      u.status AS "status",
+      m.content AS "lastMessage",
+      m.createdat AS "lastMessageTime"
     FROM conversations c
-    JOIN conversation_members cm1 ON c.id = cm1.conversationId AND cm1.userId = ?
-    JOIN conversation_members cm2 ON c.id = cm2.conversationId AND cm2.userId != ?
-    JOIN users u ON cm2.userId = u.id
+    JOIN conversation_members cm1 ON c.id = cm1.conversationid AND cm1.userid = ?
+    JOIN conversation_members cm2 ON c.id = cm2.conversationid AND cm2.userid != ?
+    JOIN users u ON cm2.userid = u.id
     LEFT JOIN messages m ON m.id = (
       SELECT id FROM messages 
-      WHERE conversationId = c.id 
+      WHERE conversationid = c.id 
       ORDER BY id DESC LIMIT 1
     )
     ORDER BY c.id DESC
