@@ -358,17 +358,7 @@ const AuthPage = () => {
               </button>
 
               {/* Quick Demo Login */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  disabled={isSubmitting}
-                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-emerald-400 font-semibold rounded-xl flex items-center justify-center space-x-2 transition"
-                >
-                  <FaMagic />
-                  <span>One-Click Demo Account Login</span>
-                </button>
-              </div>
+              
             </form>
           )}
 
