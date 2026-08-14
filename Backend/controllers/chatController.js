@@ -48,9 +48,6 @@ export const getUserChats = (req, res) => {
       unreadCount: 0,
       isOnline: true
     }));
-      unreadCount: 0,
-      isOnline: true
-    }));
 
     res.json({ chats: formattedChats });
   });
