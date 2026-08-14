@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // Strict limiter for authentication endpoints to prevent brute-force attacks
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // limit each IP to 15 auth requests per windowMs
+  max: 100, // limit each IP to 100 auth requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
   message: {
