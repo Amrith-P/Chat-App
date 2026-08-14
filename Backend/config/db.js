@@ -42,7 +42,7 @@ if (isPostgres) {
       if (key === 'readat') normalized.readAt = row[key];
       if (key === 'contactid') normalized.contactId = row[key];
       if (key === 'lastmessage') normalized.lastMessage = row[key];
-      if (key === 'lastmessagetime') normalized.lastMessageTime = row[key];
+      if (key === 'lastmessagetime' || key === 'lastmsgtime') normalized.lastMessageTime = row[key];
       if (key === 'emailverified') normalized.emailVerified = row[key];
     }
     return normalized;
@@ -216,6 +216,22 @@ export const initDb = () => {
       dbWrapper.run(q, [], (err) => {
         if (err) console.error('PostgreSQL Table Init Error:', err.message);
       });
+    });
+
+    const alterQueries = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Hey there! I am using ChatApp.';`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS emailVerified BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetToken TEXT;`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetTokenExpiry BIGINT;`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS replyToId INTEGER;`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isForwarded BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isEdited BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isDeleted BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS readAt TIMESTAMP;`
+    ];
+
+    alterQueries.forEach((q) => {
+      dbWrapper.run(q, [], () => {});
     });
   } else {
     // SQLite Table Schemas with Foreign Keys & Indexes

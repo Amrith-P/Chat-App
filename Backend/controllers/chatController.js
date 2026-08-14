@@ -7,16 +7,16 @@ export const getUserChats = (req, res) => {
 
   const query = `
     SELECT 
-      c.id AS "id",
-      c.type AS "type",
-      c.createdat AS "createdAt",
-      u.id AS "contactId",
-      u.fullname AS "name",
-      u.email AS "email",
-      u.avatar AS "avatar",
-      u.status AS "status",
-      m.content AS "lastMessage",
-      m.createdat AS "lastMessageTime"
+      c.id,
+      c.type,
+      c.createdat,
+      u.id AS contactid,
+      u.fullname AS name,
+      u.email,
+      u.avatar,
+      u.status,
+      m.content AS lastmessage,
+      m.createdat AS lastmsgtime
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversationid AND cm1.userid = ?
     JOIN conversation_members cm2 ON c.id = cm2.conversationid AND cm2.userid != ?
@@ -43,8 +43,11 @@ export const getUserChats = (req, res) => {
       avatar: chat.avatar,
       status: chat.status,
       lastMessage: chat.lastMessage ?? chat.lastmessage ?? 'No messages yet. Say hi!',
-      lastMessageTime: chat.lastMessageTime ?? chat.lastmessagetime ?? null,
-      time: chat.lastMessageTime ?? chat.lastmessagetime ?? 'New',
+      lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? null,
+      time: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? 'New',
+      unreadCount: 0,
+      isOnline: true
+    }));
       unreadCount: 0,
       isOnline: true
     }));
