@@ -1,6 +1,8 @@
-const API_BASE_URL = import.meta.env.MODE === 'development'
-  ? 'http://localhost:5050/api'
-  : 'https://chat-app-0yh9.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.MODE === 'development'
+    ? 'http://localhost:5050/api'
+    : 'https://chat-app-0yh9.onrender.com/api'
+);
 
 // Short-lived Access Token stored strictly in application memory
 let inMemoryAccessToken = localStorage.getItem('chat_token') || null;
@@ -37,7 +39,16 @@ export const apiRequest = async (endpoint, method = 'GET', body = null, isRetry 
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    const data = await response.json();
+    
+    // Safely parse JSON or text error fallback
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = { message: text || `HTTP ${response.status} Error` };
+    }
 
     // Transparent 401 Token Refresh Interceptor
     if (response.status === 401 && !isRetry && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register') && !endpoint.includes('/auth/refresh')) {
@@ -53,6 +64,8 @@ export const apiRequest = async (endpoint, method = 'GET', body = null, isRetry 
           setAccessToken(refreshData.token);
           // Retry initial request with new access token
           return await apiRequest(endpoint, method, body, true);
+        } else {
+          setAccessToken(null);
         }
       } catch (refreshErr) {
         setAccessToken(null);
@@ -60,12 +73,12 @@ export const apiRequest = async (endpoint, method = 'GET', body = null, isRetry 
     }
 
     if (!response.ok) {
-      throw new Error(data.message || 'An error occurred during API request');
+      throw new Error(data.message || `An error occurred (${response.status})`);
     }
 
     return data;
   } catch (error) {
-    console.error(`API Error (${endpoint}):`, error);
+    console.error(`API Error (${endpoint}):`, error.message || error);
     throw error;
   }
 };
