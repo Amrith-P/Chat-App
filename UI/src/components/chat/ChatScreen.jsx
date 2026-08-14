@@ -439,7 +439,7 @@ const ChatScreen = () => {
           </div>
 
           {/* Active Chat Window */}
-          <div className={`flex-1 h-full ${
+          <div className={`flex-1 h-full min-w-0 overflow-hidden ${
             mobileView === 'chat' ? 'block' : 'hidden md:block'
           }`}>
             <ChatWindow

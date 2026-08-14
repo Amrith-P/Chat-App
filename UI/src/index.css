@@ -31,6 +31,32 @@ body{
   z-index: -1;
 }
 
+/* Force strict text wrapping for chat bubbles and inputs */
+.break-words {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* React Input Emoji Mobile Bounds Fix */
+.react-emoji {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.react-input-emoji--container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.react-input-emoji--input {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  white-space: pre-wrap !important;
+}
+
 /* Accessibility: Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
   *,

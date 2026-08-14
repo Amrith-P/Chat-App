@@ -259,12 +259,12 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
               }
 
               return (
-                <div key={msg.id} className={`flex flex-col group ${isMe ? 'items-end' : 'items-start'} mb-2`}>
+                <div key={msg.id} className={`flex flex-col group ${isMe ? 'items-end' : 'items-start'} mb-2 w-full max-w-full overflow-hidden`}>
                   
-                  <div className={`relative min-w-[120px] max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-lg p-2.5 rounded-2xl text-sm transition-all duration-200 ${
+                  <div className={`relative min-w-[100px] max-w-[80%] sm:max-w-xs md:max-w-md lg:max-w-lg p-2.5 rounded-2xl text-sm transition-all duration-200 ${
                     isMe
-                      ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white rounded-tr-none shadow-lg'
-                      : 'bg-slate-800 border border-slate-700 text-slate-100 rounded-tl-none shadow-md'
+                      ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white rounded-tr-none shadow-lg self-end'
+                      : 'bg-slate-800 border border-slate-700 text-slate-100 rounded-tl-none shadow-md self-start'
                   }`}>
                     
                     {/* Forwarded Badge */}
@@ -293,7 +293,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
 
                     {/* Main Content */}
                     <div className="px-1 pt-0.5 pb-5">
-                      <p className={`leading-relaxed break-words whitespace-pre-wrap text-sm ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
+                      <p className={`leading-relaxed break-words [word-break:break-word] [overflow-wrap:anywhere] whitespace-pre-wrap text-sm ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
                         {msgText}
                       </p>
                     </div>
@@ -307,8 +307,8 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
 
                     {/* BUBBLE HOVER ACTIONS MENU */}
                     {!msg.isDeleted && (
-                      <div className={`absolute top-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-20 ${
-                        isMe ? '-left-[150px]' : '-right-[150px]'
+                      <div className={`absolute -top-9 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-20 ${
+                        isMe ? 'right-0' : 'left-0'
                       }`}>
                         
                         {/* Reaction Trigger */}
@@ -376,11 +376,11 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
       </div>
 
       {/* 3. INPUT BAR */}
-      <footer className="p-3 md:p-4 bg-slate-900 border-t border-slate-800 shrink-0 relative mb-16 md:mb-0">
+      <footer className="p-3 md:p-4 bg-slate-900 border-t border-slate-800 shrink-0 relative mb-16 md:mb-0 w-full max-w-full overflow-hidden box-border">
         
         {/* Reply/Edit Bar Overlay */}
         {(replyingTo || editingMsg) && (
-          <div className="mb-2 p-2 bg-slate-950 border-l-4 border-emerald-500 rounded-r-xl flex items-center justify-between text-xs">
+          <div className="mb-2 p-2 bg-slate-950 border-l-4 border-emerald-500 rounded-r-xl flex items-center justify-between text-xs max-w-full overflow-hidden">
             <div className="truncate pr-2">
               <span className="text-emerald-400 font-bold block">
                 {editingMsg ? 'Editing message:' : `Replying to ${replyingTo.sender}:`}
@@ -404,9 +404,9 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
           </div>
         )}
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full max-w-full overflow-hidden">
           {/* REACT-INPUT-EMOJI COMPONENT */}
-          <div className="flex-1 min-w-0 text-white">
+          <div className="flex-1 min-w-0 max-w-full text-white overflow-hidden">
             <InputEmoji
               value={inputText}
               onChange={setInputText}
