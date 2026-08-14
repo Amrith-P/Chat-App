@@ -37,26 +37,34 @@ body{
   overflow-wrap: anywhere !important;
 }
 
-/* React Input Emoji Mobile Bounds Fix */
-.react-emoji {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+/* React Input Emoji Mobile & Desktop Popover Z-Index Fix */
+footer {
+  overflow: visible !important;
+  z-index: 50 !important;
 }
 
-.react-input-emoji--container {
+.react-input-emoji--container,
+.react-input-emoji--wrapper {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
   overflow: visible !important;
   position: relative !important;
-  z-index: 30 !important;
+  z-index: 50 !important;
 }
 
-.react-input-emoji--picker__container {
-  z-index: 9999 !important;
+.react-input-emoji--picker,
+.react-input-emoji--picker__container,
+.react-emoji-picker--wrapper,
+.react-input-emoji--popover {
   position: absolute !important;
-  bottom: 50px !important;
+  bottom: 60px !important;
+  z-index: 99999 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid #334155 !important;
+  border-radius: 16px !important;
+  background-color: #0f172a !important;
+  overflow: visible !important;
 }
 
 .react-input-emoji--input {

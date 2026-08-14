@@ -415,7 +415,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
       </div>
 
       {/* 3. INPUT BAR */}
-      <footer className="p-3 md:p-4 bg-slate-900 border-t border-slate-800 shrink-0 relative mb-16 md:mb-0 w-full max-w-full overflow-hidden box-border">
+      <footer className="p-2 sm:p-3 bg-slate-900 border-t border-slate-800 shrink-0 relative z-50 overflow-visible w-full box-border">
         
         {/* Reply/Edit Bar Overlay */}
         {(replyingTo || editingMsg) && (
