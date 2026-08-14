@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import InputEmoji from 'react-input-emoji';
 import { 
   FaPhoneAlt, 
   FaVideo, 
@@ -24,8 +23,18 @@ import ConfirmModal from '../common/ConfirmModal';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+const POPULAR_EMOJIS = [
+  '😊', '😂', '🥰', '😍', '😎', '🙏', '❤️', '🔥', '👍', '🙌',
+  '✨', '💯', '🤣', '😭', '🥺', '🎉', '💩', '🥳', '🤯', '👏',
+  '🤝', '💪', '😜', '😋', '🤔', '😴', '😌', '🙄', '😬', '😇',
+  '🤗', '🤩', '😏', '😒', '😔', '💔', '⚡', '🌟', '☀️', '🎁',
+  '🎂', '🍕', '🍻', '🎈', '🚀', '⭐', '✌️', '💬', '👀', '👋',
+  '🤙', '👌', '🖐️', '⭐', '🎈', '🎉'
+];
+
 const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onToggleDrawer, onBackToSidebar, onDeleteChat }) => {
   const [inputText, setInputText] = useState('');
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
   // Header Search & Menu State
   const [isSearchInChatOpen, setIsSearchInChatOpen] = useState(false);
@@ -443,30 +452,72 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
           </div>
         )}
 
-        <div className="flex items-center space-x-2 w-full max-w-full overflow-visible relative">
-          {/* REACT-INPUT-EMOJI COMPONENT */}
-          <div className="flex-1 min-w-0 max-w-full text-white overflow-visible relative">
-            <InputEmoji
-              value={inputText}
-              onChange={setInputText}
-              cleanOnEnter
-              onEnter={handleSendText}
-              placeholder={editingMsg ? "Edit your message..." : `Message ${activeChat.name}...`}
-              background="#0f172a"
-              color="#ffffff"
-              borderColor="#1e293b"
-              borderRadius={12}
-              fontSize={14}
-              fontFamily="sans-serif"
-            />
+        {/* POPULAR EMOJI DRAWER POPOVER */}
+        {isEmojiPickerOpen && (
+          <div className="absolute bottom-16 left-3 right-3 sm:right-auto sm:w-80 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-2">
+              <span className="text-xs font-bold text-slate-300">Choose Emoji</span>
+              <button
+                type="button"
+                onClick={() => setIsEmojiPickerOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <FaTimes className="text-xs" />
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1.5 max-h-48 overflow-y-auto custom-scrollbar p-1">
+              {POPULAR_EMOJIS.map((emoji, idx) => (
+                <button
+                  key={`${emoji}-${idx}`}
+                  type="button"
+                  onClick={() => {
+                    setInputText((prev) => prev + emoji);
+                  }}
+                  className="w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center text-lg transition active:scale-125 select-none"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+
+        <div className="flex items-center space-x-2 w-full max-w-full">
+          {/* Emoji Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+            className={`p-2.5 rounded-xl transition shrink-0 ${
+              isEmojiPickerOpen 
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Toggle Emojis"
+          >
+            <FaSmile className="text-lg" />
+          </button>
+
+          {/* Native Text Input */}
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendText(inputText);
+              }
+            }}
+            placeholder={editingMsg ? "Edit message..." : `Message ${activeChat.name}...`}
+            className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+          />
 
           {/* Send Action Button */}
           <button
             type="button"
             onClick={() => handleSendText(inputText)}
             disabled={!inputText.trim()}
-            className={`p-2.5 sm:p-3 rounded-xl transition flex items-center justify-center font-bold shrink-0 ${
+            className={`w-10 h-10 rounded-xl transition flex items-center justify-center font-bold shrink-0 ${
               inputText.trim() 
                 ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20' 
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed'
