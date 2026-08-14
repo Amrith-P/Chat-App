@@ -20,26 +20,31 @@ export const AuthProvider = ({ children }) => {
       try {
         // Attempt silent refresh via HttpOnly Cookie
         const refreshData = await apiRequest('/auth/refresh', 'POST');
-        updateTokenState(refreshData.token);
-        setUser(refreshData.user);
+        if (refreshData && refreshData.token) {
+          updateTokenState(refreshData.token);
+          setUser(refreshData.user);
+          setLoading(false);
+          return;
+        }
       } catch (err) {
-        // If refresh fails, check if we have a valid stored token
-        const existingToken = getAccessToken();
-        if (existingToken) {
-          try {
-            const data = await apiRequest('/auth/me');
-            setUser(data.user);
-          } catch (meErr) {
-            updateTokenState(null);
-            setUser(null);
-          }
-        } else {
+        // Silent catch
+      }
+
+      // If refresh returned no token or failed, check if we have a valid stored token
+      const existingToken = getAccessToken();
+      if (existingToken) {
+        try {
+          const data = await apiRequest('/auth/me');
+          setUser(data.user);
+        } catch (meErr) {
           updateTokenState(null);
           setUser(null);
         }
-      } finally {
-        setLoading(false);
+      } else {
+        updateTokenState(null);
+        setUser(null);
       }
+      setLoading(false);
     };
 
     verifySession();

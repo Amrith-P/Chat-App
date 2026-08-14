@@ -154,7 +154,7 @@ export const refreshTokenHandler = (req, res) => {
   const refreshToken = req.cookies?.refreshToken;
 
   if (!refreshToken) {
-    return res.status(401).json({ message: 'No refresh token provided' });
+    return res.status(200).json({ authenticated: false, message: 'No active session' });
   }
 
   try {
@@ -165,7 +165,7 @@ export const refreshTokenHandler = (req, res) => {
       [decoded.id],
       (err, user) => {
         if (err || !user) {
-          return res.status(401).json({ message: 'User session invalid' });
+          return res.status(200).json({ authenticated: false, message: 'User session invalid' });
         }
 
         const userProfile = {
@@ -179,6 +179,7 @@ export const refreshTokenHandler = (req, res) => {
         const newAccessToken = generateAccessToken(userProfile);
 
         res.json({
+          authenticated: true,
           message: 'Token refreshed successfully',
           token: newAccessToken,
           user: userProfile
@@ -187,7 +188,7 @@ export const refreshTokenHandler = (req, res) => {
     );
   } catch (error) {
     res.clearCookie('refreshToken');
-    return res.status(401).json({ message: 'Refresh token invalid or expired' });
+    return res.status(200).json({ authenticated: false, message: 'Refresh token invalid or expired' });
   }
 };
 
