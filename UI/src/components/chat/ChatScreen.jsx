@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { apiRequest } from '../../api/client';
+import { sendSystemNotification } from '../../utils/notification';
 import NavDock from '../layout/NavDock';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -173,8 +174,11 @@ const ChatScreen = () => {
       const chatKey = msg.conversationId || msg.chatId;
       const msgContent = msg.content || msg.text || '';
 
-      // Play short audio chime for incoming messages from recipient
+      // Play short audio chime & trigger desktop notification for incoming messages
       playChimeSound('receive');
+      sendSystemNotification(`New message from ${msg.senderName || 'ChatApp User'}`, {
+        body: msgContent || 'Sent a new message'
+      });
 
       const formattedMsg = {
         id: msg.id || Date.now(),

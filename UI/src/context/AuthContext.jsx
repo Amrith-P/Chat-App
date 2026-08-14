@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiRequest, setAccessToken, getAccessToken } from '../api/client';
+import { requestNotificationPermission, sendSystemNotification } from '../utils/notification';
 
 const AuthContext = createContext(null);
 
@@ -14,6 +15,16 @@ export const AuthProvider = ({ children }) => {
     setTokenState(newToken);
   };
 
+  const triggerWelcomeNotification = async (userData) => {
+    if (!userData) return;
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      sendSystemNotification('ChatApp Pro 💬', {
+        body: `Welcome back, ${userData.fullName || 'User'}! Desktop & push notifications enabled.`
+      });
+    }
+  };
+
   // Check current session on mount (attempts silent refresh first, then /me)
   useEffect(() => {
     const verifySession = async () => {
@@ -24,6 +35,7 @@ export const AuthProvider = ({ children }) => {
           updateTokenState(refreshData.token);
           setUser(refreshData.user);
           setLoading(false);
+          triggerWelcomeNotification(refreshData.user);
           return;
         }
       } catch (err) {
@@ -36,6 +48,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const data = await apiRequest('/auth/me');
           setUser(data.user);
+          triggerWelcomeNotification(data.user);
         } catch (meErr) {
           updateTokenState(null);
           setUser(null);
@@ -56,6 +69,7 @@ export const AuthProvider = ({ children }) => {
       const data = await apiRequest('/auth/login', 'POST', { email, password });
       updateTokenState(data.token);
       setUser(data.user);
+      triggerWelcomeNotification(data.user);
       return data;
     } catch (err) {
       setError(err.message);
@@ -69,6 +83,7 @@ export const AuthProvider = ({ children }) => {
       const data = await apiRequest('/auth/register', 'POST', { fullName, email, password, avatar });
       updateTokenState(data.token);
       setUser(data.user);
+      triggerWelcomeNotification(data.user);
       return data;
     } catch (err) {
       setError(err.message);
