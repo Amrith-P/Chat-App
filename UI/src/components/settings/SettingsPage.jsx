@@ -351,4 +351,4 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage;
+export default React.memo(SettingsPage);

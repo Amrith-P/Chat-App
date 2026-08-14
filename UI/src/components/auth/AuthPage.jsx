@@ -166,8 +166,8 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-950 text-white font-sans overflow-hidden">
       
-      {/* LEFT SECTION - Hero Branding & Features */}
-      <div className="w-full md:w-1/2 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 p-6 sm:p-8 lg:p-16 flex flex-col justify-between relative overflow-hidden shrink-0">
+      {/* LEFT SECTION - Hero Presentation (Desktop Only) */}
+      <div className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 p-6 sm:p-8 lg:p-16 flex-col justify-between relative overflow-hidden shrink-0">
         
         {/* Glow Spheres */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -229,6 +229,16 @@ const AuthPage = () => {
       {/* RIGHT SECTION - Auth Form Card */}
       <div className="w-full md:w-1/2 bg-slate-950 p-6 md:p-12 lg:p-16 flex items-center justify-center relative">
         <div className="w-full max-w-md space-y-6">
+
+          {/* Mobile Only Brand Header */}
+          <div className="flex md:hidden items-center justify-center space-x-3 mb-2 pt-4">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <FaComments className="text-xl text-slate-950" />
+            </div>
+            <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
+              ChatApp Pro
+            </span>
+          </div>
 
           {/* Header Title */}
           <div className="text-center md:text-left space-y-2">

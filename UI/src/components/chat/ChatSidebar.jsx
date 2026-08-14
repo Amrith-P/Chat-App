@@ -368,4 +368,4 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
   );
 };
 
-export default ChatSidebar;
+export default React.memo(ChatSidebar);

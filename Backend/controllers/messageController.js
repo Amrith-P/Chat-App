@@ -60,7 +60,7 @@ export const getMessagesByChatId = (req, res) => {
                   isDeleted: Boolean(m.isDeleted),
                   readAt: m.readAt,
                   createdAt: m.createdAt,
-                  time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  time: m.createdAt,
                   reactions: reactionsMap[m.id] || []
                 };
               });

@@ -115,4 +115,4 @@ const StarredPage = () => {
   );
 };
 
-export default StarredPage;
+export default React.memo(StarredPage);

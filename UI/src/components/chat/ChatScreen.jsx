@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -53,19 +53,25 @@ const ChatScreen = () => {
     try {
       const data = await apiRequest('/chats');
       if (data && data.chats) {
-        const formatted = data.chats.map((c) => ({
-          id: c.id,
-          name: c.name || c.recipientName || 'User',
-          email: c.email || c.recipientEmail || '',
-          avatar: c.avatar || c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.name || 'User')}`,
-          recipientId: c.contactId || c.recipientId,
-          lastMessage: c.lastMessage || 'No messages yet. Say hi!',
-          time: c.time || (c.lastMessageTime ? parseDate(c.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New'),
-          timestamp: c.lastMessageTime ? parseDate(c.lastMessageTime).getTime() : 0,
-          unreadCount: c.unreadCount || 0,
-          isOnline: onlineUsers.has(c.contactId || c.recipientId),
-          status: c.status || 'Available'
-        })).sort((a, b) => b.timestamp - a.timestamp);
+        const formatted = data.chats.map((c) => {
+          const rawTime = c.lastMessageTime || c.time;
+          const isSpecial = !rawTime || rawTime === 'Just now' || rawTime === 'New';
+          const displayTime = isSpecial ? (rawTime || 'New') : parseDate(rawTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          return {
+            id: c.id,
+            name: c.name || c.recipientName || 'User',
+            email: c.email || c.recipientEmail || '',
+            avatar: c.avatar || c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.name || 'User')}`,
+            recipientId: c.contactId || c.recipientId,
+            lastMessage: c.lastMessage || 'No messages yet. Say hi!',
+            time: displayTime,
+            timestamp: c.lastMessageTime ? parseDate(c.lastMessageTime).getTime() : 0,
+            unreadCount: c.unreadCount || 0,
+            isOnline: onlineUsers.has(c.contactId || c.recipientId),
+            status: c.status || 'Available'
+          };
+        }).sort((a, b) => b.timestamp - a.timestamp);
 
         setConversations(formatted);
       }
@@ -121,6 +127,41 @@ const ChatScreen = () => {
     }
   }, [socket, activeChatId]);
 
+  // Audio sound effect helper (capped strictly to < 0.25 seconds)
+  const playChimeSound = (type = 'send') => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+
+      if (type === 'send') {
+        osc.frequency.setValueAtTime(700, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1050, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      } else {
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.2);
+      }
+
+      setTimeout(() => {
+        try { ctx.close(); } catch (err) {}
+      }, 250);
+    } catch (e) {}
+  };
+
   // Listen to Real-Time Socket.IO Incoming Messages
   useEffect(() => {
     if (!socket) return;
@@ -132,20 +173,8 @@ const ChatScreen = () => {
       const chatKey = msg.conversationId || msg.chatId;
       const msgContent = msg.content || msg.text || '';
 
-      // Play audio notification chime for incoming messages from recipient
-      try {
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-          gain.gain.setValueAtTime(0.1, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-        } catch (e) {}
+      // Play short audio chime for incoming messages from recipient
+      playChimeSound('receive');
 
       const formattedMsg = {
         id: msg.id || Date.now(),
@@ -259,12 +288,19 @@ const ChatScreen = () => {
     };
   }, [socket, activeChatId, user]);
 
-  const activeChat = activeChatId ? conversations.find((c) => c.id === activeChatId) : null;
-  const activeMessages = activeChatId ? (messagesMap[activeChatId] || []) : [];
+  const activeChat = useMemo(() => {
+    return activeChatId ? conversations.find((c) => String(c.id) === String(activeChatId)) : null;
+  }, [activeChatId, conversations]);
+
+  const activeMessages = useMemo(() => {
+    return activeChatId ? (messagesMap[activeChatId] || []) : [];
+  }, [activeChatId, messagesMap]);
 
   // Handle Send Message (Persist to Backend REST + Socket.IO Broadcast)
   const handleSendMessage = async (text, options = {}) => {
     if (!activeChatId) return;
+
+    playChimeSound('send');
 
     const newMsg = {
       id: Date.now(),
@@ -289,7 +325,7 @@ const ChatScreen = () => {
 
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === activeChatId
+        String(c.id) === String(activeChatId)
           ? { ...c, lastMessage: text, time: 'Just now', timestamp: Date.now(), unreadCount: 0 }
           : c
       ).sort((a, b) => b.timestamp - a.timestamp)
@@ -359,11 +395,28 @@ const ChatScreen = () => {
     setMobileView('chat');
   };
 
-  const totalUnreadCount = conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+  const handleSelectChat = useCallback((id) => {
+    navigate(`/app/chats/${id}`);
+    setMobileView('chat');
+    setConversations((prev) =>
+      prev.map((c) => (String(c.id) === String(id) ? { ...c, unreadCount: 0, hasUnread: false } : c))
+    );
+  }, [navigate]);
+
+  const totalUnreadCount = useMemo(() => {
+    return conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+  }, [conversations]);
 
   return (
     <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden relative">
       
+      {/* Real-Time Disconnecting Banner */}
+      {!isConnected && (
+        <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-slate-950 text-[11px] font-bold text-center py-1 flex items-center justify-center space-x-2 shadow-lg">
+          <span className="animate-pulse">⚡ Connection lost. Reconnecting to real-time engine...</span>
+        </div>
+      )}
+
       {/* Navigation Dock */}
       <NavDock unreadCount={totalUnreadCount} />
 
@@ -379,13 +432,7 @@ const ChatScreen = () => {
             <ChatSidebar
               conversations={conversations}
               activeChatId={activeChatId}
-              onSelectChat={(id) => {
-                navigate(`/app/chats/${id}`);
-                setMobileView('chat');
-                setConversations((prev) =>
-                  prev.map((c) => (String(c.id) === String(id) ? { ...c, unreadCount: 0, hasUnread: false } : c))
-                );
-              }}
+              onSelectChat={handleSelectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
             />
           </div>

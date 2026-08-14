@@ -19,6 +19,7 @@ import {
   FaSmile
 } from 'react-icons/fa';
 import CallModal from './CallModal';
+import ConfirmModal from '../common/ConfirmModal';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -38,6 +39,9 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
   const [editingMsg, setEditingMsg] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [starredMsgIds, setStarredMsgIds] = useState(new Set());
+
+  // Delete Confirmation Modal State
+  const [deleteConfirmMsgId, setDeleteConfirmMsgId] = useState(null);
 
   const messagesEndRef = useRef(null);
 
@@ -90,7 +94,17 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
   };
 
   if (!activeChat) {
-    return <div className="flex-1 h-full bg-slate-950" />;
+    return (
+      <div className="flex-1 h-full bg-slate-950 flex flex-col items-center justify-center text-center p-6 select-none">
+        <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 text-3xl mb-4 shadow-xl">
+          💬
+        </div>
+        <h3 className="text-lg font-bold text-white mb-1">ChatApp Pro</h3>
+        <p className="text-xs text-slate-400 max-w-sm">
+          Select a conversation from the sidebar or search registered users to start messaging in real-time.
+        </p>
+      </div>
+    );
   }
 
   const filteredMessages = chatSearchTerm
@@ -201,9 +215,20 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
       </header>
 
       {/* 2. MESSAGES CONTAINER */}
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900/60 pb-20 md:pb-6">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900/60 pb-20 md:pb-6 flex flex-col">
         
-        {Object.entries(groupedMessages).map(([date, msgs]) => (
+        {filteredMessages.length === 0 ? (
+          <div className="my-auto flex flex-col items-center justify-center text-center p-6 select-none">
+            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 text-2xl mb-3 shadow-lg">
+              👋
+            </div>
+            <h4 className="text-sm font-bold text-white mb-1">No messages yet</h4>
+            <p className="text-xs text-slate-400 max-w-xs">
+              Say hello 👋 to start the conversation with <span className="text-slate-200 font-semibold">{activeChat.name}</span>!
+            </p>
+          </div>
+        ) : (
+          Object.entries(groupedMessages).map(([date, msgs]) => (
           <React.Fragment key={date}>
             <div className="flex justify-center my-4 sticky top-2 z-10">
               <span className="px-3 py-1 bg-slate-900/80 backdrop-blur border border-slate-800 text-[11px] font-semibold text-slate-400 rounded-full shadow-md">
@@ -315,7 +340,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
                             <button onClick={() => { setEditingMsg(msg); setInputText(msgText); }} className="p-2 text-slate-400 hover:text-blue-400 transition" title="Edit">
                               <FaPen className="text-xs" />
                             </button>
-                            <button onClick={() => onMessageAction('delete', { messageId: msg.id })} className="p-2 text-slate-400 hover:text-red-400 transition" title="Delete">
+                            <button onClick={() => setDeleteConfirmMsgId(msg.id)} className="p-2 text-slate-400 hover:text-red-400 transition" title="Delete">
                               <FaTrash className="text-xs" />
                             </button>
                           </>
@@ -344,7 +369,8 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
               );
             })}
           </React.Fragment>
-        ))}
+        )))
+        }
 
         <div ref={messagesEndRef} />
       </div>
@@ -422,8 +448,25 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
         callType={callType}
       />
 
+      {/* Delete Message Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deleteConfirmMsgId)}
+        onClose={() => setDeleteConfirmMsgId(null)}
+        onConfirm={() => {
+          if (deleteConfirmMsgId) {
+            onMessageAction('delete', { messageId: deleteConfirmMsgId });
+            showToast('Message deleted');
+            setDeleteConfirmMsgId(null);
+          }
+        }}
+        title="Delete Message"
+        message="Are you sure you want to delete this message? This will remove the message for everyone."
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
+
     </div>
   );
 };
 
-export default ChatWindow;
+export default React.memo(ChatWindow);

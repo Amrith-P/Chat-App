@@ -1,2664 +1,1581 @@
-# ChatApp Pro — Complete Production Professionalization & Enhancement Prompt
-
-## ROLE
-
-Act as a senior full-stack engineer, security engineer, backend architect, frontend architect, and QA engineer.
-
-You are working on an existing full-stack real-time messaging application called **ChatApp Pro**.
-
-The application is already functional. Your job is to **professionalize, harden, optimize, and extend the existing application without redesigning the UI**.
-
-Do NOT treat this as a greenfield project.
-
-You must first inspect the existing codebase, understand the architecture, identify what is already implemented, and then modify the application incrementally.
-
----
-
-# 1. EXISTING TECHNOLOGY STACK
-
-## Frontend
-
-* React
-* Vite
-* JavaScript
-* Tailwind CSS
-* React Router DOM
-* React Context API
-* Socket.IO Client
-* Axios/fetch or the existing API communication mechanism
-
-## Backend
-
-* Node.js
-* Express
-* SQLite
-* Socket.IO
-* JWT
-* bcrypt
-
-## Existing authentication
-
-Already implemented:
-
-* Registration
-* Login
-* Logout
-* bcrypt password hashing
-* JWT authentication
-* Protected routes
-* Persistent login
-* `localStorage` token storage
-* API authorization middleware
-* User profile information
-* Full name
-* Email
-* Profile picture
-* Status/Bio
-
-## Existing real-time functionality
-
-Already implemented:
-
-* Private 1-to-1 messaging
-* Socket.IO
-* Online/offline status
-* Typing indicators
-* Read receipts
-* Blue ticks
-* Message reactions
-* Message editing
-* Real-time sidebar updates
-* Unread message counts
-* Audio notification chime
-
-## Existing UI
-
-The current UI is already designed and functional.
-
-### CRITICAL REQUIREMENT
-
-**DO NOT REDESIGN THE UI.**
-
-Preserve:
-
-* Existing layout
-* Existing page structure
-* Existing sidebar
-* Existing chat window
-* Existing colors
-* Existing typography
-* Existing spacing
-* Existing component hierarchy
-* Existing navigation
-* Existing responsive behavior
-* Existing icons
-* Existing visual identity
-* Existing buttons
-* Existing cards
-* Existing modals
-
-Do not replace the current design with a new design system.
-
-Do not introduce a completely different visual style.
-
-Do not move major elements around.
-
-Do not change the existing user experience unnecessarily.
-
-The goal is:
-
-> **Same UI + significantly better engineering, security, reliability, functionality, animations, performance, and production readiness.**
-
-Only make visual changes when they are absolutely necessary for a new feature.
-
----
-
-# 2. FIRST TASK — AUDIT THE EXISTING APPLICATION
-
-Before modifying anything, inspect the entire repository.
-
-Understand:
-
-### Frontend
-
-* `src/`
-* Components
-* Pages
-* Contexts
-* Hooks
-* Services
-* API utilities
-* Socket.IO implementation
-* Authentication implementation
-* Protected routes
-* Local storage usage
-* Message state management
-* User state management
-* Chat state management
-* Error handling
-* Loading states
-* Existing animations
-
-### Backend
-
-Inspect:
-
-* Server entry point
-* Express middleware
-* Routes
-* Controllers
-* Services
-* SQLite initialization
-* Database schema
-* SQL queries
-* Authentication middleware
-* JWT generation
-* JWT validation
-* Socket.IO initialization
-* Socket authentication
-* Room management
-* Message handling
-* User handling
-* Error handling
-* CORS
-* Environment variables
-
-### Database
-
-Inspect:
-
-* Existing tables
-* Primary keys
-* Foreign keys
-* Indexes
-* Constraints
-* Message schema
-* User schema
-* Conversation/chat schema
-* Reactions
-* Read receipts
-* Any other tables
-
-### Important
-
-Do not recreate existing functionality unnecessarily.
-
-Do not duplicate routes.
-
-Do not create duplicate database tables.
-
-Do not create duplicate authentication systems.
-
-Do not replace working functionality without a clear reason.
-
-First understand what already exists.
-
----
-
-# 3. CREATE A SAFE DEVELOPMENT STRATEGY
-
-Before making major changes:
-
-1. Identify the existing architecture.
-2. Identify existing functionality.
-3. Identify missing functionality.
-4. Identify security vulnerabilities.
-5. Identify database changes required.
-6. Identify frontend changes required.
-7. Identify backend changes required.
-8. Identify Socket.IO changes required.
-9. Identify deployment requirements.
-10. Create a logical implementation order.
-
-Do not make dozens of unrelated changes simultaneously.
-
-Work in logical modules.
-
-After each major module:
-
-* Verify imports
-* Verify routes
-* Verify database queries
-* Verify authentication
-* Verify Socket.IO
-* Verify frontend compilation
-* Verify backend startup
-* Verify existing functionality
-
-Do not leave the application in a broken intermediate state.
-
----
-
-# 4. AUTHENTICATION PROFESSIONALIZATION
-
-The current authentication system uses:
-
-* bcrypt
-* JWT
-* localStorage
-* protected routes
-
-Keep JWT authentication, but improve its security and architecture.
-
-## Implement:
-
-### Registration
-
-Validate:
-
-* Full name
-* Email
-* Password
-* Password confirmation
-
-Rules:
-
-* Email must be valid.
-* Email must be normalized.
-* Password must meet minimum strength requirements.
-* Duplicate emails must be rejected cleanly.
-* Password must never be stored as plaintext.
-* Password confirmation must never be stored.
-
-Return safe user information only.
-
-Never return:
-
-* Password hash
-* JWT secret
-* Internal security fields
-
----
-
-# 5. JWT SECURITY IMPROVEMENT
-
-Review the current JWT implementation.
-
-Implement:
-
-* Short-lived access tokens
-* Proper token expiration
-* Secure token validation
-* Token issuer where appropriate
-* Token audience where appropriate
-* Strong secret from environment variables
-* Proper JWT error handling
-
-Do not hard-code secrets.
-
-Never commit secrets into Git.
-
-Create/update:
-
-`.env.example`
-
-with placeholders only.
-
----
-
-# 6. IMPROVE TOKEN STORAGE
-
-The current application stores JWT in `localStorage`.
-
-Evaluate this architecture carefully.
-
-Where practical, migrate toward:
-
-### Access token
-
-Short-lived access token kept in application memory.
-
-### Refresh token
-
-Secure:
-
-* HTTP-only
-* Secure in production
-* SameSite appropriately configured
-* Expiring refresh token
-
-The refresh token must not be readable by JavaScript.
-
-Implement token refresh where appropriate.
-
-However:
-
-**Do not break Socket.IO authentication.**
-
-The Socket.IO authentication flow must be redesigned appropriately so that authenticated sockets continue to work securely.
-
-If a complete refresh-token migration would create unnecessary instability in the current application, implement the safest incremental architecture possible and document the decision.
-
----
-
-# 7. LOGOUT
-
-Logout must:
-
-* Clear frontend authentication state
-* Invalidate/rotate refresh token if implemented
-* Disconnect the Socket.IO connection
-* Clear user-specific state
-* Clear cached chat state
-* Prevent access to protected pages
-* Prevent authenticated API requests after logout
-
-Logout must work correctly even if the socket is already disconnected.
-
----
-
-# 8. FORGOT PASSWORD
-
-Implement:
-
-### Forgot Password
-
-User enters email.
-
-The system should:
-
-1. Validate email.
-2. Avoid revealing whether an account exists.
-3. Generate a secure random reset token.
-4. Store only a hashed representation of the reset token.
-5. Add expiration.
-6. Allow one-time use.
-7. Invalidate after successful password reset.
-
-For development, if an actual email provider is not configured, provide a safe development mechanism without exposing reset tokens in production logs.
-
-Prepare the architecture so an email provider can easily be added later.
-
----
-
-# 9. RESET PASSWORD
-
-Create secure password reset functionality.
-
-Requirements:
-
-* Token validation
-* Token expiration
-* One-time usage
-* Password strength validation
-* bcrypt hashing
-* Existing reset tokens invalidated after success
-* Existing sessions optionally invalidated after password reset
-* Clear success/error handling
-
----
-
-# 10. CHANGE PASSWORD
-
-Add authenticated change-password functionality.
-
-Require:
-
-* Current password
-* New password
-* Confirm new password
-
-Validate:
-
-* Current password is correct
-* New password is strong
-* New password is different where appropriate
-* Confirmation matches
-
-After changing the password:
-
-* Invalidate appropriate sessions/tokens
-* Require reauthentication if appropriate
-* Maintain security of the current account
-
----
-
-# 11. EMAIL VERIFICATION ARCHITECTURE
-
-Prepare email verification.
-
-Add database support for:
-
-* `email_verified`
-* Verification token hash
-* Verification expiration
-
-Implement:
-
-* Generate verification token
-* Verify token
-* Expire token
-* Prevent reuse
-* Resend verification
-
-Do not make the entire application unusable if email configuration is not available during development.
-
----
-
-# 12. INPUT VALIDATION
-
-Introduce **Zod** or another strong schema-validation library.
-
-Use validation consistently.
-
-Validate:
-
-### Authentication
-
-* Register
-* Login
-* Forgot password
-* Reset password
-* Change password
-
-### User
-
-* Name
-* Email
-* Bio/status
-
-### Messaging
-
-* Message text
-* Message IDs
-* Conversation IDs
-* Reaction values
-
-### API parameters
-
-* IDs
-* Pagination
-* Search queries
-* Sorting
-* Filtering
-
-### Socket events
-
-Validate Socket.IO payloads exactly like REST API payloads.
-
-Never trust frontend validation.
-
-Backend validation is mandatory.
-
----
-
-# 13. SECURITY HARDENING
-
-Implement production-level security.
-
-Add:
-
-### Helmet
-
-Use Express Helmet with sensible configuration.
-
-### Rate limiting
-
-Add rate limits especially for:
-
-* Login
-* Registration
-* Forgot password
-* Reset password
-* Message sending
-* User search
-* API requests
-
-Do not make normal chat usage frustrating.
-
-Use stricter limits for authentication endpoints.
-
-### CORS
-
-Make CORS production-safe.
-
-Do not use:
-
-```text
-*
-```
-
-when credentials are involved.
-
-Use environment-based allowed origins.
-
-Example:
-
-```text
-CLIENT_URL
-```
-
-Support separate development and production origins.
-
-### Request size limits
-
-Configure Express request body limits.
-
-### Security headers
-
-Use Helmet and appropriate HTTP security headers.
-
-### Error handling
-
-Never expose:
-
-* Stack traces
-* Database errors
-* SQL statements
-* JWT secrets
-* Internal paths
-* Sensitive implementation details
-
-to normal production users.
-
----
-
-# 14. SQL INJECTION PROTECTION
-
-Review every SQLite query.
-
-Use parameterized queries.
-
-Never concatenate user input into SQL statements.
-
-Audit:
-
-* Login
-* Registration
-* Search
-* Messages
-* Conversations
-* Reactions
-* User profiles
-* Pagination
-* Filtering
-
----
-
-# 15. DATABASE PROFESSIONALIZATION
-
-Review the SQLite database architecture.
-
-Ensure appropriate:
-
-* Primary keys
-* Foreign keys
-* Unique constraints
-* NOT NULL constraints
-* Indexes
-* Timestamps
-* Cascading behavior where appropriate
-
-Enable foreign-key enforcement.
-
-Review all tables for consistency.
-
-Do not destroy existing user data.
-
-Do not drop tables casually.
-
-If schema changes are required, create safe migrations.
-
----
-
-# 16. DATABASE MIGRATION SYSTEM
-
-Introduce a simple migration mechanism if one does not already exist.
-
-Example:
-
-```text
-migrations/
-    001_initial_schema.sql
-    002_auth_improvements.sql
-    003_password_reset.sql
-    004_indexes.sql
-```
-
-Migrations should be:
-
-* Repeatable safely
-* Ordered
-* Trackable
-* Versioned
-
-Never require manually deleting the database during development.
-
----
-
-# 17. DATABASE INDEXING
-
-Analyze common queries and add indexes where beneficial.
-
-Likely candidates include:
-
-* User email
-* User ID
-* Conversation participants
-* Message conversation ID
-* Message timestamp
-* Unread messages
-* Message sender
-* Message receiver
-* Reset tokens
-* Verification tokens
-
-Do not add unnecessary indexes blindly.
-
----
-
-# 18. USER PROFILE IMPROVEMENTS
-
-Keep the current UI.
-
-Improve the underlying functionality.
-
-Support:
-
-* Update full name
-* Update bio/status
-* Update profile image
-* Change password
-* Account information
-* Email verification status
-
-Ensure users can only modify their own profile.
-
-Never allow a client to submit another user's ID and modify that user's account.
-
-The backend must determine the authenticated user from the authentication context.
-
----
-
-# 19. PROFILE IMAGE SECURITY
-
-The current profile images use DiceBear.
-
-Preserve the current functionality.
-
-If image upload functionality is later introduced:
-
-Validate:
-
-* File type
-* MIME type
-* File size
-* Extension
-* Image dimensions
-
-Never trust only the file extension.
-
-Prevent malicious file uploads.
-
-Do not store arbitrary executable files.
-
----
-
-# 20. USER SEARCH
-
-Professionalize user search.
-
-Implement:
-
-* Search by name/email as appropriate
-* Pagination
-* Minimum search length
-* Rate limiting
-* Input sanitization
-* Case-insensitive matching
-* Proper empty states
-
-Do not expose unnecessary private information.
-
-Do not allow unrestricted database enumeration.
-
----
-
-# 21. CHAT ARCHITECTURE
-
-Preserve the current 1-to-1 messaging architecture.
-
-Ensure:
-
-* Only authorized users can access a conversation.
-* Users cannot subscribe to arbitrary private rooms.
-* Users cannot read another user's messages.
-* Conversation membership is verified server-side.
-
-Never trust:
-
-```text
-conversationId
-senderId
-receiverId
-```
-
-from the client without verification.
-
-The authenticated user identity must come from the server-side authentication context.
-
----
-
-# 22. MESSAGE SECURITY
-
-Every message must be validated.
-
-Handle:
-
-* Empty messages
-* Whitespace-only messages
-* Excessively long messages
-* Invalid message IDs
-* Unauthorized edits
-* Unauthorized deletions
-* Invalid reactions
-
-Limit message length to a sensible value.
-
-Prevent abuse through rate limiting.
-
----
-
-# 23. MESSAGE EDITING
-
-Existing editing functionality must be preserved.
-
-Ensure:
-
-* Only the message owner can edit a message.
-* Server verifies ownership.
-* Edited timestamp is stored.
-* Client receives real-time update.
-* Other participant sees the edit immediately.
-
-Never trust the frontend's `senderId`.
-
----
-
-# 24. MESSAGE DELETION
-
-If deletion does not already exist, consider implementing it professionally.
-
-Support:
-
-* Delete for me
-* Delete for everyone
-
-if compatible with the existing product direction.
-
-Ensure permissions are enforced server-side.
-
-Do not physically remove important records if the application needs auditability.
-
-Use soft deletion where appropriate.
-
----
-
-# 25. MESSAGE REACTIONS
-
-Preserve existing emoji reactions.
-
-Improve:
-
-* Validation
-* Authorization
-* Duplicate reaction handling
-* Removal
-* Real-time synchronization
-* Database consistency
-
-A user should not be able to manipulate reactions on messages they are not authorized to access.
-
----
-
-# 26. READ RECEIPTS
-
-Preserve:
-
-* Sent
-* Delivered if supported
-* Read
-* Blue ticks
-
-Ensure read status is persisted.
-
-Socket.IO should provide instant updates.
-
-REST/database should provide persistence.
-
-If a user reconnects, the correct read state must be restored.
-
----
-
-# 27. TYPING INDICATORS
-
-Preserve the current typing indicator.
-
-Improve it so:
-
-* It is socket-based.
-* It is not persisted unnecessarily.
-* It automatically times out.
-* It does not generate excessive events.
-
-Use throttling/debouncing.
-
----
-
-# 28. ONLINE/OFFLINE STATUS
-
-Preserve current online/offline functionality.
-
-Improve reliability around:
-
-* Multiple tabs
-* Browser refresh
-* Network interruption
-* Socket reconnect
-* Server restart
-* Logout
-* Duplicate socket connections
-
-A user should not incorrectly remain online forever because of a disconnected socket.
-
----
-
-# 29. SOCKET.IO SECURITY
-
-This is extremely important.
-
-Authenticate Socket.IO connections.
-
-Do not allow unauthenticated users to connect to private messaging functionality.
-
-Validate every socket event.
-
-Validate:
-
-* User identity
-* Room membership
-* Message ownership
-* Conversation membership
-* Payload structure
-
-Never trust socket payloads simply because they originated from an authenticated socket.
-
-Implement proper disconnect handling.
-
-Implement reconnection handling.
-
-Avoid duplicate event listeners.
-
----
-
-# 30. SOCKET.IO EVENT ARCHITECTURE
-
-Review existing events.
-
-Create a consistent event naming convention.
+Application Overview
+
+ChatApp Pro is a full-stack real-time messaging application designed to provide a WhatsApp-like private messaging experience through a web browser.
+
+The application consists of:
+
+Frontend
+React
+Vite
+JavaScript
+Tailwind CSS
+React Router DOM
+Context API / React state
+Socket.IO Client
+Axios/fetch for REST API communication
+Backend
+Node.js
+Express.js
+Socket.IO
+SQLite
+JWT authentication
+bcrypt password hashing
+Communication architecture
+
+The application uses two communication mechanisms simultaneously:
+
+                     ChatApp Pro
+                          │
+              ┌───────────┴───────────┐
+              │                       │
+        REST API                 Socket.IO
+              │                       │
+       Persistent data          Real-time data
+              │                       │
+           SQLite              WebSocket connection
+REST API is responsible for:
+Registration
+Login
+Authentication
+User search
+User profile retrieval
+Chat creation/retrieval
+Message persistence
+Historical message retrieval
+Other database operations
+Socket.IO is responsible for:
+Instant messages
+Typing indicators
+Online/offline status
+Read receipts
+Emoji reactions
+Real-time UI updates
+2. Overall User Journey
+
+The complete user journey is:
+
+Application Opens
+       ↓
+Check Authentication Token
+       ↓
+ ┌─────┴─────┐
+ │           │
+Token       No Token
+Valid        │
+ │           ↓
+ ↓         Login
+Dashboard    ↓
+ │         Authentication
+ ↓           ↓
+Search Users
+       ↓
+Select User
+       ↓
+Start / Open Chat
+       ↓
+Load Previous Messages
+       ↓
+Connect Socket
+       ↓
+Send / Receive Messages
+       ↓
+Typing / Read / Reactions
+       ↓
+Continue Conversations
+       ↓
+Logout
+       ↓
+Disconnect Socket
+       ↓
+Clear Authentication
+       ↓
+Login Page
+3. Application Startup
+
+When the user opens the application, React starts through Vite.
+
+The frontend first determines whether the user already has an authenticated session.
+
+Typically, the application checks:
+
+localStorage
+     ↓
+JWT token
 
 For example:
 
-```text
-message:send
-message:new
-message:edit
-message:deleted
-message:read
-message:reaction
-typing:start
-typing:stop
-user:online
-user:offline
-```
+authToken = stored JWT
 
-Do not rename existing events unnecessarily if doing so would break the current frontend.
+The application then decides:
 
-If renaming is required, update all consumers consistently.
+If token exists
 
----
+The user is considered potentially authenticated.
 
-# 31. SOCKET + REST ARCHITECTURE
+The application:
 
-Maintain the current dual architecture:
+Retrieves the token.
+Restores authentication state.
+Loads the user information.
+Establishes the Socket.IO connection.
+Redirects the user to the main application/dashboard.
+If token does not exist
 
-### REST API
+The user is redirected to:
 
-Responsible for:
+/login
+4. Login Flow
+Login Screen
 
-* Persistence
-* Authentication
-* Fetching historical messages
-* User data
-* Conversations
-* Profile changes
-* Password operations
+The login page contains:
 
-### Socket.IO
-
-Responsible for:
-
-* Real-time message delivery
-* Typing indicators
-* Read receipts
-* Reactions
-* Online status
-* Real-time updates
-
-Do not use Socket.IO as a replacement for database persistence.
-
-Do not rely exclusively on socket events for important data.
-
----
-
-# 32. RECONNECTION & OFFLINE RECOVERY
-
-Implement robust socket reconnection.
-
-When the connection is restored:
-
-1. Authenticate again if necessary.
-2. Rejoin authorized rooms.
-3. Restore online state.
-4. Synchronize unread messages.
-5. Synchronize read receipts.
-6. Recover any missed state from REST APIs.
-
-The application should recover gracefully after:
-
-* Wi-Fi disconnect
-* Server restart
-* Laptop sleep
-* Browser tab suspension
-* Network changes
-
----
-
-# 33. API ARCHITECTURE
-
-Review all API endpoints.
-
-Use consistent structure:
-
-```text
-/api/auth/*
-/api/users/*
-/api/chats/*
-/api/messages/*
-```
-
-Do not create inconsistent endpoint patterns.
-
-Use appropriate HTTP status codes.
-
-Examples:
-
-```text
-200 OK
-201 Created
-400 Bad Request
-401 Unauthorized
-403 Forbidden
-404 Not Found
-409 Conflict
-422 Validation Error
-429 Too Many Requests
-500 Internal Server Error
-```
-
----
-
-# 34. GLOBAL ERROR HANDLING
-
-Create a centralized Express error-handling mechanism.
-
-Errors should have a consistent structure.
+Application logo
+Email input
+Password input
+Login button
+Link to registration
+Validation/error messages
 
 Example:
 
-```json
+┌──────────────────────────────────────┐
+│              ChatApp                 │
+│                                      │
+│         Welcome Back                 │
+│                                      │
+│ Email                                │
+│ ┌──────────────────────────────────┐ │
+│ │ user@example.com                 │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ Password                             │
+│ ┌──────────────────────────────────┐ │
+│ │ ••••••••••                       │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│        [       Login       ]         │
+│                                      │
+│ Don't have an account? Register      │
+└──────────────────────────────────────┘
+5. Login Validation
+
+When the user clicks Login, the frontend validates the form.
+
+Typical checks:
+
+Email
+Required
+Valid email format
+Password
+Required
+
+If validation fails:
+
+Login
+ ↓
+Validation
+ ↓
+Invalid
+ ↓
+Show error
+
+The API request is not sent until the basic validation succeeds.
+
+6. Login API Request
+
+The frontend sends:
+
+POST /api/auth/login
+
+with something similar to:
+
 {
-  "success": false,
-  "message": "Human-readable error message",
-  "code": "ERROR_CODE"
+  "email": "user@example.com",
+  "password": "password"
 }
-```
+7. Backend Authentication
+
+The Express backend receives the request.
+
+The flow is:
+
+Login request
+     ↓
+Find user by email
+     ↓
+User exists?
+   /     \
+ No       Yes
+ ↓         ↓
+Error    bcrypt.compare()
+             ↓
+       Password correct?
+          /       \
+        No         Yes
+        ↓           ↓
+      Error       Generate JWT
+                      ↓
+                  Return token
+
+The password is never stored as plain text.
+
+The database stores a bcrypt hash.
+
+8. Successful Login
+
+The backend returns information such as:
+
+{
+  "token": "JWT_TOKEN",
+  "user": {
+    "id": 1,
+    "name": "Amrith",
+    "email": "user@example.com"
+  }
+}
+
+The frontend stores the authentication information.
+
+For the implementation you described, the JWT is persisted using browser storage.
+
+Conceptually:
+
+localStorage
+ ├── token
+ └── user
+9. What Happens Immediately After Login?
+
+Several things happen.
+
+Successful Login
+       ↓
+Store JWT
+       ↓
+Update Auth Context
+       ↓
+Update current user
+       ↓
+Connect Socket.IO
+       ↓
+Join user's private socket room
+       ↓
+Navigate to application
 
-Do not expose stack traces in production.
+The user is then taken to the main chat interface.
+
+10. Main Application UI
 
-Frontend should handle API errors consistently.
+The main interface behaves similarly to WhatsApp Web.
 
----
+A typical layout:
 
-# 35. FRONTEND API LAYER
+┌───────────────────────────────────────────────────────────┐
+│ Header                                                     │
+├───────────────────┬───────────────────────────────────────┤
+│                   │                                       │
+│ Search            │ Chat Header                           │
+│                   │                                       │
+│ Conversations     │                                       │
+│                   │                                       │
+│ ───────────────   │                                       │
+│ John              │          Messages                     │
+│ Last message      │                                       │
+│                   │                                       │
+│ Sarah             │                                       │
+│ Last message      │                                       │
+│                   │                                       │
+│ Mike              │                                       │
+│ Last message      │                                       │
+│                   │                                       │
+│                   ├───────────────────────────────────────┤
+│                   │ Message input          Send           │
+└───────────────────┴───────────────────────────────────────┘
 
-Centralize API communication.
+The interface consists primarily of:
 
-Avoid scattered:
+Application header
+User/profile area
+Search
+Conversation list
+Chat window
+Message input
+Message actions
+11. Authentication Context
 
-```javascript
-fetch(...)
-```
+The frontend maintains authentication globally.
 
-or Axios configurations throughout components where possible.
+Conceptually:
 
-Create a reusable API client.
+AuthContext
+   │
+   ├── currentUser
+   ├── token
+   ├── login()
+   ├── logout()
+   └── authentication status
 
-Handle:
+This allows components throughout the application to know:
 
-* Base URL
-* Authentication
-* Token refresh
-* Error handling
-* Timeouts
-* JSON parsing
-* Network failures
+Who is currently logged in?
 
-Do not duplicate authentication logic in every component.
+without repeatedly querying the login page.
 
----
+12. Protected Routes
 
-# 36. FRONTEND AUTH STATE
+The application uses protected routes.
 
-Improve Context API architecture without unnecessarily replacing it.
+For example:
 
-Create clear separation between:
+/login
+/register
 
-* Auth state
-* User state
-* Chat state
-* Socket state
+are public.
 
-Ensure:
+But:
 
-* Login updates auth state
-* Logout clears state
-* Token expiration is handled
-* Socket disconnects on logout
-* Protected routes work correctly
-* Refresh restores valid session
-* Invalid sessions are handled gracefully
+/chat
+/dashboard
+/profile
 
----
+require authentication.
 
-# 37. PROTECTED ROUTES
+The routing logic is essentially:
 
-Ensure all protected pages require authentication.
+User requests protected page
+          ↓
+       Token?
+       /    \
+     No      Yes
+     ↓        ↓
+ Login      Allow
 
-Prevent:
+This prevents unauthenticated users from directly accessing the chat interface.
 
-* Unauthenticated access
-* Flashing private content before authentication resolves
-* Redirect loops
-* Broken navigation after logout
+13. Socket.IO Connection
 
-Handle authentication loading states properly.
+After successful authentication, the frontend establishes a persistent Socket.IO connection.
 
----
+Conceptually:
 
-# 38. LOADING STATES
+React Application
+       │
+       │ Socket.IO
+       ↓
+Node.js Socket Server
 
-Every asynchronous operation should have an appropriate loading state.
+This connection stays alive while the user is using the application.
 
-Preserve the current UI.
+The purpose is to allow instant communication without repeatedly polling the server.
 
-Improve implementation for:
+14. Private Socket Rooms
 
-* Login
-* Registration
-* Loading chats
-* Loading messages
-* Sending messages
-* Editing messages
-* Reactions
-* Search
-* Profile updates
-* Password changes
-* Logout
-* Socket connection
+Each user can have an isolated room.
 
-Avoid unnecessary full-page loading spinners.
+Conceptually:
 
-Prefer the existing UI's visual language.
+User A
+Room: user_101
 
-Use skeletons/spinners where already appropriate.
 
----
+User B
+Room: user_205
 
-# 39. ERROR STATES
+When User A sends a message to User B:
 
-Create polished error handling for:
+User A
+  ↓
+Socket Server
+  ↓
+User B's room
+  ↓
+User B
 
-* API unavailable
-* Network disconnected
-* Socket disconnected
-* Authentication expired
-* Invalid credentials
-* Validation errors
-* Message send failure
-* Message edit failure
-* Search failure
-* Profile update failure
-* Server error
+This prevents messages from being broadcast to unrelated users.
 
-Errors must be understandable to normal users.
+15. User Registration
 
-Do not display raw technical errors.
+A new user can select:
 
----
+Create Account / Register
 
-# 40. TOAST NOTIFICATIONS
+The registration screen contains:
 
-If a toast library is not already present, introduce a lightweight professional solution.
+Full name
+Email
+Password
+Confirm password
+Register button
 
-Use it for:
+The frontend validates the fields.
 
-* Login success/failure
-* Registration
-* Password changes
-* Profile updates
-* Message failures
-* Connection problems
-* Successful operations
+The backend:
 
-Do not spam users with unnecessary notifications.
+Checks whether email already exists.
+Hashes password using bcrypt.
+Creates user record.
+Stores profile information.
+Returns registration result.
+16. User Profile
 
----
+The application stores information such as:
 
-# 41. ANIMATIONS
+User
+├── ID
+├── Full Name
+├── Email
+├── Profile Picture
+└── Status/Bio
 
-Do NOT redesign the UI.
+Profile pictures are automatically generated using the configured avatar service.
 
-The application already uses Tailwind micro-interactions.
+The profile can be displayed in:
 
-Preserve those.
+Header
+Search results
+Conversation list
+Chat header
+Profile section
+17. Searching for Users
 
-Add subtle professional animations where appropriate.
+One of the important functions is finding another registered user.
 
-Possible additions:
-
-* Page transition
-* Modal enter/exit
-* Chat message entrance
-* Sidebar item transitions
-* Unread badge transition
-* Online indicator transition
-* Typing indicator animation
-* Reaction animation
-* Toast animation
-* Button loading transition
-* Connection status transition
-
-Animations should be:
-
-* Fast
-* Subtle
-* Professional
-* Functional
-
-Avoid excessive animations.
-
-Do not make every element bounce or scale.
-
----
-
-# 42. REDUCED MOTION
-
-Respect:
-
-```text
-prefers-reduced-motion
-```
-
-Users who have reduced-motion enabled should receive minimal animation.
-
----
-
-# 43. MESSAGE UX MICRO-INTERACTIONS
-
-Without changing the existing UI:
-
-Add subtle interactions such as:
-
-* Message appearing smoothly
-* Reaction feedback
-* Send button loading state
-* Message edit transition
-* Read receipt transition
-* Typing indicator transition
-* Connection indicator transition
-
-Do not change the fundamental design.
-
----
-
-# 44. AUDIO NOTIFICATIONS
-
-The current application already has an in-browser audio chime.
-
-Preserve it.
-
-Improve it so that:
-
-* It does not play unnecessarily.
-* It does not play for the sender's own message.
-* It respects browser autoplay restrictions.
-* It can be disabled later through notification settings.
-* It does not create multiple audio instances.
-
----
-
-# 45. NOTIFICATION SETTINGS ARCHITECTURE
-
-Add backend/database support for future notification preferences.
-
-Potential settings:
-
-```text
-message notifications
-sound notifications
-typing notifications
-read receipt visibility
-online status visibility
-```
-
-Do not redesign the existing UI.
-
-Only add settings UI where required and integrate it into the existing visual style.
-
----
-
-# 46. ACCOUNT SETTINGS
-
-Create a professional settings architecture.
-
-Potential sections:
-
-### Account
-
-* Name
-* Email
-* Profile picture
-* Bio
-
-### Security
-
-* Change password
-* Active sessions
-* Logout from all devices
-
-### Notifications
-
-* Message sounds
-* Notifications
-
-### Privacy
-
-* Online status
-* Read receipts
-
-Keep the existing UI style.
-
----
-
-# 47. LOGOUT FROM ALL DEVICES
-
-Implement a session architecture capable of revoking sessions.
-
-Add a sessions table if necessary.
-
-Track:
-
-* Session ID
-* User ID
-* Created time
-* Last activity
-* Expiration
-* Revocation status
-
-Allow:
-
-```text
-Logout current session
-Logout all sessions
-```
-
-This should also disconnect/revoke relevant Socket.IO sessions.
-
----
-
-# 48. ADMIN ARCHITECTURE
-
-The current application has no admin functionality.
-
-Introduce a secure foundation for future administration.
-
-Add a role concept:
-
-```text
-user
-admin
-```
-
-Do not expose admin functionality to normal users.
-
-Backend must enforce authorization.
-
-Never rely on hiding an admin button in the frontend.
-
----
-
-# 49. ADMIN FEATURES
-
-Create an admin area only if compatible with the current project scope.
-
-Possible features:
-
-### Dashboard
-
-* Total users
-* Active users
-* Total messages
-* Messages today
-* Online users
-
-### User management
-
-* Search users
-* View users
-* Disable user
-* Enable user
-* Delete user if appropriate
-
-### Moderation
-
-* View reported content
-* Review reports
-* Remove content
-* Suspend users
-
-### Audit logs
-
-Track sensitive admin actions.
-
-Keep the admin UI consistent with the existing application style rather than introducing an unrelated design.
-
----
-
-# 50. REPORTING SYSTEM
-
-Consider adding message/user reporting.
-
-Users should be able to report:
-
-* Message
-* User
-
-Store:
-
-```text
-reporter
-target
-reason
-description
-status
-created_at
-resolved_at
-```
-
-Do not expose reports to normal users.
-
----
-
-# 51. AUDIT LOG
-
-Create an audit mechanism for important security actions.
-
-Examples:
-
-* Login
-* Logout
-* Password change
-* Password reset
-* Account disable
-* Admin actions
-* Session revocation
-
-Never store passwords or secrets in audit logs.
-
----
-
-# 52. PAGINATION
-
-Do not load unlimited data.
-
-Implement pagination for:
-
-* Messages
-* User search
-* Conversations where appropriate
-* Admin users
-* Reports
-
-For messages, prefer cursor-based pagination if practical.
-
-The chat should initially load recent messages and allow older messages to load progressively.
-
-Do not break the existing chat scrolling behavior.
-
----
-
-# 53. CHAT PERFORMANCE
-
-Optimize rendering.
-
-Avoid unnecessary re-rendering of:
-
-* Entire sidebar
-* Entire message list
-* Every message when one message changes
-
-Use:
-
-* Memoization where appropriate
-* Stable callbacks
-* Proper keys
-* Efficient Context usage
-* Selective state updates
-
-Do not prematurely optimize everything.
-
-Measure before making complex changes.
-
----
-
-# 54. MESSAGE LIST OPTIMIZATION
-
-If message history becomes large, consider virtualization.
-
-Do not introduce virtualization if it breaks:
-
-* Scroll behavior
-* Message grouping
-* Reactions
-* Editing
-* Read receipts
-* Typing indicators
-
-Only use it when beneficial.
-
----
-
-# 55. FRONTEND CODE QUALITY
-
-Refactor where necessary.
-
-Avoid:
-
-* Huge components
-* Duplicate API logic
-* Duplicate socket logic
-* Magic strings
-* Hardcoded URLs
-* Hardcoded secrets
-* Deeply nested conditionals
-* Unnecessary state
-* Memory leaks
-* Unremoved event listeners
-
-Use reusable:
-
-* Hooks
-* Services
-* Utilities
-* Components
-* Constants
-
-Do not over-engineer simple features.
-
----
-
-# 56. SOCKET MEMORY LEAK PREVENTION
-
-Audit all:
-
-```javascript
-socket.on(...)
-```
-
-listeners.
-
-Every subscription should have appropriate cleanup.
-
-Prevent:
-
-* Duplicate listeners
-* Duplicate messages
-* Multiple typing indicators
-* Memory leaks after route changes
-* Events firing after logout
-
----
-
-# 57. FRONTEND ROUTING
-
-Review React Router configuration.
-
-Ensure:
-
-* Protected routes
-* Public routes
-* Authentication redirects
-* Unknown route handling
-* Proper logout navigation
-* Refresh behavior
-
-Do not unnecessarily change the current route structure.
-
----
-
-# 58. ENVIRONMENT CONFIGURATION
-
-Create clear environment variables.
-
-Frontend:
-
-```text
-VITE_API_URL=
-VITE_SOCKET_URL=
-```
-
-Backend:
-
-```text
-PORT=
-CLIENT_URL=
-JWT_SECRET=
-JWT_EXPIRES_IN=
-REFRESH_TOKEN_SECRET=
-DATABASE_PATH=
-NODE_ENV=
-```
-
-Only include variables actually required by the implementation.
-
-Create:
-
-```text
-.env.example
-```
-
-Never commit real secrets.
-
----
-
-# 59. HEALTH CHECK
-
-Add:
-
-```text
-GET /api/health
-```
-
-Response should indicate:
-
-* API is running
-* Environment
-* Timestamp
-* Database connectivity if appropriate
+The user can enter a name/email into the search field.
 
 Example:
 
-```json
-{
-  "status": "ok",
-  "timestamp": "...",
-  "database": "connected"
-}
-```
+Search users...
 
-Do not expose sensitive infrastructure details.
+Suppose the user enters:
 
----
+rahul
 
-# 60. GRACEFUL SERVER SHUTDOWN
+The frontend sends a request to the backend.
 
-Implement graceful shutdown.
+Conceptually:
 
-Handle:
+Search input
+     ↓
+API request
+     ↓
+Express
+     ↓
+SQLite
+     ↓
+Matching users
+     ↓
+Frontend
+18. Search Results UI
 
-* SIGTERM
-* SIGINT
+The results appear below the search field.
 
-Close:
+Example:
 
-* Socket.IO
-* HTTP server
-* SQLite connection
+Search users...
 
-Prevent corrupted/incomplete operations where possible.
 
----
+┌─────────────────────────────┐
+│ 👤 Rahul Kumar              │
+│    rahul@example.com        │
+└─────────────────────────────┘
 
-# 61. SQLITE PRODUCTION CONSIDERATIONS
 
-SQLite is acceptable for this project.
+┌─────────────────────────────┐
+│ 👤 Rahul S                  │
+│    rahuls@example.com       │
+└─────────────────────────────┘
 
-Do not automatically replace it with PostgreSQL.
+The current user should normally not be presented as someone to start a conversation with themselves.
 
-However, review:
+19. Selecting a User
 
-* WAL mode
-* Foreign keys
-* Busy timeout
-* Transactions
-* Indexes
-* Connection lifecycle
-* Concurrent writes
+When the user clicks a search result:
 
-Ensure database writes are safe.
+Search Result
+      ↓
+Selected User
+      ↓
+Open/Create Chat
 
-For deployment platforms with ephemeral filesystems, clearly document that SQLite requires persistent disk/storage if data must survive deployments/restarts.
+The application checks whether a conversation already exists.
 
-Do not silently assume ephemeral filesystem storage is permanent.
+Existing conversation
 
----
+Open it.
 
-# 62. TRANSACTIONS
+No existing conversation
 
-Use transactions where multiple database operations must succeed together.
+Create/initialize the conversation.
 
-Examples:
+20. Chat Creation
 
-* Creating conversation + participants
-* Message + related state
-* Password reset completion
-* Account deletion
-* Admin moderation operations
+The backend can create a private conversation between:
 
-If one operation fails, roll back appropriately.
+User A
++
+User B
 
----
+Conceptually:
 
-# 63. API RATE LIMITING STRATEGY
+Chat
+├── chatId
+├── participant A
+└── participant B
 
-Use different limits for different endpoints.
+The frontend then selects that chat.
 
-Strict:
+21. Chat Header
 
-* Login
-* Register
-* Forgot password
-* Reset password
+Once a chat is opened, the header displays the other user's information.
 
-Moderate:
+For example:
 
-* User search
-* Message creation
+┌─────────────────────────────────────────────┐
+│ 👤 Rahul Kumar                              │
+│    Online                                    │
+└─────────────────────────────────────────────┘
 
-Normal:
+Possible information:
 
-* Fetch messages
-* Fetch profile
-* Conversations
+Profile image
+Full name
+Online status
+Last seen/status
+22. Loading Message History
 
-Do not rate-limit Socket.IO typing events excessively in a way that breaks functionality.
+When a conversation opens, the frontend retrieves existing messages from the REST API.
 
----
+Conceptually:
 
-# 64. SECURITY AGAINST USER ENUMERATION
+Open Chat
+   ↓
+GET messages
+   ↓
+Backend
+   ↓
+SQLite
+   ↓
+Messages
+   ↓
+Frontend
 
-Login and forgot-password flows should not reveal whether an email exists.
+The messages are then displayed chronologically.
 
-Avoid responses like:
+Example:
 
-```text
-This email is registered.
-```
+          Yesterday
+
+
+              Hello!
+       10:31 AM
+
+
+How are you?
+       10:32 AM
+
+
+              I'm good!
+       10:33 AM
+23. Message Structure
+
+A message typically contains information such as:
+
+Message
+├── id
+├── chatId
+├── senderId
+├── content
+├── timestamp
+├── read status
+└── reaction information
+24. Sending a Message
+
+The message input is located at the bottom of the chat.
+
+Example:
+
+┌─────────────────────────────────────────────┐
+│ Type a message...                     [➤]  │
+└─────────────────────────────────────────────┘
+
+The user types:
+
+Hello Rahul!
+
+and clicks Send or presses Enter.
+
+25. Message Sending Architecture
+
+The application uses the dual communication architecture.
+
+Conceptually:
+
+                User types message
+                       ↓
+                    Send
+                       ↓
+             ┌─────────┴─────────┐
+             ↓                   ↓
+         Socket.IO            REST API
+             ↓                   ↓
+      Instant delivery       Persistence
+             ↓                   ↓
+       Receiver UI           SQLite
+
+Socket.IO provides the immediate experience.
+
+The REST API/database ensures the message is permanently stored.
+
+26. Message Appearing Instantly
+
+When User A sends:
+
+Hello!
+
+the UI should immediately reflect the outgoing message.
+
+Example:
+
+                          Hello!   ✓
+
+The user shouldn't need to refresh the page.
+
+27. Receiver Side
+
+User B is connected to the socket.
+
+The server receives the event and routes it to User B.
+
+User A
+  ↓
+Socket Server
+  ↓
+User B
+  ↓
+React state update
+  ↓
+Message appears
+
+User B sees:
+
+Hello!
+10:45 AM
+
+without refreshing.
+
+28. Message Persistence
+
+At the same time, the message is saved in SQLite.
+
+This is important because Socket.IO alone isn't sufficient for permanent history.
+
+After the user closes the browser:
+
+Message
+   ↓
+SQLite
+   ↓
+Stored permanently
+
+When the user returns later:
+
+Open chat
+   ↓
+Fetch messages
+   ↓
+Previously stored messages appear
+29. Optimistic UI Behavior
+
+A good messaging interface should feel instant.
+
+When the sender clicks Send:
+
+Click Send
+   ↓
+Immediately append message to UI
+   ↓
+Send to backend
+
+This avoids the interface feeling slow while waiting for the database request.
+
+If the server reports an error, the UI can mark the message as failed or remove it.
+
+30. Enter Key Behavior
+
+The message field can support:
+
+Enter → Send
+
+while:
+
+Shift + Enter
+
+can optionally create a new line if multiline messaging is supported.
+
+31. Empty Messages
+
+The application should not send:
+
+""
 
 or:
 
-```text
-No account found.
-```
+"     "
 
-where that could enable account enumeration.
+The Send button should either:
 
-Use generic responses where appropriate.
+remain disabled, or
+ignore whitespace-only messages.
+32. Typing Indicator
 
----
+Socket.IO can be used for typing indicators.
 
-# 65. XSS PROTECTION
+When User A types:
 
-Review all user-generated content.
+Hello...
 
-Potentially untrusted data includes:
+the frontend emits a typing event.
 
-* Name
-* Bio
-* Status
-* Message
-* Search query
-* Reaction metadata
+Conceptually:
 
-Do not render user-generated HTML directly.
+User A
+  ↓
+typing event
+  ↓
+Socket server
+  ↓
+User B
 
-React's default escaping should be preserved.
+User B sees:
 
-Do not use `dangerouslySetInnerHTML` unless absolutely necessary and properly sanitized.
+Rahul is typing...
 
----
+When typing stops:
 
-# 66. CSRF CONSIDERATIONS
+Rahul
 
-If HTTP-only cookies are introduced for refresh/session authentication, implement appropriate CSRF protections.
+or the indicator disappears.
 
-Use appropriate:
+33. Online/Offline Status
 
-* SameSite configuration
-* CSRF token strategy if required
-* Origin checking where appropriate
+Socket connection state can be used to determine availability.
 
-Do not introduce cookies without considering CSRF.
+Conceptually:
 
----
+Socket connected
+      ↓
+User online
 
-# 67. SECURITY LOGGING
 
-Create useful server-side logs.
+Socket disconnected
+      ↓
+User offline
 
-Log:
+The chat header may show:
 
-* Authentication failures
-* Unexpected server errors
-* Socket authentication failures
-* Rate-limit events
-* Security-relevant actions
+● Online
 
-Do not log:
+or:
 
-* Passwords
-* JWT secrets
-* Refresh tokens
-* Full private message contents unnecessarily
+Offline
+34. Read Receipts
 
----
+The application can support read receipts through Socket.IO.
 
-# 68. TESTING
+For example:
 
-Introduce a proper testing setup.
+✓
 
-At minimum:
+means sent.
 
-### Authentication tests
+✓✓
 
-* Register
-* Duplicate registration
-* Login
-* Invalid password
-* Protected endpoint
-* Logout
-* Token expiration
-* Password reset
-* Change password
+means delivered.
 
-### Authorization tests
+A different visual state can indicate:
 
-* User accessing own data
-* User accessing another user's data
-* Unauthorized message editing
-* Unauthorized message deletion
-* Unauthorized conversation access
+✓✓
 
-### Message tests
+read/seen.
 
-* Send
-* Edit
-* Read
-* React
-* Invalid message
+The exact visual treatment depends on the UI implementation.
 
-### Socket tests
+The flow is:
 
-* Authenticated connection
-* Unauthorized connection
-* Message delivery
-* Typing
-* Read receipts
-* Reconnection
+Message received
+       ↓
+User opens chat
+       ↓
+Read event
+       ↓
+Socket.IO
+       ↓
+Sender UI updated
+35. Emoji Reactions
 
----
+A user can react to a message.
 
-# 69. FRONTEND TESTING
+Example:
 
-Add component tests for important components.
+              That's great!
+                    ❤️
 
-Test:
+The reaction can be sent through Socket.IO for immediate UI updates and persisted through the backend.
 
-* Login form
-* Registration form
-* Protected route
-* Chat screen
-* Message composer
-* Message editing
-* Reactions
-* Sidebar
-* User search
-* Profile/settings
+Flow:
 
-Do not test implementation details unnecessarily.
+User selects emoji
+       ↓
+Message reaction event
+       ↓
+Socket server
+       ↓
+Receiver UI
+       ↓
+Persist reaction
+36. Conversation List
 
-Test actual user behavior.
+The left sidebar contains conversations.
 
----
+For example:
 
-# 70. END-TO-END TESTING
+Chats
 
-If practical, add Playwright or Cypress.
 
-Critical flow:
+🔎 Search
 
-```text
-Open app
-↓
-Register
-↓
-Login
-↓
-Search user
-↓
+
+Rahul Kumar
+How are you?
+10:42 AM
+
+
+Anjali
+See you tomorrow
+Yesterday
+
+
+Vishnu
+Okay
+Monday
+
+Each conversation item can display:
+
+Avatar
+Name
+Last message
+Last message time
+Unread count
+Online status
+37. Sidebar Behavior After Sending
+
+Suppose the current conversation is:
+
+Rahul
+
+and you send:
+
+I'll call you later.
+
+The sidebar should immediately update:
+
+Rahul
+I'll call you later.       10:50 AM
+
+No page refresh should be necessary.
+
+38. Receiving a Message While Viewing Another Chat
+
+Suppose User A is chatting with Rahul.
+
+Another user, Anjali, sends a message.
+
+The application receives it through Socket.IO.
+
+Because Anjali's chat isn't currently selected:
+
+Anjali
+Are you free?
+
+The sidebar can update:
+
+Anjali
+Are you free?              10:52 AM
+                         [1]
+
+where [1] represents an unread count.
+
+39. Opening an Unread Conversation
+
+When the user clicks Anjali:
+
+Unread count
+     ↓
 Open chat
-↓
-Send message
-↓
-Second user receives message
-↓
-Typing indicator appears
-↓
-Message is read
-↓
-Reaction is added
-↓
-Message is edited
-↓
+     ↓
+Load messages
+     ↓
+Mark messages as read
+     ↓
+Unread indicator disappears
+
+A read event can be emitted through Socket.IO.
+
+40. Message Ordering
+
+Messages should appear chronologically.
+
+For example:
+
+10:00  Hi
+10:01  How are you?
+10:02  I'm good
+10:03  Great!
+
+The backend should return messages in a consistent order, and the frontend should maintain that order when appending real-time messages.
+
+41. Duplicate Message Prevention
+
+Because the application uses both REST and Socket.IO, care must be taken to avoid displaying the same message twice.
+
+For example:
+
+REST response
++
+Socket response
+
+should not result in:
+
+Hello
+Hello
+
+The frontend should identify messages by a unique message ID.
+
+Conceptually:
+
+if message.id already exists:
+      don't append
+else:
+      append
+
+This is an important part of a reliable real-time messaging application.
+
+42. Page Refresh
+
+Suppose the user refreshes the browser.
+
+The application should:
+
+Refresh
+ ↓
+Read JWT
+ ↓
+Restore authentication
+ ↓
+Reconnect Socket.IO
+ ↓
+Load conversations
+ ↓
+Load selected chat
+ ↓
+Fetch message history
+
+The user should not have to log in again as long as the authentication token remains valid.
+
+43. Browser Tab Closing
+
+When the browser/tab closes:
+
+Browser closes
+     ↓
+Socket disconnects
+     ↓
+Server recognizes disconnection
+     ↓
+User becomes offline
+
+The messages already stored in SQLite remain available.
+
+44. API Authorization
+
+Protected backend APIs require authentication.
+
+The frontend sends:
+
+Authorization: Bearer <JWT>
+
+The backend's authentication middleware:
+
+Request
+ ↓
+Read JWT
+ ↓
+Verify JWT
+ ↓
+Valid?
+ /   \
+No    Yes
+↓      ↓
+401   Continue
+
+This prevents unauthorized access.
+
+45. Direct URL Access
+
+Suppose someone manually enters:
+
+/chat
+
+without being logged in.
+
+The protected route checks authentication.
+
+If there is no valid token:
+
+/chat
+ ↓
+Not authenticated
+ ↓
+Redirect
+ ↓
+/login
+46. Logout Flow
+
+Logout should be available from the profile/menu area.
+
+For example:
+
+Profile
+────────────
+My Profile
+Settings
 Logout
-```
 
-Also test:
+The user clicks:
 
-```text
+Logout
+47. Logout Process
+
+The logout sequence is:
+
+Click Logout
+       ↓
+Clear authentication state
+       ↓
+Remove JWT/token
+       ↓
+Disconnect Socket.IO
+       ↓
+Clear user/session state
+       ↓
+Redirect to Login
+
+Conceptually:
+
+localStorage
+     ↓
+remove token
+
+and:
+
+Socket.IO
+     ↓
+disconnect()
+48. After Logout
+
+The user is redirected to:
+
+/login
+
+The protected pages are no longer accessible.
+
+If the user tries:
+
+/chat
+
+they are redirected back to:
+
+/login
+49. Complete End-to-End Example
+
+Let's follow an actual conversation.
+
+Step 1 — Amrith opens the application
+Browser
+ ↓
+React loads
+ ↓
+Check localStorage
+
+No token exists.
+
+→ Login page
+Step 2 — Amrith logs in
+Email
+Password
+   ↓
+POST /api/auth/login
+
+Backend:
+
+Find user
+ ↓
+bcrypt password verification
+ ↓
+Generate JWT
+ ↓
+Return JWT
+
+Frontend:
+
+Store JWT
+ ↓
+Update AuthContext
+ ↓
+Connect Socket.IO
+ ↓
+Open Chat UI
+Step 3 — Search Rahul
+
+Amrith types:
+
+Rahul
+
+The frontend queries the user API.
+
+Results:
+
+Rahul Kumar
+rahul@example.com
+Step 4 — Click Rahul
+
+The application checks whether a chat exists.
+
+If it exists:
+
+Open chat
+
+If not:
+
+Create chat
+ ↓
+Open chat
+Step 5 — Load conversation
+
+Frontend:
+
+GET /api/chats/...
+GET /api/messages/...
+
+Backend:
+
+SQLite
+ ↓
+Historical messages
+
+The messages appear.
+
+Step 6 — Send message
+
+Amrith types:
+
+Hi Rahul!
+
+and presses Enter.
+
+Frontend immediately updates:
+
+Hi Rahul!      ✓
+
+Socket.IO sends the real-time event.
+
+The API/database persists the message.
+
+Step 7 — Rahul receives it
+
+Rahul's browser receives the Socket.IO event:
+
+new_message
+
+His UI updates immediately:
+
+Hi Rahul!
+
+No refresh.
+
+Step 8 — Rahul types
+
+Rahul starts typing.
+
+Socket event:
+
+typing
+
+Amrith sees:
+
+Rahul is typing...
+Step 9 — Rahul replies
+
+Rahul sends:
+
+Hi Amrith!
+
+Amrith's UI immediately shows:
+
+Hi Rahul!              ✓✓
+                       Hi Amrith!
+Step 10 — Amrith leaves the chat
+
+The message remains in SQLite.
+
+If Amrith returns tomorrow:
+
+Open Rahul chat
+       ↓
+Fetch historical messages
+       ↓
+Previous conversation restored
+Step 11 — Logout
+
+Amrith clicks:
+
+Profile → Logout
+
+The application:
+
+Clear JWT
+ ↓
+Clear auth state
+ ↓
+Disconnect Socket.IO
+ ↓
+Redirect /login
+
+The session is finished.
+
+50. Complete Architecture Flow
+
+The entire system can be represented as:
+
+                         ┌──────────────────────┐
+                         │       Browser        │
+                         │      React/Vite      │
+                         └──────────┬───────────┘
+                                    │
+                  ┌─────────────────┴────────────────┐
+                  │                                  │
+                  ▼                                  ▼
+           REST API / Axios                     Socket.IO
+                  │                                  │
+                  ▼                                  ▼
+          Express Controllers                  Socket Handler
+                  │                                  │
+                  ▼                                  ▼
+          Services / Logic                     Real-time events
+                  │                                  │
+                  ▼                                  │
+             Repository                             │
+                  │                                  │
+                  ▼                                  │
+                SQLite                              │
+                  │                                  │
+                  └──────────────┬───────────────────┘
+                                 │
+                                 ▼
+                          Persistent data
+51. REST API vs Socket.IO
+
+This distinction is particularly important when explaining the project in an interview.
+
+Feature	REST API	Socket.IO
+Login	✅	❌
+Registration	✅	❌
+Search users	✅	❌
+Load chats	✅	❌
+Load old messages	✅	❌
+Save messages	✅	Can trigger event
+Instant messages	❌	✅
+Typing indicator	❌	✅
+Read receipts	❌	✅
+Reactions	Can persist	✅ Real-time
+Online status	❌	✅
+Logout	Frontend/API	Disconnect
+
+The important architectural idea is:
+
+REST handles reliable data retrieval and persistence, while Socket.IO handles real-time communication.
+
+52. Database-Level Flow
+
+The important entities are conceptually:
+
+Users
+ │
+ ├──────────────┐
+ │              │
+ ▼              ▼
+Chats         Messages
+ │              │
+ │              ├── sender
+ │              ├── receiver/chat
+ │              ├── content
+ │              └── timestamp
+ │
+ └── participants
+
+A user can participate in multiple chats.
+
+A chat contains multiple messages.
+
+Each message belongs to a particular conversation and sender.
+
+53. Error Handling
+
+The application should handle failures gracefully.
+
 Invalid login
-Expired session
-Socket reconnect
-Protected route
-Password reset
-```
+Invalid email/password
 
----
+→ Show error message.
 
-# 71. ACCESSIBILITY
+User doesn't exist
+User not found
 
-Do not redesign the UI.
+→ Show appropriate feedback.
 
-Improve accessibility internally.
+Network failure
+Unable to connect to server
 
-Ensure:
+→ Don't crash the application.
 
-* Buttons have accessible names
-* Inputs have labels
-* Modals have appropriate focus behavior
-* Keyboard navigation works
-* Escape closes appropriate modals
-* Focus states remain visible
-* Screen readers can understand important actions
-* Images have appropriate alt text
-* Loading states have accessible descriptions
-* Color is not the only way information is communicated
+Socket disconnect
 
----
+The UI can indicate:
 
-# 72. RESPONSIVE BEHAVIOR
+Reconnecting...
 
-Do not redesign responsive layouts.
+and attempt to reconnect.
 
-Audit the existing UI at:
+Message failure
 
-* Desktop
-* Laptop
-* Tablet
-* Mobile
+The message can be marked as:
 
-Fix only genuine functional/responsive bugs.
+Failed to send
+↻ Retry
 
-Do not change the design language.
+if such behavior is implemented.
 
----
+54. Loading States
 
-# 73. NETWORK FAILURE HANDLING
+Professional UI should show loading states during asynchronous operations.
 
-The application must gracefully handle:
+Login
+[ Logging in... ]
+Search
+Searching...
+Loading chats
+Loading conversations...
+Loading messages
+Loading messages...
 
-* API unavailable
-* Socket unavailable
-* Internet disconnected
-* Server restart
-* Request timeout
+This prevents the user from thinking the application is frozen.
 
-Show an appropriate existing-style notification/status.
+55. Empty States
 
-Do not leave the application silently broken.
+The application should also have useful empty states.
 
----
+No conversations
+No conversations yet.
 
-# 74. OFFLINE-AWARE BEHAVIOR
 
-Detect:
+Search for a user to start chatting.
+No search results
+No users found.
+Empty chat
+No messages yet.
 
-```javascript
-navigator.onLine
-```
 
-where useful.
+Say hello 👋
+56. Responsive Behavior
 
-When offline:
+On desktop:
 
-* Indicate connection status.
-* Prevent impossible operations where appropriate.
-* Preserve typed message content where possible.
-* Retry/recover when connection returns.
+┌──────────────┬─────────────────────┐
+│ Chat List    │ Conversation        │
+│              │                     │
+│              │                     │
+└──────────────┴─────────────────────┘
 
-Do not claim a message was delivered if it was not persisted.
+On smaller screens:
 
----
+Chat List
+    ↓
+Conversation
 
-# 75. MESSAGE SEND RELIABILITY
+The UI can switch between the conversation list and selected chat to maximize available screen space.
 
-Improve message sending so the UI does not incorrectly display a successful message when the server fails.
+57. Security Flow
 
-If appropriate, use temporary message states:
+Authentication security:
 
-```text
-sending
-sent
-failed
-```
-
-Do not introduce complicated optimistic behavior if it causes duplication.
-
-The database must remain the source of truth for persisted messages.
-
----
-
-# 76. DUPLICATE MESSAGE PREVENTION
-
-Socket + REST architecture can sometimes result in duplicate messages.
-
-Design the system so the same message is not appended multiple times.
-
-Use a unique message ID.
-
-Frontend should reconcile incoming socket events with existing messages.
-
----
-
-# 77. SECURITY OF MESSAGE IDS
-
-Review message ID generation.
-
-Ensure IDs are not easily exploitable for unauthorized data access.
-
-Even if IDs are predictable, server-side authorization must always be enforced.
-
----
-
-# 78. API DOCUMENTATION
-
-Create documentation for the backend.
-
-Document:
-
-* Authentication endpoints
-* User endpoints
-* Chat endpoints
-* Message endpoints
-* Socket events
-* Request bodies
-* Responses
-* Error responses
-* Authentication requirements
-
-A simple:
-
-```text
-API.md
-```
-
-is acceptable.
-
----
-
-# 79. PROJECT DOCUMENTATION
-
-Improve `README.md`.
-
-Include:
-
-### Project overview
-
-### Features
-
-### Tech stack
-
-### Architecture
-
-### Installation
-
-### Environment variables
-
-### Database setup
-
-### Development
-
-### Production build
-
-### Deployment
-
-### Authentication architecture
-
-### Socket.IO architecture
-
-### Security
-
-### Testing
-
-### Troubleshooting
-
-### Future improvements
-
-Make it professional enough for a GitHub portfolio.
-
----
-
-# 80. ARCHITECTURE DOCUMENTATION
-
-Add an architecture explanation.
-
-Explain:
-
-```text
-React
+Password
    ↓
-REST API
+bcrypt
    ↓
-Express
+Password hash
    ↓
 SQLite
 
-React
-   ↕
-Socket.IO
-   ↕
-Node/Express
-```
-
-Explain how:
-
-* Authentication works
-* Messages are persisted
-* Real-time events work
-* Rooms work
-* Read receipts work
-* Reconnection works
-
----
-
-# 81. PERFORMANCE
-
-Optimize production build.
-
-Review:
-
-* Bundle size
-* Lazy loading
-* Route splitting
-* Image loading
-* API calls
-* Duplicate requests
-* Socket listeners
-* React rendering
-* Database queries
-
-Use React lazy loading for large routes where appropriate.
-
-Do not add unnecessary libraries.
-
----
-
-# 82. DEPENDENCY MANAGEMENT
-
-Review existing dependencies.
-
-Remove:
-
-* Unused packages
-* Duplicate packages
-* Obsolete packages
-
-Do not upgrade every dependency blindly.
-
-Only upgrade dependencies when:
-
-* Necessary
-* Security-related
-* Compatible with the current application
-
-After dependency changes, verify the entire application.
-
----
-
-# 83. CODE QUALITY
-
-Ensure:
-
-* Consistent naming
-* Consistent error handling
-* Reusable functions
-* Clear folder structure
-* No duplicated business logic
-* No dead code
-* No commented-out abandoned implementations
-* No console debugging statements in production paths
-
-Use comments only when they explain non-obvious logic.
-
----
-
-# 84. SECURITY REVIEW
-
-After implementation, perform a security audit.
-
-Specifically look for:
-
-* Broken authorization
-* IDOR vulnerabilities
-* JWT vulnerabilities
-* Token leakage
-* XSS
-* SQL injection
-* CORS misconfiguration
-* CSRF risks
-* Rate-limit bypass
-* Socket authorization bypass
-* Sensitive data exposure
-* Password reset vulnerabilities
-* User enumeration
-* File upload vulnerabilities
-* Privilege escalation
-
-Fix all discovered issues.
-
----
-
-# 85. REGRESSION TEST
-
-The following existing functionality MUST continue working:
-
-### Authentication
-
-* Register
-* Login
-* Logout
-* Persistent authentication
-
-### User
-
-* Search
-* Profile
-* Avatar
-* Status/Bio
-
-### Messaging
-
-* Send messages
-* Receive messages
-* Message history
-* Message editing
-* Reactions
-
-### Real-time
-
-* Online/offline
-* Typing
-* Read receipts
-* Socket reconnection
-* Audio notification
-
-### Navigation
-
-* Protected routes
-* Public routes
-* Logout redirects
-
-Do not consider the work complete if these are broken.
-
----
-
-# 86. UI PRESERVATION RULE
-
-This is one of the highest-priority requirements.
-
-Before modifying any frontend component, determine whether the change actually requires a visual modification.
-
-If it does not, modify only the logic.
-
-Do not:
-
-* Redesign components
-* Replace Tailwind classes unnecessarily
-* Change colors
-* Change typography
-* Change layout
-* Replace icons
-* Replace navigation
-* Replace the sidebar
-* Replace the chat window
-* Replace the message bubbles
-* Replace the overall theme
-
-The existing UI should look substantially the same after the professionalization.
-
-The improvement should primarily be visible through:
-
-* Better behavior
-* Better reliability
-* Better animations
-* Better loading states
-* Better error handling
-* Better security
-* Better authentication
-* Better responsiveness
-* Better performance
-
----
-
-# 87. DO NOT ADD UNNECESSARY TECHNOLOGIES
-
-Do not introduce a large number of libraries simply because they are popular.
-
-Before installing a dependency, ask:
-
-1. Is it actually required?
-2. Can the existing stack handle it?
-3. Does it solve a meaningful problem?
-4. Will it increase maintenance complexity?
-
-Prefer the existing:
-
-* React
-* Vite
-* Tailwind
-* Context API
-* Express
-* SQLite
-* Socket.IO
-
-over replacing the architecture unnecessarily.
-
----
-
-# 88. ERROR-RESILIENT DEVELOPMENT
-
-If you encounter an existing bug while implementing a feature:
-
-1. Understand the root cause.
-2. Fix it properly.
-3. Do not hide the error.
-4. Do not add hacks merely to silence it.
-5. Verify related functionality afterward.
-
-Never solve an error by disabling security.
-
----
-
-# 89. NO BREAKING CHANGES WITHOUT REASON
-
-Preserve existing API contracts where possible.
-
-If an API must change:
-
-* Update backend
-* Update frontend
-* Update documentation
-* Update tests
-
-Do not leave old and new implementations conflicting with each other.
-
----
-
-# 90. FINAL PRODUCTION CHECKLIST
-
-Before declaring the project complete, verify:
-
-## Authentication
-
-* [ ] Registration works
-* [ ] Login works
-* [ ] Logout works
-* [ ] Protected routes work
-* [ ] Token expiration works
-* [ ] Password reset works
-* [ ] Password change works
-* [ ] Email verification architecture exists
-* [ ] Passwords are securely hashed
-
-## Security
-
-* [ ] Helmet enabled
-* [ ] CORS restricted
-* [ ] Rate limiting enabled
-* [ ] Input validation enabled
-* [ ] SQL injection protected
-* [ ] XSS reviewed
-* [ ] JWT security reviewed
-* [ ] Socket authentication secured
-* [ ] Authorization verified server-side
-* [ ] Secrets removed from source code
-* [ ] `.env.example` created
-
-## Messaging
-
-* [ ] Sending works
-* [ ] Receiving works
-* [ ] Editing works
-* [ ] Reactions work
-* [ ] Read receipts work
-* [ ] Typing works
-* [ ] Online/offline works
-* [ ] Reconnection works
-* [ ] Duplicate messages prevented
-* [ ] Unauthorized access prevented
-
-## Database
-
-* [ ] Schema reviewed
-* [ ] Migrations available
-* [ ] Foreign keys enabled
-* [ ] Indexes reviewed
-* [ ] Transactions used where required
-* [ ] SQLite production persistence documented
-
-## Frontend
-
-* [ ] UI preserved
-* [ ] Existing design preserved
-* [ ] Loading states improved
-* [ ] Error states improved
-* [ ] Animations improved
-* [ ] Reduced-motion supported
-* [ ] Memory leaks removed
-* [ ] Socket listeners cleaned up
-* [ ] Responsive behavior verified
-
-## Testing
-
-* [ ] Authentication tests
-* [ ] Authorization tests
-* [ ] API tests
-* [ ] Socket tests
-* [ ] Frontend tests
-* [ ] E2E critical flow
-
-## Production
-
-* [ ] Health check
-* [ ] Graceful shutdown
-* [ ] Environment configuration
-* [ ] Production error handling
-* [ ] Production CORS
-* [ ] Build succeeds
-* [ ] Frontend build succeeds
-* [ ] Backend starts successfully
-* [ ] README updated
-* [ ] API documentation updated
-
----
-
-# 91. IMPLEMENTATION ORDER
-
-Implement the work in this order.
-
-## Phase 1 — Audit
-
-Inspect the entire codebase.
-
-Do not modify anything yet.
-
-Produce a concise internal assessment of:
-
-* Current architecture
-* Existing features
-* Missing features
-* Security risks
-* Database schema
-* API structure
-* Socket structure
-
-Then begin implementation.
-
-## Phase 2 — Foundation
-
-Implement:
-
-* Better environment configuration
-* Centralized errors
-* Validation
-* Security middleware
-* Rate limiting
-* Helmet
-* CORS hardening
-* Database improvements
-* Health check
-
-## Phase 3 — Authentication
-
-Implement:
-
-* Secure token architecture
-* Forgot password
-* Reset password
-* Change password
-* Email verification architecture
-* Session management
-* Logout improvements
-
-## Phase 4 — Messaging Security
-
-Harden:
-
-* REST authorization
-* Socket authentication
-* Room authorization
-* Message authorization
-* Reactions
-* Read receipts
-* Editing
-* User access
-
-## Phase 5 — Reliability
-
-Implement:
-
-* Socket reconnection
-* Offline handling
-* Duplicate prevention
-* Message delivery reliability
-* Loading states
-* Error states
-* State synchronization
-
-## Phase 6 — UX Improvements
-
-Without redesigning the UI:
-
-* Improve micro-interactions
-* Improve transitions
-* Improve loading states
-* Improve toast feedback
-* Improve modal behavior
-* Improve accessibility
-* Improve reduced-motion behavior
-
-## Phase 7 — Settings
-
-Add:
-
-* Account settings
-* Security settings
-* Notification preferences
-* Privacy settings
-
-while preserving the existing visual design.
-
-## Phase 8 — Testing
-
-Add:
-
-* Unit tests
-* Integration tests
-* Socket tests
-* E2E tests
-
-## Phase 9 — Performance
-
-Optimize:
-
-* React rendering
-* API requests
-* Socket events
-* Database queries
-* Message history
-* Bundle size
-
-## Phase 10 — Documentation & Production
-
-Finalize:
-
-* README
-* API documentation
-* Architecture documentation
-* `.env.example`
-* Health check
-* Deployment configuration
-* Production checklist
-
----
-
-# 92. IMPORTANT DEVELOPMENT RULE
-
-Do not stop after creating files.
-
-Actually integrate everything into the existing application.
-
-For every feature:
-
-```text
-Database
-    ↓
-Backend model/query
-    ↓
-Service/controller
-    ↓
-API route
-    ↓
-Frontend API service
-    ↓
-React state/context
-    ↓
-Existing UI
-```
-
-For real-time features:
-
-```text
-Client
-    ↓
-Socket.IO
-    ↓
-Authentication
-    ↓
-Authorization
-    ↓
-Server event
-    ↓
-Database persistence where required
-    ↓
-Recipient socket
-    ↓
-React state update
-```
-
-Everything must be connected end-to-end.
-
----
-
-# 93. IMPORTANT RULE ABOUT EXISTING CODE
-
-Do not assume existing code is wrong merely because it does not follow your preferred architecture.
-
-Preserve working code when it is safe.
-
-Refactor only when there is a meaningful benefit.
-
-If you discover an architectural problem, fix it incrementally.
-
-Do not rewrite the entire application.
-
----
-
-# 94. FINAL ACCEPTANCE CRITERIA
-
-The finished ChatApp Pro should feel like a **real production-grade messaging application**, not a tutorial project.
-
-It should demonstrate:
-
-* Secure authentication
-* Proper authorization
-* Production-level API design
-* Secure WebSocket architecture
-* Persistent database storage
-* Real-time communication
-* Reliable reconnection
-* Strong validation
-* Rate limiting
-* Secure headers
-* Error handling
-* Session management
-* Password recovery
-* Profile management
-* Notification architecture
-* Good accessibility
-* Good performance
-* Automated testing
-* Professional documentation
-* Clean code
-* Production configuration
-
-Most importantly:
-
-### THE UI MUST REMAIN ESSENTIALLY THE SAME.
-
-The purpose of this task is to transform:
-
-> "A working React + Node chat application"
-
-into:
-
-> **"A secure, reliable, maintainable, production-quality full-stack real-time messaging platform."**
-
-Do not sacrifice existing functionality merely to introduce new architecture.
-
-Do not sacrifice security to preserve convenience.
-
-Do not sacrifice the existing UI to introduce new functionality.
-
-Implement carefully, incrementally, and verify every major change.
+Login:
+
+Credentials
+   ↓
+bcrypt verification
+   ↓
+JWT
+
+API:
+
+JWT
+ ↓
+Authorization middleware
+ ↓
+Protected resource
+
+The backend should never trust the frontend alone for authorization.
+
+58. What Happens When an Unauthorized Request Is Made?
+
+Example:
+
+GET /api/messages
+
+without a valid JWT.
+
+Backend:
+
+JWT missing/invalid
+       ↓
+401 Unauthorized
+
+Frontend can respond by:
+
+Clear authentication
+ ↓
+Redirect to login
+59. Full UI State Lifecycle
+
+The frontend essentially moves through these states:
+
+UNAUTHENTICATED
+       ↓
+AUTHENTICATING
+       ↓
+AUTHENTICATED
+       ↓
+SOCKET_CONNECTED
+       ↓
+CHAT_SELECTED
+       ↓
+MESSAGING
+       ↓
+SOCKET_DISCONNECTED / RECONNECTING
+       ↓
+LOGOUT
+       ↓
+UNAUTHENTICATED
+60. Complete User Flow — One-Line Version
+
+For documentation/interview purposes, you can describe the entire application like this:
+
+When the application starts, React checks for a persisted JWT token. If the user is authenticated, the application restores the session, connects to the Socket.IO server, and loads the chat interface. Users can search for registered users through the REST API and open or create private conversations. When a conversation is opened, previous messages are retrieved from the Express API and SQLite database. New messages are sent through the real-time Socket.IO connection for instant delivery while also being persisted through the backend. Typing indicators, read receipts, reactions, and online status are handled through Socket.IO events. The React state is updated immediately so the interface behaves without page refreshes. When the user logs out, the JWT is removed, authentication state is cleared, the Socket.IO connection is disconnected, and the user is redirected to the login screen.
+
+61. Interview-Level Architecture Explanation
+
+If an interviewer asks:
+
+"Explain how your chat application works."
+
+A strong answer would be:
+
+"My application is a full-stack real-time messaging system built with React and Vite on the frontend and Node.js, Express and SQLite on the backend. I use JWT-based authentication and bcrypt for password hashing. After login, the JWT is persisted on the client and used to authorize protected API requests. The application uses a dual communication architecture. REST APIs handle operations that require persistence, such as authentication, user search, chat retrieval and historical message retrieval. Socket.IO maintains a persistent bidirectional connection for real-time operations such as sending messages, typing indicators, read receipts, reactions and online status. When a user sends a message, the UI updates immediately and the message is sent through the real-time socket while being persisted through the backend. The receiver gets the message through their Socket.IO connection without refreshing the page. React Context/state management keeps the authentication and chat UI synchronized, while React Router handles protected navigation. On logout, the token and authentication state are cleared and the socket connection is disconnected."
+
+That is the core technical story of your application.
+
+62. Final End-to-End Flow Diagram
+                         USER OPENS APP
+                               │
+                               ▼
+                     Check JWT in storage
+                               │
+                    ┌──────────┴──────────┐
+                    │                     │
+                JWT valid              No JWT
+                    │                     │
+                    ▼                     ▼
+              Restore session           LOGIN
+                    │                     │
+                    ▼                     ▼
+             Connect Socket.IO       POST /login
+                    │                     │
+                    │                  Verify
+                    │                  password
+                    │                     │
+                    │                     ▼
+                    │                  Generate JWT
+                    │                     │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                         CHAT DASHBOARD
+                               │
+                 ┌─────────────┴─────────────┐
+                 │                           │
+                 ▼                           ▼
+            Search users                Conversations
+                 │                           │
+                 └─────────────┬─────────────┘
+                               ▼
+                         Select user
+                               │
+                               ▼
+                      Open/create chat
+                               │
+                               ▼
+                    Fetch message history
+                               │
+                               ▼
+                         DISPLAY CHAT
+                               │
+                  ┌────────────┼────────────┐
+                  │            │            │
+                  ▼            ▼            ▼
+               Message      Typing       Reaction
+                  │            │            │
+                  ▼            ▼            ▼
+              Socket.IO     Socket.IO    Socket.IO
+                  │            │            │
+                  ▼            ▼            ▼
+              Receiver       Receiver     Receiver
+                  │
+                  ▼
+             Persist message
+                  │
+                  ▼
+                SQLite
+                  │
+                  ▼
+             Future history
+                  │
+                  ▼
+               LOGOUT
+                  │
+          ┌───────┼────────┐
+          ▼       ▼        ▼
+       Clear JWT  Clear   Disconnect
+                  state    Socket
+          │
+          └─────────┬─────────┘
+                    ▼
+                 LOGIN
+
+This gives you the complete functional, UI, backend, database, authentication, and real-time flow of the application from beginning to end.
