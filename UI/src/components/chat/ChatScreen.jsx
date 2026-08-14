@@ -335,28 +335,30 @@ const ChatScreen = () => {
       ).sort((a, b) => b.timestamp - a.timestamp)
     );
 
-    // Emit Real-Time Socket.IO event
-    emitSendMessage({
-      chatId: activeChatId,
-      conversationId: activeChatId,
-      recipientId: activeChat?.recipientId || activeChat?.contactId,
-      text,
-      content: text,
-      replyToId: options.replyToId,
-      isForwarded: options.isForwarded
-    });
-
-    // Persist via REST API
-    try {
-      await apiRequest('/messages', 'POST', {
+    // 1. Emit via Real-Time Socket.IO (Socket backend handles DB persistence & broadcast)
+    if (socket && isConnected) {
+      emitSendMessage({
         chatId: activeChatId,
         conversationId: activeChatId,
+        recipientId: activeChat?.recipientId || activeChat?.contactId,
+        text,
         content: text,
-        replyToId: options.replyToId || null,
-        isForwarded: Boolean(options.isForwarded)
+        replyToId: options.replyToId,
+        isForwarded: options.isForwarded
       });
-    } catch (err) {
-      console.error('Failed to persist message via REST:', err.message);
+    } else {
+      // 2. Fallback to REST API ONLY if real-time socket engine is disconnected
+      try {
+        await apiRequest('/messages', 'POST', {
+          chatId: activeChatId,
+          conversationId: activeChatId,
+          content: text,
+          replyToId: options.replyToId || null,
+          isForwarded: Boolean(options.isForwarded)
+        });
+      } catch (err) {
+        console.error('Failed to persist message via REST:', err.message);
+      }
     }
   };
 
