@@ -48,7 +48,15 @@ body{
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 30 !important;
+}
+
+.react-input-emoji--picker__container {
+  z-index: 9999 !important;
+  position: absolute !important;
+  bottom: 50px !important;
 }
 
 .react-input-emoji--input {

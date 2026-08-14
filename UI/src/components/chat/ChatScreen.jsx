@@ -462,6 +462,7 @@ const ChatScreen = () => {
               onSelectChat={handleSelectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
               onDeleteChat={handleDeleteChat}
+              onStartChatWithContact={handleStartChatWithContact}
             />
           </div>
 

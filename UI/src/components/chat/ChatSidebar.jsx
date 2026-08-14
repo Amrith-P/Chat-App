@@ -14,7 +14,7 @@ import {
 } from 'react-icons/fa';
 import { apiRequest } from '../../api/client';
 
-const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat, onDeleteChat }) => {
+const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat, onDeleteChat, onStartChatWithContact }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'favorites'
   const [activeMenuChatId, setActiveMenuChatId] = useState(null);
@@ -260,7 +260,11 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
                   <div
                     key={u.id}
                     onClick={() => {
-                      onOpenNewChat();
+                      if (onStartChatWithContact) {
+                        onStartChatWithContact(u);
+                      } else if (onOpenNewChat) {
+                        onOpenNewChat();
+                      }
                       setSearchTerm('');
                     }}
                     className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 hover:border-purple-500/30 cursor-pointer transition space-y-2 group shadow-sm"

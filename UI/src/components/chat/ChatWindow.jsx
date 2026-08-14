@@ -135,8 +135,8 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
         </div>
       )}
 
-      {/* 1. CHAT HEADER */}
-      <header className="h-16 bg-slate-900 border-b border-slate-800 px-4 md:px-6 flex items-center justify-between shrink-0 select-none z-10">
+      {/* 1. CHAT HEADER - Sticky Top Pinned Header */}
+      <header className="h-16 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 flex items-center justify-between shrink-0 select-none z-30 sticky top-0">
         
         {/* Contact Info & Mobile Back Button */}
         <div className="flex items-center space-x-3">
@@ -443,9 +443,9 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
           </div>
         )}
 
-        <div className="flex items-center space-x-2 w-full max-w-full overflow-hidden">
+        <div className="flex items-center space-x-2 w-full max-w-full overflow-visible relative">
           {/* REACT-INPUT-EMOJI COMPONENT */}
-          <div className="flex-1 min-w-0 max-w-full text-white overflow-hidden">
+          <div className="flex-1 min-w-0 max-w-full text-white overflow-visible relative">
             <InputEmoji
               value={inputText}
               onChange={setInputText}
