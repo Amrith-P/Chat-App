@@ -138,3 +138,33 @@ export const createOrGetDirectChat = (req, res) => {
     });
   });
 };
+
+// @desc    Delete conversation and messages
+// @route   DELETE /api/chats/:chatId
+export const deleteChat = (req, res) => {
+  const { chatId } = req.params;
+  const currentUserId = req.user.id;
+
+  // Verify membership
+  db.get(
+    'SELECT * FROM conversation_members WHERE conversationid = ? AND userid = ?',
+    [chatId, currentUserId],
+    (err, member) => {
+      if (err || !member) {
+        return res.status(403).json({ message: 'Not authorized to delete this chat' });
+      }
+
+      // Delete messages, conversation members and conversation
+      db.run('DELETE FROM messages WHERE conversationid = ?', [chatId], () => {
+        db.run('DELETE FROM conversation_members WHERE conversationid = ?', [chatId], () => {
+          db.run('DELETE FROM conversations WHERE id = ?', [chatId], (delErr) => {
+            if (delErr) {
+              return res.status(500).json({ message: 'Failed to delete chat' });
+            }
+            res.json({ success: true, message: 'Chat deleted successfully', chatId });
+          });
+        });
+      });
+    }
+  );
+};

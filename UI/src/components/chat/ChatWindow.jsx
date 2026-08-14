@@ -16,19 +16,21 @@ import {
   FaStar,
   FaShare,
   FaPen,
-  FaSmile
+  FaSmile,
+  FaEllipsisV
 } from 'react-icons/fa';
 import CallModal from './CallModal';
 import ConfirmModal from '../common/ConfirmModal';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onToggleDrawer, onBackToSidebar }) => {
+const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onToggleDrawer, onBackToSidebar, onDeleteChat }) => {
   const [inputText, setInputText] = useState('');
   
-  // Header Search in Chat State
+  // Header Search & Menu State
   const [isSearchInChatOpen, setIsSearchInChatOpen] = useState(false);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
 
   // Call Modal State
   const [isCallOpen, setIsCallOpen] = useState(false);
@@ -40,8 +42,9 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
   const [toastMessage, setToastMessage] = useState('');
   const [starredMsgIds, setStarredMsgIds] = useState(new Set());
 
-  // Delete Confirmation Modal State
+  // Delete Confirm Modal States
   const [deleteConfirmMsgId, setDeleteConfirmMsgId] = useState(null);
+  const [isDeleteChatConfirmOpen, setIsDeleteChatConfirmOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -211,6 +214,42 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
           <button onClick={onToggleDrawer} className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition" title="Contact Info">
             <FaInfoCircle className="text-xs md:text-sm" />
           </button>
+
+          {/* 3-DOTS HEADER DROPDOWN MENU */}
+          <div className="relative">
+            <button
+              onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+              className="p-2 md:p-2.5 rounded-xl hover:bg-slate-800 hover:text-white transition"
+              title="More Options"
+            >
+              <FaEllipsisV className="text-xs md:text-sm" />
+            </button>
+
+            {isHeaderMenuOpen && (
+              <div className="absolute right-0 top-12 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 w-44 z-30">
+                <button
+                  onClick={() => {
+                    setIsHeaderMenuOpen(false);
+                    onToggleDrawer();
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-xs font-medium text-slate-300 hover:bg-slate-800 flex items-center space-x-2 transition"
+                >
+                  <FaInfoCircle className="text-xs text-slate-400" />
+                  <span>Contact Info</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsHeaderMenuOpen(false);
+                    setIsDeleteChatConfirmOpen(true);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 flex items-center space-x-2 transition border-t border-slate-800"
+                >
+                  <FaTrash className="text-xs" />
+                  <span>Delete Chat</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -462,6 +501,22 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
         title="Delete Message"
         message="Are you sure you want to delete this message? This will remove the message for everyone."
         confirmText="Delete"
+        confirmVariant="danger"
+      />
+
+      {/* Delete Chat Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isDeleteChatConfirmOpen}
+        onClose={() => setIsDeleteChatConfirmOpen(false)}
+        onConfirm={() => {
+          setIsDeleteChatConfirmOpen(false);
+          if (onDeleteChat && activeChat) {
+            onDeleteChat(activeChat.id);
+          }
+        }}
+        title="Delete Conversation"
+        message={`Are you sure you want to delete your conversation with ${activeChat?.name || 'this contact'}? All chat messages will be permanently deleted.`}
+        confirmText="Delete Chat"
         confirmVariant="danger"
       />
 

@@ -400,6 +400,26 @@ const ChatScreen = () => {
     setMobileView('chat');
   };
 
+  // Handle deleting a conversation
+  const handleDeleteChat = async (chatId) => {
+    try {
+      await apiRequest(`/chats/${chatId}`, 'DELETE');
+      setConversations((prev) => prev.filter((c) => String(c.id) !== String(chatId)));
+      setMessagesMap((prev) => {
+        const updated = { ...prev };
+        delete updated[chatId];
+        return updated;
+      });
+
+      if (String(activeChatId) === String(chatId)) {
+        navigate('/app/chats');
+        setMobileView('sidebar');
+      }
+    } catch (err) {
+      console.error('Failed to delete chat:', err.message);
+    }
+  };
+
   const handleSelectChat = useCallback((id) => {
     navigate(`/app/chats/${id}`);
     setMobileView('chat');
@@ -439,6 +459,7 @@ const ChatScreen = () => {
               activeChatId={activeChatId}
               onSelectChat={handleSelectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
+              onDeleteChat={handleDeleteChat}
             />
           </div>
 
@@ -456,6 +477,7 @@ const ChatScreen = () => {
                 navigate('/app/chats');
                 setMobileView('sidebar');
               }}
+              onDeleteChat={handleDeleteChat}
             />
           </div>
 

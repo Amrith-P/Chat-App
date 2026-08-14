@@ -8,13 +8,16 @@ import {
   FaCommentDots, 
   FaUserPlus,
   FaTimes,
-  FaArrowRight
+  FaArrowRight,
+  FaEllipsisV,
+  FaTrash
 } from 'react-icons/fa';
 import { apiRequest } from '../../api/client';
 
-const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat }) => {
+const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat, onDeleteChat }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'favorites'
+  const [activeMenuChatId, setActiveMenuChatId] = useState(null);
 
   // Grouped Search State
   const [searchResults, setSearchResults] = useState({
@@ -23,6 +26,17 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
     users: []
   });
   const [isSearchingDb, setIsSearchingDb] = useState(false);
+
+  // Close 3-dots dropdown menu when clicking anywhere else
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.chat-menu-container')) {
+        setActiveMenuChatId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   // Grouped Search Handler
   useEffect(() => {
@@ -329,7 +343,7 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2 truncate pr-2">
                         <h3 className={`text-sm truncate ${isActive ? 'font-bold text-white' : 'font-semibold text-slate-200'}`}>
@@ -356,6 +370,38 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat 
                         </span>
                       )}
                     </div>
+                  </div>
+
+                  {/* 3-DOTS ACTION MENU */}
+                  <div className="relative chat-menu-container shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuChatId(activeMenuChatId === chat.id ? null : chat.id);
+                      }}
+                      className="p-2 text-slate-500 hover:text-white hover:bg-slate-700/60 rounded-lg transition"
+                      title="Chat Options"
+                    >
+                      <FaEllipsisV className="text-xs" />
+                    </button>
+
+                    {activeMenuChatId === chat.id && (
+                      <div className="absolute right-0 top-8 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 w-36 z-30">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuChatId(null);
+                            if (onDeleteChat) onDeleteChat(chat.id);
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 flex items-center space-x-2 transition"
+                        >
+                          <FaTrash className="text-xs" />
+                          <span>Delete Chat</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
