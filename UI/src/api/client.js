@@ -78,7 +78,9 @@ export const apiRequest = async (endpoint, method = 'GET', body = null, isRetry 
 
     return data;
   } catch (error) {
-    console.error(`API Error (${endpoint}):`, error.message || error);
+    if (!endpoint.includes('/auth/refresh')) {
+      console.error(`API Error (${endpoint}):`, error.message || error);
+    }
     throw error;
   }
 };
