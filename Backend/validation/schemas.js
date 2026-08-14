@@ -34,7 +34,10 @@ export const loginSchema = z.object({
 export const sendMessageSchema = z.object({
   chatId: z
     .union([z.string(), z.number()])
-    .refine((val) => val !== undefined && val !== '', 'Chat ID is required'),
+    .optional(),
+  conversationId: z
+    .union([z.string(), z.number()])
+    .optional(),
   content: z
     .string()
     .min(1, 'Message content cannot be empty')
@@ -43,6 +46,12 @@ export const sendMessageSchema = z.object({
   replyToId: z
     .union([z.string(), z.number(), z.null()])
     .optional(),
+  isForwarded: z
+    .boolean()
+    .optional()
+}).refine((data) => Boolean(data.chatId || data.conversationId), {
+  message: 'Chat ID or Conversation ID is required',
+  path: ['chatId']
 });
 
 // User Search Schema

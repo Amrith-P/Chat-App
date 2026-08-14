@@ -80,16 +80,17 @@ export const getMessagesByChatId = (req, res) => {
 // @desc    Send a message (REST fallback)
 // @route   POST /api/messages
 export const sendMessage = (req, res) => {
-  const { chatId, content, messageType = 'text', replyToId = null, isForwarded = false } = req.body;
+  const { chatId, conversationId, content, messageType = 'text', replyToId = null, isForwarded = false } = req.body;
+  const targetChatId = chatId || conversationId;
   const senderId = req.user.id;
 
-  if (!chatId || !content || !content.trim()) {
+  if (!targetChatId || !content || !content.trim()) {
     return res.status(400).json({ message: 'Chat ID and message content are required' });
   }
 
   db.run(
-    'INSERT INTO messages (conversationId, senderId, content, messageType, replyToId, isForwarded) VALUES (?, ?, ?, ?, ?, ?)',
-    [chatId, senderId, content.trim(), messageType, replyToId, isForwarded ? 1 : 0],
+    'INSERT INTO messages (conversationid, senderid, content, messagetype, replytoid, isforwarded) VALUES (?, ?, ?, ?, ?, ?)',
+    [targetChatId, senderId, content.trim(), messageType, replyToId, isForwarded ? 1 : 0],
     function (err) {
       if (err) {
         return res.status(500).json({ message: 'Failed to send message', error: err.message });
@@ -97,13 +98,15 @@ export const sendMessage = (req, res) => {
 
       const newMessage = {
         id: this.lastID,
-        chatId,
+        chatId: targetChatId,
+        conversationId: targetChatId,
         senderId,
         isMe: true,
         text: content.trim(),
+        content: content.trim(),
         messageType,
         replyToId,
-        isForwarded,
+        isForwarded: Boolean(isForwarded),
         isEdited: false,
         isDeleted: false,
         readAt: null,

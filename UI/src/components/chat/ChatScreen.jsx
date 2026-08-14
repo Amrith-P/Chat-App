@@ -345,10 +345,11 @@ const ChatScreen = () => {
     // Persist via REST API
     try {
       await apiRequest('/messages', 'POST', {
+        chatId: activeChatId,
         conversationId: activeChatId,
         content: text,
-        replyToId: options.replyToId,
-        isForwarded: options.isForwarded
+        replyToId: options.replyToId || null,
+        isForwarded: Boolean(options.isForwarded)
       });
     } catch (err) {
       console.error('Failed to persist message via REST:', err.message);
