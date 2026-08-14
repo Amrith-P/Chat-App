@@ -15,45 +15,10 @@ import {
   FaBolt, 
   FaMagic,
   FaCheck,
-  FaSyncAlt,
-  FaTimes,
-  FaThLarge,
-  FaPlus,
-  FaMale,
-  FaFemale,
-  FaSmileBeam
+  FaSyncAlt
 } from 'react-icons/fa';
 
-// 24 Curated Smiling Male & Female Avatars
-const SMILING_AVATARS = [
-  // MALE SMILING AVATARS (12)
-  { id: 'm1', gender: 'male', name: 'Alex', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AlexSmile&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm2', gender: 'male', name: 'David', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=DavidHappy&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm3', gender: 'male', name: 'James', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JamesJoy&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm4', gender: 'male', name: 'Ethan', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=EthanSmirk&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm5', gender: 'male', name: 'Lucas', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LucasCheerful&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm6', gender: 'male', name: 'Noah', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=NoahBright&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm7', gender: 'male', name: 'Oliver', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=OliverSunny&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm8', gender: 'male', name: 'Liam', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LiamGleeful&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm9', gender: 'male', name: 'Benjamin', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=BenjaminBeam&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm10', gender: 'male', name: 'Mason', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MasonDelight&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm11', gender: 'male', name: 'Logan', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LoganRadiant&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'm12', gender: 'male', name: 'Jacob', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JacobJolly&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-
-  // FEMALE SMILING AVATARS (12)
-  { id: 'f1', gender: 'female', name: 'Emma', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=EmmaSmile&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f2', gender: 'female', name: 'Sophia', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SophiaHappy&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f3', gender: 'female', name: 'Olivia', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=OliviaJoy&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f4', gender: 'female', name: 'Ava', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AvaCheerful&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f5', gender: 'female', name: 'Isabella', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=IsabellaBright&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f6', gender: 'female', name: 'Mia', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MiaSunny&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f7', gender: 'female', name: 'Amelia', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AmeliaGleeful&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f8', gender: 'female', name: 'Harper', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=HarperBeam&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f9', gender: 'female', name: 'Evelyn', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=EvelynDelight&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f10', gender: 'female', name: 'Abigail', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AbigailRadiant&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f11', gender: 'female', name: 'Emily', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=EmilyJolly&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-  { id: 'f12', gender: 'female', name: 'Ella', url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=EllaSparkle&mouth=smile,laughing,twinkle&eyebrows=defaultHappy&eyes=happy' },
-];
+const defaultSeeds = ['Alex', 'Sarah', 'Felix', 'Mimi', 'Jack', 'Luna', 'Zack', 'Maya'];
 
 const AuthPage = () => {
   const { login, register, forgotPassword, resetPassword, error, setError } = useAuth();
@@ -63,10 +28,18 @@ const AuthPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Avatar Selection States
-  const [selectedAvatar, setSelectedAvatar] = useState(SMILING_AVATARS[0].url);
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-  const [avatarFilter, setAvatarFilter] = useState('all'); // 'all' | 'male' | 'female'
+  // Avatar Selection State
+  const [avatarSeeds, setAvatarSeeds] = useState(defaultSeeds);
+  const [selectedAvatar, setSelectedAvatar] = useState(
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${defaultSeeds[0]}`
+  );
+
+  const handleRandomizeAvatars = () => {
+    const randomSuffix = Math.floor(Math.random() * 1000);
+    const newSeeds = defaultSeeds.map((seed) => `${seed}_${randomSuffix}`);
+    setAvatarSeeds(newSeeds);
+    setSelectedAvatar(`https://api.dicebear.com/7.x/avataaars/svg?seed=${newSeeds[0]}`);
+  };
 
   // Form States
   const [formData, setFormData] = useState({
@@ -394,23 +367,22 @@ const AuthPage = () => {
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               
               {/* AVATAR SELECTION PICKER */}
-              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center space-x-1.5">
-                    <FaSmileBeam className="text-amber-400 text-sm" />
-                    <span>Choose Smiling Avatar</span>
+                  <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    Select Profile Avatar
                   </label>
                   <button
                     type="button"
-                    onClick={() => setIsAvatarModalOpen(true)}
-                    className="flex items-center space-x-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg transition border border-emerald-500/20"
+                    onClick={handleRandomizeAvatars}
+                    className="flex items-center space-x-1.5 text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg transition border border-emerald-500/20"
                   >
-                    <FaThLarge className="text-[10px]" />
-                    <span>More Avatars +</span>
+                    <FaSyncAlt className="text-[10px]" />
+                    <span>Randomize</span>
                   </button>
                 </div>
 
-                {/* Selected Avatar Preview + Quick Thumbnails */}
+                {/* Selected Avatar Preview + Grid */}
                 <div className="flex items-center space-x-3">
                   <div className="relative shrink-0">
                     <img
@@ -424,36 +396,25 @@ const AuthPage = () => {
                   </div>
 
                   {/* Thumbnail Choices Grid */}
-                  <div className="flex items-center space-x-2 overflow-x-auto custom-scrollbar py-1">
-                    {SMILING_AVATARS.slice(0, 4).map((av) => {
-                      const isSelected = selectedAvatar === av.url;
+                  <div className="grid grid-cols-4 gap-1.5 flex-1">
+                    {avatarSeeds.slice(0, 8).map((seed) => {
+                      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+                      const isSelected = selectedAvatar === avatarUrl;
                       return (
                         <button
-                          key={av.id}
+                          key={seed}
                           type="button"
-                          onClick={() => setSelectedAvatar(av.url)}
-                          className={`w-10 h-10 rounded-full overflow-hidden border-2 shrink-0 transition transform hover:scale-110 flex items-center justify-center bg-slate-950 ${
+                          onClick={() => setSelectedAvatar(avatarUrl)}
+                          className={`w-9 h-9 rounded-full overflow-hidden border-2 transition transform hover:scale-110 flex items-center justify-center bg-slate-950 ${
                             isSelected
                               ? 'border-emerald-400 ring-2 ring-emerald-500/50 scale-105'
                               : 'border-slate-800 opacity-70 hover:opacity-100'
                           }`}
-                          title={`${av.name} (${av.gender})`}
                         >
-                          <img src={av.url} alt={av.name} className="w-full h-full object-cover" />
+                          <img src={avatarUrl} alt={seed} className="w-full h-full object-cover" />
                         </button>
                       );
                     })}
-
-                    {/* View All Button Thumbnail */}
-                    <button
-                      type="button"
-                      onClick={() => setIsAvatarModalOpen(true)}
-                      className="w-10 h-10 rounded-full border-2 border-dashed border-emerald-500/60 bg-emerald-500/10 text-emerald-400 flex flex-col items-center justify-center hover:bg-emerald-500/20 transition shrink-0"
-                      title="View all 24 smiling avatars"
-                    >
-                      <FaPlus className="text-xs" />
-                      <span className="text-[8px] font-bold">24+</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -655,131 +616,6 @@ const AuthPage = () => {
 
         </div>
       </div>
-
-      {/* 4. AVATAR SELECTION MODAL POPUP (24 SMILING AVATARS) */}
-      {isAvatarModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-xl shadow-2xl p-5 sm:p-6 overflow-hidden flex flex-col max-h-[85vh]">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <FaSmileBeam className="text-lg" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center space-x-2">
-                    <span>Choose Smiling Avatar</span>
-                    <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-extrabold">24 Options</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">Select a cheerful smiling avatar for your profile</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAvatarModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              >
-                <FaTimes className="text-base" />
-              </button>
-            </div>
-
-            {/* Gender Filter Tabs */}
-            <div className="flex items-center space-x-2 py-3.5 shrink-0 border-b border-slate-800/60">
-              <button
-                type="button"
-                onClick={() => setAvatarFilter('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-                  avatarFilter === 'all'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                <FaThLarge className="text-xs" />
-                <span>All (24)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setAvatarFilter('male')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-                  avatarFilter === 'male'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                <FaMale className="text-xs" />
-                <span>Male Smiling (12)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setAvatarFilter('female')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${
-                  avatarFilter === 'female'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                <FaFemale className="text-xs" />
-                <span>Female Smiling (12)</span>
-              </button>
-            </div>
-
-            {/* Avatar Grid */}
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 py-4 overflow-y-auto custom-scrollbar flex-1 pr-1">
-              {SMILING_AVATARS.filter((a) => avatarFilter === 'all' || a.gender === avatarFilter).map((av) => {
-                const isSelected = selectedAvatar === av.url;
-                return (
-                  <button
-                    key={av.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedAvatar(av.url);
-                      setIsAvatarModalOpen(false);
-                    }}
-                    className={`group relative p-2.5 rounded-2xl border-2 transition flex flex-col items-center justify-center space-y-1.5 bg-slate-950/60 hover:bg-slate-800/80 ${
-                      isSelected
-                        ? 'border-emerald-400 ring-2 ring-emerald-500/40 bg-emerald-500/10'
-                        : 'border-slate-800/80 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="relative w-14 h-14 rounded-full overflow-hidden border border-slate-700 bg-slate-900 group-hover:scale-105 transition">
-                      <img src={av.url} alt={av.name} className="w-full h-full object-cover" />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
-                          <span className="bg-emerald-500 text-slate-950 rounded-full p-1 shadow-lg">
-                            <FaCheck className="text-xs" />
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[11px] font-semibold text-slate-300 group-hover:text-white flex items-center space-x-1">
-                      <span>{av.name}</span>
-                      {av.gender === 'male' ? (
-                        <FaMale className="text-[10px] text-blue-400" />
-                      ) : (
-                        <FaFemale className="text-[10px] text-pink-400" />
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
-              <span className="text-xs text-slate-400">All avatars are smiling and happy 😊</span>
-              <button
-                type="button"
-                onClick={() => setIsAvatarModalOpen(false)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
-              >
-                Close Window
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
