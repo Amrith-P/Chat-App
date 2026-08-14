@@ -1,4 +1,4 @@
-// ChatApp Pro Backend Server - Real-Time API Engine
+// ChatApp Pro Backend Server - Real-Time API Engine v1.0.5
 import express from 'express';
 import http from 'http';
 import cors from 'cors';
