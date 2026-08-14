@@ -12,7 +12,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 
-const NavDock = ({ unreadCount = 0 }) => {
+const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
   const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(true);
 
@@ -103,8 +103,10 @@ const NavDock = ({ unreadCount = 0 }) => {
         </div>
       </aside>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (below md) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 flex items-center justify-around px-2 z-40 select-none">
+      {/* MOBILE BOTTOM NAVIGATION BAR (below md - hidden when active chat is open) */}
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 items-center justify-around px-2 z-40 select-none ${
+        hideMobileNav ? 'hidden' : 'flex'
+      }`}>
         {navItems.map((item) => {
           const Icon = item.icon;
           return (

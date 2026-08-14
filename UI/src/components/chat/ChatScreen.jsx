@@ -435,7 +435,7 @@ const ChatScreen = () => {
   }, [conversations]);
 
   return (
-    <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden relative">
+    <div className="h-[100dvh] w-full flex bg-slate-950 text-white font-sans overflow-hidden fixed inset-0">
       
       {/* Real-Time Disconnecting Banner */}
       {!isConnected && (
@@ -444,8 +444,8 @@ const ChatScreen = () => {
         </div>
       )}
 
-      {/* Navigation Dock */}
-      <NavDock unreadCount={totalUnreadCount} />
+      {/* Navigation Dock (Mobile Nav hidden when typing/active chat open) */}
+      <NavDock unreadCount={totalUnreadCount} hideMobileNav={mobileView === 'chat'} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
