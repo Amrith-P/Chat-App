@@ -1,4 +1,5 @@
 import db from '../config/db.js';
+import { isUserOnline } from '../socket/socketHandler.js';
 
 // @desc    Get all conversations for the logged in user
 // @route   GET /api/chats
@@ -35,19 +36,22 @@ export const getUserChats = (req, res) => {
       return res.status(500).json({ message: 'Failed to fetch conversations', error: err.message });
     }
 
-    const formattedChats = (chats || []).map((chat) => ({
-      id: chat.id,
-      contactId: chat.contactId ?? chat.contactid,
-      name: chat.name,
-      email: chat.email,
-      avatar: chat.avatar,
-      status: chat.status,
-      lastMessage: chat.lastMessage ?? chat.lastmessage ?? 'No messages yet. Say hi!',
-      lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? null,
-      time: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? 'New',
-      unreadCount: 0,
-      isOnline: true
-    }));
+    const formattedChats = (chats || []).map((chat) => {
+      const cId = chat.contactId ?? chat.contactid;
+      return {
+        id: chat.id,
+        contactId: cId,
+        name: chat.name,
+        email: chat.email,
+        avatar: chat.avatar,
+        status: chat.status,
+        lastMessage: chat.lastMessage ?? chat.lastmessage ?? 'No messages yet. Say hi!',
+        lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? null,
+        time: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? 'New',
+        unreadCount: 0,
+        isOnline: isUserOnline(cId)
+      };
+    });
 
     res.json({ chats: formattedChats });
   });

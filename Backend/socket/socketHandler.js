@@ -37,7 +37,7 @@ export const initSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    const userId = socket.user.id;
+    const userId = Number(socket.user.id);
     console.log(`⚡ User connected to WebSocket: ${socket.user.fullName} (ID: ${userId})`);
 
     // Track online user sockets
@@ -49,7 +49,10 @@ export const initSocket = (server) => {
     // Join personal user room for direct messaging
     socket.join(`user_${userId}`);
 
-    // Broadcast online status to all sockets
+    // Send full list of currently online users to the newly connected socket
+    socket.emit('online_users_list', { userIds: Array.from(onlineUsers.keys()) });
+
+    // Broadcast online status to all other sockets
     io.emit('user_online', { userId });
 
     // Handle joining a specific chat room
@@ -204,4 +207,11 @@ export const initSocket = (server) => {
   });
 
   return io;
+};
+
+export const isUserOnline = (userId) => {
+  if (!userId) return false;
+  const idNum = Number(userId);
+  const idStr = String(userId);
+  return onlineUsers.has(idNum) || onlineUsers.has(idStr);
 };

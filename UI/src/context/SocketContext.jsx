@@ -52,16 +52,32 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(false);
     });
 
+    newSocket.on('online_users_list', ({ userIds }) => {
+      if (Array.isArray(userIds)) {
+        const set = new Set();
+        userIds.forEach((id) => {
+          set.add(Number(id));
+          set.add(String(id));
+        });
+        setOnlineUsers(set);
+      }
+    });
+
     newSocket.on('user_online', ({ userId }) => {
-      setOnlineUsers((prev) => new Set([...prev, userId]));
+      if (userId !== undefined && userId !== null) {
+        setOnlineUsers((prev) => new Set([...prev, Number(userId), String(userId)]));
+      }
     });
 
     newSocket.on('user_offline', ({ userId }) => {
-      setOnlineUsers((prev) => {
-        const updated = new Set(prev);
-        updated.delete(userId);
-        return updated;
-      });
+      if (userId !== undefined && userId !== null) {
+        setOnlineUsers((prev) => {
+          const updated = new Set(prev);
+          updated.delete(Number(userId));
+          updated.delete(String(userId));
+          return updated;
+        });
+      }
     });
 
     newSocket.on('user_typing', ({ conversationId, userId, isTyping }) => {

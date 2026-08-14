@@ -69,7 +69,7 @@ const ChatScreen = () => {
             time: displayTime,
             timestamp: c.lastMessageTime ? parseDate(c.lastMessageTime).getTime() : 0,
             unreadCount: c.unreadCount || 0,
-            isOnline: onlineUsers.has(c.contactId || c.recipientId),
+            isOnline: Boolean(c.isOnline) || onlineUsers.has(Number(c.contactId || c.recipientId)) || onlineUsers.has(String(c.contactId || c.recipientId)),
             status: c.status || 'Available'
           };
         }).sort((a, b) => b.timestamp - a.timestamp);
@@ -84,6 +84,17 @@ const ChatScreen = () => {
   useEffect(() => {
     fetchDbConversations();
   }, [user]);
+
+  // Dynamically update isOnline status for conversations when onlineUsers set changes
+  useEffect(() => {
+    setConversations((prev) =>
+      prev.map((c) => {
+        const contactId = c.contactId || c.recipientId;
+        const isOnline = onlineUsers.has(Number(contactId)) || onlineUsers.has(String(contactId));
+        return { ...c, isOnline };
+      })
+    );
+  }, [onlineUsers]);
 
   // Fetch Message History for Active Database Chat
   useEffect(() => {
