@@ -39,12 +39,12 @@ const createSessionAndSendTokens = async (req, res, user, statusCode = 200, mess
     (err) => {
       if (err) console.error('Failed to log session:', err.message);
 
-      // Set HttpOnly Cookie for Refresh Token
+      // Set HttpOnly Cookie for Refresh Token (Cross-Origin Persistent for 30 Days)
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        secure: true, // Required for SameSite=None
+        sameSite: 'none', // Allows cross-domain cookie sending (Vercel -> Render)
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days persistence
       });
 
       res.status(statusCode).json({

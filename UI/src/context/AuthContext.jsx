@@ -5,10 +5,26 @@ import { requestNotificationPermission, sendSystemNotification } from '../utils/
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chat_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [token, setTokenState] = useState(getAccessToken());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!user && !getAccessToken());
   const [error, setError] = useState(null);
+
+  const setUser = (userData) => {
+    setUserState(userData);
+    if (userData) {
+      localStorage.setItem('chat_user', JSON.stringify(userData));
+    } else {
+      localStorage.removeItem('chat_user');
+    }
+  };
 
   const updateTokenState = (newToken) => {
     setAccessToken(newToken);
@@ -50,10 +66,13 @@ export const AuthProvider = ({ children }) => {
           setUser(data.user);
           triggerWelcomeNotification(data.user);
         } catch (meErr) {
-          updateTokenState(null);
-          setUser(null);
+          // If stored token is invalid and no active session
+          if (!user) {
+            updateTokenState(null);
+            setUser(null);
+          }
         }
-      } else {
+      } else if (!user) {
         updateTokenState(null);
         setUser(null);
       }
