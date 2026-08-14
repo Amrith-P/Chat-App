@@ -91,6 +91,12 @@ if (isPostgres) {
       });
     },
 
+    prepare: (sql) => ({
+      run: (params, cb) => dbWrapper.run(sql, params, cb),
+      get: (params, cb) => dbWrapper.get(sql, params, cb),
+      all: (params, cb) => dbWrapper.all(sql, params, cb)
+    }),
+
     serialize: (fn) => {
       if (fn) fn();
     }
@@ -124,6 +130,11 @@ if (isPostgres) {
     get: sqliteDb.get.bind(sqliteDb),
     all: sqliteDb.all.bind(sqliteDb),
     run: sqliteDb.run.bind(sqliteDb),
+    prepare: (sql) => ({
+      run: (params, cb) => sqliteDb.run(sql, params, cb),
+      get: (params, cb) => sqliteDb.get(sql, params, cb),
+      all: (params, cb) => sqliteDb.all(sql, params, cb)
+    }),
     serialize: sqliteDb.serialize.bind(sqliteDb)
   };
 }

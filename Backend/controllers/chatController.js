@@ -10,25 +10,22 @@ export const getUserChats = (req, res) => {
       c.id AS id,
       c.type,
       c.createdAt,
-      u.id AS contactId,
+      u.id AS "contactId",
       u.fullName AS name,
       u.email AS email,
       u.avatar AS avatar,
       u.status AS status,
-      (
-        SELECT content FROM messages 
-        WHERE conversationId = c.id 
-        ORDER BY id DESC LIMIT 1
-      ) AS lastMessage,
-      (
-        SELECT createdAt FROM messages 
-        WHERE conversationId = c.id 
-        ORDER BY id DESC LIMIT 1
-      ) AS lastMessageTime
+      m.content AS "lastMessage",
+      m.createdAt AS "lastMessageTime"
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversationId AND cm1.userId = ?
     JOIN conversation_members cm2 ON c.id = cm2.conversationId AND cm2.userId != ?
     JOIN users u ON cm2.userId = u.id
+    LEFT JOIN messages m ON m.id = (
+      SELECT id FROM messages 
+      WHERE conversationId = c.id 
+      ORDER BY id DESC LIMIT 1
+    )
     ORDER BY c.id DESC
   `;
 
