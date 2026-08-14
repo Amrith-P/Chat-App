@@ -47,57 +47,136 @@ export const initSocket = (server) => {
     io.emit('user_online', { userId });
 
     // Handle joining a specific chat room
-    socket.on('join_chat', ({ chatId }) => {
-      socket.join(`chat_${chatId}`);
+    socket.on('join_chat', ({ chatId, conversationId }) => {
+      const targetRoom = chatId || conversationId;
+      if (targetRoom) {
+        socket.join(`chat_${targetRoom}`);
+      }
     });
 
     // Handle real-time sending of messages
-    socket.on('send_message', ({ chatId, recipientId, text }) => {
-      if (!chatId || !text || !text.trim()) return;
+    socket.on('send_message', (data = {}) => {
+      const targetChatId = data.chatId || data.conversationId;
+      const targetText = data.text || data.content;
+      const recipientId = data.recipientId;
+      const replyToId = data.replyToId || null;
+      const isForwarded = data.isForwarded || false;
 
-      const trimmedText = text.trim();
+      if (!targetChatId || !targetText || !targetText.trim()) {
+        console.warn('⚠️ Invalid send_message payload received:', data);
+        return;
+      }
 
-      // Store in SQLite database
+      const trimmedText = targetText.trim();
+
+      // Store in database (SQLite or PostgreSQL)
       db.run(
-        'INSERT INTO messages (conversationId, senderId, content) VALUES (?, ?, ?)',
-        [chatId, userId, trimmedText],
+        'INSERT INTO messages (conversationId, senderId, content, replyToId, isForwarded) VALUES (?, ?, ?, ?, ?)',
+        [targetChatId, userId, trimmedText, replyToId, isForwarded ? 1 : 0],
         function (err) {
           if (err) {
-            console.error('Failed to save real-time message:', err.message);
+            console.error('Failed to save real-time message to DB:', err.message);
             return;
           }
 
           const messageObj = {
-            id: this.lastID,
-            chatId,
+            id: this.lastID || Date.now(),
+            chatId: targetChatId,
+            conversationId: targetChatId,
             senderId: userId,
             senderName: socket.user.fullName,
             text: trimmedText,
+            content: trimmedText,
+            replyToId,
+            isForwarded,
+            isEdited: false,
+            isDeleted: false,
+            readAt: null,
+            reactions: [],
+            createdAt: new Date().toISOString(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
 
-          // Send back to sender
+          // Send confirmation back to sender
           socket.emit('message_sent', messageObj);
 
-          // Emit to recipient's personal user room
+          // Emit to recipient's personal user room (excluding sender)
           if (recipientId) {
-            io.to(`user_${recipientId}`).emit('receive_message', {
+            socket.to(`user_${recipientId}`).emit('receive_message', {
               ...messageObj,
               isMe: false
             });
           }
 
-          // Emit to room
-          io.to(`chat_${chatId}`).emit('receive_message', messageObj);
+          // Emit to conversation room (excluding sender)
+          socket.to(`chat_${targetChatId}`).emit('receive_message', messageObj);
         }
       );
     });
 
+    // Handle mark read
+    socket.on('mark_read', ({ messageIds, chatId, recipientId }) => {
+      if (!messageIds || messageIds.length === 0) return;
+      
+      const now = new Date().toISOString();
+      // Assuming SQLite for simplicity in dev (multiple updates require loop or IN clause)
+      const placeholders = messageIds.map(() => '?').join(',');
+      db.run(`UPDATE messages SET readAt = ? WHERE id IN (${placeholders})`, [now, ...messageIds], (err) => {
+        if (!err) {
+          // Notify sender that messages were read
+          if (recipientId) {
+            io.to(`user_${recipientId}`).emit('messages_read', { messageIds, chatId, readAt: now });
+          }
+          io.to(`chat_${chatId}`).emit('messages_read', { messageIds, chatId, readAt: now });
+        }
+      });
+    });
+
+    // Handle reactions
+    socket.on('add_reaction', ({ messageId, chatId, emoji, recipientId }) => {
+      db.run(
+        'INSERT INTO message_reactions (messageId, userId, emoji) VALUES (?, ?, ?)',
+        [messageId, userId, emoji],
+        function (err) {
+          if (!err) {
+            const reaction = { id: this.lastID, messageId, userId, userName: socket.user.fullName, emoji };
+            if (recipientId) io.to(`user_${recipientId}`).emit('message_reaction_added', { chatId, reaction });
+            io.to(`chat_${chatId}`).emit('message_reaction_added', { chatId, reaction });
+          }
+        }
+      );
+    });
+
+    // Handle edit message
+    socket.on('edit_message', ({ messageId, chatId, newText, recipientId }) => {
+      db.run('UPDATE messages SET content = ?, isEdited = 1 WHERE id = ? AND senderId = ?', [newText.trim(), messageId, userId], (err) => {
+        if (!err) {
+          if (recipientId) io.to(`user_${recipientId}`).emit('message_edited', { messageId, chatId, newText: newText.trim() });
+          io.to(`chat_${chatId}`).emit('message_edited', { messageId, chatId, newText: newText.trim() });
+        }
+      });
+    });
+
+    // Handle delete message
+    socket.on('delete_message', ({ messageId, chatId, recipientId }) => {
+      db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ? AND senderId = ?', [messageId, userId], (err) => {
+        if (!err) {
+          if (recipientId) io.to(`user_${recipientId}`).emit('message_deleted', { messageId, chatId });
+          io.to(`chat_${chatId}`).emit('message_deleted', { messageId, chatId });
+        }
+      });
+    });
+
     // Handle typing notifications
-    socket.on('typing', ({ chatId, recipientId, isTyping }) => {
+    socket.on('typing', (data = {}) => {
+      const targetChatId = data.chatId || data.conversationId;
+      const recipientId = data.recipientId;
+      const isTyping = data.isTyping;
+
       if (recipientId) {
         io.to(`user_${recipientId}`).emit('user_typing', {
-          chatId,
+          chatId: targetChatId,
+          conversationId: targetChatId,
           userId,
           isTyping
         });

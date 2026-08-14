@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaTimes, FaPhone, FaVideo, FaBell, FaBan, FaTrash, FaShieldAlt, FaEnvelope } from 'react-icons/fa';
+import ConfirmModal from '../common/ConfirmModal';
 
 const ContactDrawer = ({ contact, isOpen, onClose }) => {
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
   if (!isOpen || !contact) return null;
 
   return (
@@ -24,51 +27,47 @@ const ContactDrawer = ({ contact, isOpen, onClose }) => {
             <img
               src={contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact.name)}`}
               alt={contact.name}
-              className="w-24 h-24 rounded-full object-cover border-4 border-emerald-500/40 shadow-xl"
+              className="w-24 h-24 rounded-full border-2 border-emerald-500/50 p-1 object-cover shadow-xl"
             />
             {contact.isOnline && (
-              <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full ring-4 ring-slate-900" />
+              <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full" />
             )}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{contact.name}</h2>
-            <p className="text-xs text-slate-400 flex items-center justify-center space-x-1 mt-0.5">
-              <FaEnvelope className="text-[10px]" />
-              <span>{contact.email || `${contact.name.toLowerCase().replace(/\s+/g, '')}@example.com`}</span>
-            </p>
+            <h2 className="text-lg font-bold text-white mb-0.5">{contact.name}</h2>
+            <p className="text-xs text-slate-400 font-mono">{contact.email}</p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <button className="flex items-center justify-center space-x-2 py-2.5 bg-slate-800 hover:bg-slate-700/80 rounded-xl text-xs font-semibold text-white transition">
-            <FaPhone className="text-emerald-400" />
+        {/* Quick Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">
+            <FaPhone className="text-emerald-400 text-base mb-1.5" />
             <span>Audio Call</span>
           </button>
-          <button className="flex items-center justify-center space-x-2 py-2.5 bg-slate-800 hover:bg-slate-700/80 rounded-xl text-xs font-semibold text-white transition">
-            <FaVideo className="text-teal-400" />
+          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">
+            <FaVideo className="text-blue-400 text-base mb-1.5" />
             <span>Video Call</span>
           </button>
         </div>
 
-        {/* Bio / Status */}
-        <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status / About</span>
-          <p className="text-xs text-slate-300 font-medium">
-            {contact.status || 'Available for messaging on ChatApp Pro ✨'}
-          </p>
-        </div>
-
-        {/* Shared Media Section */}
-        <div className="space-y-3">
-          <div className="flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-400 uppercase tracking-wider">Shared Media</span>
-            <span className="text-emerald-400 hover:underline cursor-pointer font-semibold">View All</span>
+        {/* User Details */}
+        <div className="space-y-4 pt-2 border-t border-slate-800 text-xs">
+          <div>
+            <span className="text-slate-500 font-semibold block mb-1 uppercase text-[10px] tracking-wider">About / Status</span>
+            <p className="text-slate-300 font-medium leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800/60">
+              {contact.status || 'Available on ChatApp Pro'}
+            </p>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="h-16 bg-slate-800 rounded-lg flex items-center justify-center text-xs text-slate-500 font-bold border border-slate-700/50">IMG_1.jpg</div>
-            <div className="h-16 bg-slate-800 rounded-lg flex items-center justify-center text-xs text-slate-500 font-bold border border-slate-700/50">DOC_2.pdf</div>
-            <div className="h-16 bg-slate-800 rounded-lg flex items-center justify-center text-xs text-slate-500 font-bold border border-slate-700/50">+4 More</div>
+
+          <div className="flex items-center space-x-3 text-slate-300">
+            <FaEnvelope className="text-slate-400 text-sm shrink-0" />
+            <span className="truncate">{contact.email}</span>
+          </div>
+
+          <div className="flex items-center space-x-3 text-slate-300">
+            <FaShieldAlt className="text-emerald-400 text-sm shrink-0" />
+            <span>End-to-End Encrypted Session</span>
           </div>
         </div>
 
@@ -82,18 +81,49 @@ const ContactDrawer = ({ contact, isOpen, onClose }) => {
             <input type="checkbox" className="accent-emerald-500 rounded cursor-pointer" />
           </button>
 
-          <button className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition">
+          <button 
+            onClick={() => setConfirmConfig({
+              title: 'Block Contact',
+              message: `Are you sure you want to block ${contact.name}? They will no longer be able to message or call you.`,
+              confirmText: 'Block User',
+              onConfirm: () => alert(`${contact.name} has been blocked.`)
+            })} 
+            className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
+          >
             <FaBan className="text-sm" />
             <span>Block User</span>
           </button>
 
-          <button className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition">
+          <button 
+            onClick={() => setConfirmConfig({
+              title: 'Clear Chat History',
+              message: `Are you sure you want to clear chat history with ${contact.name}? This will clear your local view.`,
+              confirmText: 'Clear Chat',
+              onConfirm: () => alert('Chat history cleared.')
+            })} 
+            className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
+          >
             <FaTrash className="text-sm" />
             <span>Clear Chat History</span>
           </button>
         </div>
 
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        onClose={() => setConfirmConfig(null)}
+        onConfirm={() => {
+          if (confirmConfig?.onConfirm) confirmConfig.onConfirm();
+          setConfirmConfig(null);
+        }}
+        title={confirmConfig?.title}
+        message={confirmConfig?.message}
+        confirmText={confirmConfig?.confirmText}
+        confirmVariant="danger"
+      />
+
     </div>
   );
 };

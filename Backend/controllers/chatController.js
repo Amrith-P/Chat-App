@@ -46,9 +46,8 @@ export const getUserChats = (req, res) => {
       avatar: chat.avatar,
       status: chat.status,
       lastMessage: chat.lastMessage || 'No messages yet. Say hi!',
-      time: chat.lastMessageTime
-        ? new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : 'New',
+      lastMessageTime: chat.lastMessageTime || null,
+      time: chat.lastMessageTime || 'New',
       unreadCount: 0,
       isOnline: true
     }));

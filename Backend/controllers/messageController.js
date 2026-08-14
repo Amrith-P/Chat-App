@@ -16,7 +16,7 @@ export const getMessagesByChatId = (req, res) => {
       }
 
       db.all(
-        `SELECT m.id, m.conversationId, m.senderId, m.content AS text, m.messageType, m.createdAt, u.fullName AS senderName 
+        `SELECT m.id, m.conversationId, m.senderId, m.content AS text, m.messageType, m.replyToId, m.isForwarded, m.isEdited, m.isDeleted, m.readAt, m.createdAt, u.fullName AS senderName 
          FROM messages m
          JOIN users u ON m.senderId = u.id
          WHERE m.conversationId = ?
@@ -27,18 +27,47 @@ export const getMessagesByChatId = (req, res) => {
             return res.status(500).json({ message: 'Error loading message history' });
           }
 
-          const formattedMessages = messages.map((m) => ({
-            id: m.id,
-            chatId: m.conversationId,
-            senderId: m.senderId,
-            senderName: m.senderName,
-            isMe: m.senderId === currentUserId,
-            text: m.text,
-            messageType: m.messageType,
-            time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }));
+          // Fetch all reactions for this conversation
+          db.all(
+            `SELECT r.id, r.messageId, r.userId, r.emoji, u.fullName AS userName
+             FROM message_reactions r
+             JOIN messages m ON r.messageId = m.id
+             JOIN users u ON r.userId = u.id
+             WHERE m.conversationId = ?`,
+            [chatId],
+            (rErr, reactionsRows) => {
+              const reactionsMap = {};
+              if (!rErr && reactionsRows) {
+                reactionsRows.forEach(r => {
+                  if (!reactionsMap[r.messageId]) reactionsMap[r.messageId] = [];
+                  reactionsMap[r.messageId].push({ id: r.id, userId: r.userId, userName: r.userName, emoji: r.emoji });
+                });
+              }
 
-          res.json({ messages: formattedMessages });
+              const formattedMessages = messages.map((m) => {
+                let text = m.isDeleted ? '🚫 This message was deleted' : m.text;
+                return {
+                  id: m.id,
+                  chatId: m.conversationId,
+                  senderId: m.senderId,
+                  senderName: m.senderName,
+                  isMe: m.senderId === currentUserId,
+                  text: text,
+                  messageType: m.messageType,
+                  replyToId: m.replyToId,
+                  isForwarded: Boolean(m.isForwarded),
+                  isEdited: Boolean(m.isEdited),
+                  isDeleted: Boolean(m.isDeleted),
+                  readAt: m.readAt,
+                  createdAt: m.createdAt,
+                  time: m.createdAt,
+                  reactions: reactionsMap[m.id] || []
+                };
+              });
+
+              res.json({ messages: formattedMessages });
+            }
+          );
         }
       );
     }
@@ -48,7 +77,7 @@ export const getMessagesByChatId = (req, res) => {
 // @desc    Send a message (REST fallback)
 // @route   POST /api/messages
 export const sendMessage = (req, res) => {
-  const { chatId, content, messageType = 'text' } = req.body;
+  const { chatId, content, messageType = 'text', replyToId = null, isForwarded = false } = req.body;
   const senderId = req.user.id;
 
   if (!chatId || !content || !content.trim()) {
@@ -56,8 +85,8 @@ export const sendMessage = (req, res) => {
   }
 
   db.run(
-    'INSERT INTO messages (conversationId, senderId, content, messageType) VALUES (?, ?, ?, ?)',
-    [chatId, senderId, content.trim(), messageType],
+    'INSERT INTO messages (conversationId, senderId, content, messageType, replyToId, isForwarded) VALUES (?, ?, ?, ?, ?, ?)',
+    [chatId, senderId, content.trim(), messageType, replyToId, isForwarded ? 1 : 0],
     function (err) {
       if (err) {
         return res.status(500).json({ message: 'Failed to send message', error: err.message });
@@ -70,6 +99,13 @@ export const sendMessage = (req, res) => {
         isMe: true,
         text: content.trim(),
         messageType,
+        replyToId,
+        isForwarded,
+        isEdited: false,
+        isDeleted: false,
+        readAt: null,
+        reactions: [],
+        createdAt: new Date().toISOString(),
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 

@@ -1,10 +1,15 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import AuthPage from './components/auth/AuthPage';
 import ChatScreen from './components/chat/ChatScreen';
 
-const MainContent = () => {
+import ContactsPage from './components/contacts/ContactsPage';
+import StarredPage from './components/starred/StarredPage';
+import SettingsPage from './components/settings/SettingsPage';
+
+const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -16,16 +21,43 @@ const MainContent = () => {
     );
   }
 
-  return user ? <ChatScreen /> : <AuthPage />;
+  return user ? children : <Navigate to="/login" replace />;
+};
+
+const AuthRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? <Navigate to="/app/chats" replace /> : children;
 };
 
 const App = () => {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <MainContent />
-      </SocketProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <SocketProvider>
+          <Routes>
+            {/* Base redirect */}
+            <Route path="/" element={<Navigate to="/app/chats" replace />} />
+            
+            {/* Auth Routes */}
+            <Route path="/login" element={<AuthRoute><AuthPage /></AuthRoute>} />
+            <Route path="/register" element={<AuthRoute><AuthPage /></AuthRoute>} />
+
+            {/* Protected App Routes */}
+            <Route path="/app" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/app/chats" replace />} />
+              <Route path="chats" element={<div id="chat-tab-placeholder"></div>} />
+              <Route path="chats/:chatId" element={<div id="chat-tab-placeholder"></div>} />
+              <Route path="contacts" element={<ContactsPage />} />
+              <Route path="starred" element={<StarredPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </SocketProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 };
 

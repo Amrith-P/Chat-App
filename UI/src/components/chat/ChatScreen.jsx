@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { apiRequest } from '../../api/client';
@@ -7,70 +8,38 @@ import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ContactDrawer from './ContactDrawer';
 import SearchModal from './SearchModal';
-import ContactsPage from '../contacts/ContactsPage';
-import StarredPage from '../starred/StarredPage';
-import SettingsPage from '../settings/SettingsPage';
 
-const initialConversations = [
-  {
-    id: 'chat_1',
-    name: 'Sarah Jenkins',
-    email: 'sarah.j@example.com',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-    lastMessage: "Sounds great! Let's touch base tomorrow morning 🚀",
-    time: '10:45 AM',
-    unreadCount: 2,
-    isOnline: true,
-    status: 'Design Lead @ ChatApp • Coffee lover ☕'
-  },
-  {
-    id: 'chat_2',
-    name: 'David Chen',
-    email: 'david.c@example.com',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
-    lastMessage: 'Did you check the new backend API endpoints?',
-    time: '09:20 AM',
-    unreadCount: 0,
-    isOnline: true,
-    status: 'Fullstack Engineer 💻'
-  },
-  {
-    id: 'chat_3',
-    name: 'Emma Watson',
-    email: 'emma.w@example.com',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
-    lastMessage: 'Thanks for sending over the documentation!',
-    time: 'Yesterday',
-    unreadCount: 0,
-    isOnline: false,
-    status: 'Product Specialist ✨'
-  }
-];
-
-const initialMessages = {
-  chat_1: [
-    { id: 1, senderId: 'sarah', isMe: false, text: 'Hey there! How is the project coming along?', time: '10:40 AM' },
-    { id: 2, senderId: 'me', isMe: true, text: 'Hey Sarah! We just finished upgrading the authentication and chat interface!', time: '10:42 AM' },
-    { id: 3, senderId: 'sarah', isMe: false, text: "Sounds great! Let's touch base tomorrow morning 🚀", time: '10:45 AM' }
-  ],
-  chat_2: [
-    { id: 1, senderId: 'david', isMe: false, text: 'Hi! Quick question about SQLite configuration.', time: '09:15 AM' },
-    { id: 2, senderId: 'me', isMe: true, text: 'Sure David, what do you need?', time: '09:18 AM' },
-    { id: 3, senderId: 'david', isMe: false, text: 'Did you check the new backend API endpoints?', time: '09:20 AM' }
-  ],
-  chat_3: [
-    { id: 1, senderId: 'emma', isMe: false, text: 'Thanks for sending over the documentation!', time: 'Yesterday' }
-  ]
+const parseDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  // Support SQLite format by replacing space with 'T' and adding 'Z' for UTC if not present
+  let iso = String(dateStr);
+  if (!iso.includes('T')) iso = iso.replace(' ', 'T') + 'Z';
+  const d = new Date(iso);
+  return isNaN(d) ? new Date() : d;
 };
 
 const ChatScreen = () => {
   const { user } = useAuth();
   const { socket, isConnected, onlineUsers, emitSendMessage, emitTyping } = useSocket();
 
-  const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'contacts' | 'starred' | 'settings'
-  const [conversations, setConversations] = useState(initialConversations);
-  const [activeChatId, setActiveChatId] = useState('chat_1');
-  const [messagesMap, setMessagesMap] = useState(initialMessages);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isChatsRoute = location.pathname.includes('/app/chats');
+  
+  // Extract dynamic chatId from /app/chats/:chatId
+  const urlChatId = isChatsRoute ? location.pathname.split('/app/chats/')[1] : null;
+
+  const [conversations, setConversations] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(urlChatId || null);
+
+  useEffect(() => {
+    if (urlChatId && String(urlChatId) !== String(activeChatId)) {
+      setActiveChatId(urlChatId);
+    } else if (!urlChatId && activeChatId) {
+      setActiveChatId(null);
+    }
+  }, [urlChatId]);
+  const [messagesMap, setMessagesMap] = useState({});
 
   // Mobile View Toggle ('sidebar' | 'chat')
   const [mobileView, setMobileView] = useState('sidebar');
@@ -79,33 +48,39 @@ const ChatScreen = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Fetch Real Conversations from SQLite Backend
-  useEffect(() => {
-    const fetchDbConversations = async () => {
-      try {
-        const data = await apiRequest('/chats');
-        if (data && data.chats && data.chats.length > 0) {
-          const formatted = data.chats.map((c) => ({
+  // Fetch Real Conversations from Database Backend
+  const fetchDbConversations = async () => {
+    try {
+      const data = await apiRequest('/chats');
+      if (data && data.chats) {
+        const formatted = data.chats.map((c) => {
+          const rawTime = c.lastMessageTime || c.time;
+          const isSpecial = !rawTime || rawTime === 'Just now' || rawTime === 'New';
+          const displayTime = isSpecial ? (rawTime || 'New') : parseDate(rawTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          return {
             id: c.id,
-            name: c.recipientName,
-            email: c.recipientEmail,
-            avatar: c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.recipientName)}`,
-            recipientId: c.recipientId,
-            lastMessage: c.lastMessage || 'No messages yet',
-            time: c.lastMessageTime ? new Date(c.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New',
-            unreadCount: 0,
-            isOnline: onlineUsers.has(c.recipientId),
-            status: c.recipientStatus || 'Available'
-          }));
+            name: c.name || c.recipientName || 'User',
+            email: c.email || c.recipientEmail || '',
+            avatar: c.avatar || c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.name || 'User')}`,
+            recipientId: c.contactId || c.recipientId,
+            lastMessage: c.lastMessage || 'No messages yet. Say hi!',
+            time: displayTime,
+            timestamp: c.lastMessageTime ? parseDate(c.lastMessageTime).getTime() : 0,
+            unreadCount: c.unreadCount || 0,
+            isOnline: onlineUsers.has(c.contactId || c.recipientId),
+            status: c.status || 'Available'
+          };
+        }).sort((a, b) => b.timestamp - a.timestamp);
 
-          setConversations(formatted);
-          setActiveChatId(formatted[0].id);
-        }
-      } catch (err) {
-        console.log('Using default demo conversations (fallback or unauthenticated DB query)');
+        setConversations(formatted);
       }
-    };
+    } catch (err) {
+      console.log('Error fetching backend conversations:', err.message);
+    }
+  };
 
+  useEffect(() => {
     fetchDbConversations();
   }, [user]);
 
@@ -114,84 +89,232 @@ const ChatScreen = () => {
     if (!activeChatId) return;
 
     const fetchMessages = async () => {
-      // If it's a numeric database chat ID
-      if (typeof activeChatId === 'number' || !activeChatId.toString().startsWith('chat_')) {
-        try {
-          const data = await apiRequest(`/messages/${activeChatId}`);
-          if (data && data.messages) {
-            const formattedMsgs = data.messages.map((m) => ({
-              id: m.id,
-              senderId: m.senderId,
-              isMe: m.senderId === user?.id,
-              text: m.content,
-              time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }));
+      try {
+        const data = await apiRequest(`/messages/${activeChatId}`);
+        if (data && data.messages) {
+          const formattedMsgs = data.messages.map((m) => ({
+            id: m.id,
+            senderId: m.senderId,
+            isMe: m.senderId === user?.id,
+            text: m.text,
+            replyToId: m.replyToId,
+            isForwarded: Boolean(m.isForwarded),
+            isEdited: Boolean(m.isEdited),
+            isDeleted: Boolean(m.isDeleted),
+            readAt: m.readAt,
+            reactions: m.reactions || [],
+            time: parseDate(m.createdAt || m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: parseDate(m.createdAt || m.time).toLocaleDateString()
+          }));
 
-            setMessagesMap((prev) => ({
-              ...prev,
-              [activeChatId]: formattedMsgs
-            }));
-          }
-        } catch (err) {
-          console.log('Failed to fetch backend message history for chat:', activeChatId);
+          setMessagesMap((prev) => ({
+            ...prev,
+            [activeChatId]: formattedMsgs
+          }));
         }
+      } catch (err) {
+        console.log('Failed to fetch backend message history for chat:', activeChatId);
       }
     };
 
     fetchMessages();
   }, [activeChatId, user]);
 
+  // Join active conversation room on Socket.IO
+  useEffect(() => {
+    if (socket && activeChatId) {
+      socket.emit('join_chat', { chatId: activeChatId, conversationId: activeChatId });
+    }
+  }, [socket, activeChatId]);
+
+  // Audio sound effect helper (capped strictly to < 0.25 seconds)
+  const playChimeSound = (type = 'send') => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+
+      if (type === 'send') {
+        osc.frequency.setValueAtTime(700, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1050, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      } else {
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.2);
+      }
+
+      setTimeout(() => {
+        try { ctx.close(); } catch (err) {}
+      }, 250);
+    } catch (e) {}
+  };
+
   // Listen to Real-Time Socket.IO Incoming Messages
   useEffect(() => {
     if (!socket) return;
 
     const handleReceiveMessage = (msg) => {
-      const chatKey = msg.conversationId || activeChatId;
+      const isMyMessage = msg.senderId === user?.id;
+      if (isMyMessage) return;
+
+      const chatKey = msg.conversationId || msg.chatId;
+      const msgContent = msg.content || msg.text || '';
+
+      // Play short audio chime for incoming messages from recipient
+      playChimeSound('receive');
+
       const formattedMsg = {
         id: msg.id || Date.now(),
         senderId: msg.senderId,
-        isMe: msg.senderId === user?.id,
-        text: msg.content,
-        time: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        isMe: isMyMessage,
+        text: msgContent,
+        replyToId: msg.replyToId,
+        isForwarded: msg.isForwarded,
+        isEdited: msg.isEdited,
+        isDeleted: msg.isDeleted,
+        readAt: msg.readAt,
+        reactions: msg.reactions || [],
+        time: parseDate(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: parseDate(msg.createdAt).toLocaleDateString()
       };
 
-      setMessagesMap((prev) => ({
-        ...prev,
-        [chatKey]: [...(prev[chatKey] || []), formattedMsg]
-      }));
+      // Append message to active messages map
+      if (chatKey) {
+        setMessagesMap((prev) => {
+          const existing = prev[chatKey] || [];
+          if (existing.some((m) => m.id === formattedMsg.id)) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [chatKey]: [...existing, formattedMsg]
+          };
+        });
 
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === chatKey
-            ? {
-                ...c,
-                lastMessage: msg.content,
-                time: 'Just now',
-                unreadCount: activeChatId === chatKey ? 0 : (c.unreadCount || 0) + 1
-              }
-            : c
-        )
-      );
+        setConversations((prev) => {
+          const exists = prev.some((c) => String(c.id) === String(chatKey));
+          if (!exists) {
+            fetchDbConversations();
+            return prev;
+          }
+          return prev.map((c) =>
+            String(c.id) === String(chatKey)
+              ? {
+                  ...c,
+                  lastMessage: msgContent,
+                  time: 'Just now',
+                  timestamp: Date.now(),
+                  unreadCount: String(activeChatId) === String(chatKey) ? 0 : (c.unreadCount || 0) + 1,
+                  hasUnread: String(activeChatId) !== String(chatKey)
+                }
+              : c
+          ).sort((a, b) => b.timestamp - a.timestamp);
+        });
+
+        if (!activeChatId) setActiveChatId(chatKey);
+        
+        // Mark as read immediately if chat is open
+        if (String(activeChatId) === String(chatKey) && socket) {
+          socket.emit('mark_read', { messageIds: [formattedMsg.id], chatId: chatKey });
+        }
+      }
+    };
+
+    const handleMessagesRead = ({ messageIds, chatId, readAt }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => messageIds.includes(m.id) ? { ...m, readAt } : m)
+        };
+      });
+    };
+
+    const handleReactionAdded = ({ chatId, reaction }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => m.id === reaction.messageId ? { ...m, reactions: [...(m.reactions || []), reaction] } : m)
+        };
+      });
+    };
+
+    const handleMessageEdited = ({ messageId, chatId, newText }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => m.id === messageId ? { ...m, text: newText, isEdited: true } : m)
+        };
+      });
+    };
+
+    const handleMessageDeleted = ({ messageId, chatId }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => m.id === messageId ? { ...m, text: '🚫 This message was deleted', isDeleted: true } : m)
+        };
+      });
     };
 
     socket.on('receive_message', handleReceiveMessage);
+    socket.on('messages_read', handleMessagesRead);
+    socket.on('message_reaction_added', handleReactionAdded);
+    socket.on('message_edited', handleMessageEdited);
+    socket.on('message_deleted', handleMessageDeleted);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
+      socket.off('messages_read', handleMessagesRead);
+      socket.off('message_reaction_added', handleReactionAdded);
+      socket.off('message_edited', handleMessageEdited);
+      socket.off('message_deleted', handleMessageDeleted);
     };
   }, [socket, activeChatId, user]);
 
-  const activeChat = conversations.find((c) => c.id === activeChatId) || conversations[0];
-  const activeMessages = messagesMap[activeChatId] || [];
+  const activeChat = useMemo(() => {
+    return activeChatId ? conversations.find((c) => String(c.id) === String(activeChatId)) : null;
+  }, [activeChatId, conversations]);
+
+  const activeMessages = useMemo(() => {
+    return activeChatId ? (messagesMap[activeChatId] || []) : [];
+  }, [activeChatId, messagesMap]);
 
   // Handle Send Message (Persist to Backend REST + Socket.IO Broadcast)
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, options = {}) => {
+    if (!activeChatId) return;
+
+    playChimeSound('send');
+
     const newMsg = {
       id: Date.now(),
       senderId: user?.id || 'me',
       isMe: true,
       text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      replyToId: options.replyToId,
+      isForwarded: options.isForwarded,
+      isEdited: false,
+      isDeleted: false,
+      readAt: null,
+      reactions: [],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString()
     };
 
     // Update local state instantly for zero-latency UX
@@ -202,131 +325,114 @@ const ChatScreen = () => {
 
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === activeChatId
-          ? { ...c, lastMessage: text, time: 'Just now', unreadCount: 0 }
+        String(c.id) === String(activeChatId)
+          ? { ...c, lastMessage: text, time: 'Just now', timestamp: Date.now(), unreadCount: 0 }
           : c
-      )
+      ).sort((a, b) => b.timestamp - a.timestamp)
     );
 
     // Emit Real-Time Socket.IO event
     emitSendMessage({
+      chatId: activeChatId,
       conversationId: activeChatId,
-      recipientId: activeChat?.recipientId,
-      content: text
+      recipientId: activeChat?.recipientId || activeChat?.contactId,
+      text,
+      content: text,
+      replyToId: options.replyToId,
+      isForwarded: options.isForwarded
     });
 
-    // Also persist via REST API if numeric DB chat ID
-    if (typeof activeChatId === 'number' || !activeChatId.toString().startsWith('chat_')) {
-      try {
-        await apiRequest('/messages', 'POST', {
-          conversationId: activeChatId,
-          content: text
-        });
-      } catch (err) {
-        console.error('Failed to persist message via REST:', err);
-      }
+    // Persist via REST API
+    try {
+      await apiRequest('/messages', 'POST', {
+        conversationId: activeChatId,
+        content: text,
+        replyToId: options.replyToId,
+        isForwarded: options.isForwarded
+      });
+    } catch (err) {
+      console.error('Failed to persist message via REST:', err.message);
+    }
+  };
+
+  const handleMessageAction = (action, payload) => {
+    if (!socket || !activeChatId) return;
+    const recipientId = activeChat?.recipientId || activeChat?.contactId;
+
+    if (action === 'delete') {
+      socket.emit('delete_message', { messageId: payload.messageId, chatId: activeChatId, recipientId });
+    } else if (action === 'edit') {
+      socket.emit('edit_message', { messageId: payload.messageId, newText: payload.newText, chatId: activeChatId, recipientId });
+    } else if (action === 'react') {
+      socket.emit('add_reaction', { messageId: payload.messageId, emoji: payload.emoji, chatId: activeChatId, recipientId });
     }
   };
 
   // Handle starting a 1-on-1 chat from Contacts or Search
   const handleStartChatWithContact = async (contact) => {
+    setIsSearchOpen(false);
+    setIsDrawerOpen(false); // Also close drawer just in case
+
     try {
-      // Create or fetch direct conversation from SQLite backend if real user
-      if (contact.id) {
-        const res = await apiRequest('/chats', 'POST', { recipientId: contact.id });
-        if (res && res.conversation) {
-          const convId = res.conversation.id;
-          const existingIndex = conversations.findIndex((c) => c.id === convId);
+      const recipientId = contact.id || contact.contactId;
+      if (recipientId) {
+        const res = await apiRequest('/chats', 'POST', { recipientId });
+        if (res && (res.chat || res.conversation)) {
+          const chatObj = res.chat || res.conversation;
+          const convId = chatObj.id;
 
-          if (existingIndex === -1) {
-            const newConv = {
-              id: convId,
-              name: contact.fullName || contact.name,
-              email: contact.email,
-              avatar: contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact.fullName || contact.name)}`,
-              recipientId: contact.id,
-              lastMessage: 'Started a new conversation',
-              time: 'Just now',
-              unreadCount: 0,
-              isOnline: onlineUsers.has(contact.id),
-              status: contact.status || 'Hey there! I am using ChatApp.'
-            };
-
-            setConversations((prev) => [newConv, ...prev]);
-          }
-
-          setActiveChatId(convId);
-          setActiveTab('chats');
+          await fetchDbConversations();
+          navigate(`/app/chats/${convId}`);
           setMobileView('chat');
           return;
         }
       }
     } catch (err) {
-      console.log('Falling back to local state chat creation');
+      console.log('Failed to create/get chat from backend:', err.message);
     }
 
-    // Local fallback
-    const existingIndex = conversations.findIndex((c) => c.name === contact.name || c.email === contact.email);
-
-    if (existingIndex !== -1) {
-      setActiveChatId(conversations[existingIndex].id);
-    } else {
-      const newChatId = `chat_${Date.now()}`;
-      const newConv = {
-        id: newChatId,
-        name: contact.fullName || contact.name,
-        email: contact.email,
-        avatar: contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact.name)}`,
-        lastMessage: 'Started a new conversation',
-        time: 'Just now',
-        unreadCount: 0,
-        isOnline: true,
-        status: contact.status || 'Hey there! I am using ChatApp.'
-      };
-
-      setConversations((prev) => [newConv, ...prev]);
-      setActiveChatId(newChatId);
-      setMessagesMap((prev) => ({
-        ...prev,
-        [newChatId]: [
-          {
-            id: Date.now(),
-            senderId: 'system',
-            isMe: false,
-            text: `Conversation started with ${contact.name || contact.fullName}. Say hi! 👋`,
-            time: 'Just now'
-          }
-        ]
-      }));
-    }
-
-    setActiveTab('chats');
+    navigate('/app/chats');
     setMobileView('chat');
   };
+
+  const handleSelectChat = useCallback((id) => {
+    navigate(`/app/chats/${id}`);
+    setMobileView('chat');
+    setConversations((prev) =>
+      prev.map((c) => (String(c.id) === String(id) ? { ...c, unreadCount: 0, hasUnread: false } : c))
+    );
+  }, [navigate]);
+
+  const totalUnreadCount = useMemo(() => {
+    return conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+  }, [conversations]);
 
   return (
     <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden relative">
       
-      {/* 1. Vertical Navigation Dock */}
-      <NavDock activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Real-Time Disconnecting Banner */}
+      {!isConnected && (
+        <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-slate-950 text-[11px] font-bold text-center py-1 flex items-center justify-center space-x-2 shadow-lg">
+          <span className="animate-pulse">⚡ Connection lost. Reconnecting to real-time engine...</span>
+        </div>
+      )}
 
-      {/* 2. Main Content Area depending on activeTab */}
-      {activeTab === 'chats' && (
-        <div className="flex-1 flex h-full overflow-hidden">
-          {/* Chat Sidebar */}
-          <div className={`w-full md:w-80 lg:w-96 shrink-0 h-full ${
-            mobileView === 'sidebar' ? 'block' : 'hidden md:block'
-          }`}>
+      {/* Navigation Dock */}
+      <NavDock unreadCount={totalUnreadCount} />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {isChatsRoute ? (
+          <>
+            {/* Chats Tab View */}
+            {/* Chat List Sidebar */}
+            <div className={`w-full md:w-80 lg:w-96 flex flex-col shrink-0 border-r border-slate-800 transition-all duration-300 ${
+              mobileView === 'sidebar' ? 'block' : 'hidden md:flex'
+            }`}>
             <ChatSidebar
               conversations={conversations}
               activeChatId={activeChatId}
-              onSelectChat={(id) => {
-                setActiveChatId(id);
-                setMobileView('chat');
-                setConversations((prev) =>
-                  prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
-                );
-              }}
+              onSelectChat={handleSelectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
             />
           </div>
@@ -339,8 +445,12 @@ const ChatScreen = () => {
               activeChat={activeChat}
               messages={activeMessages}
               onSendMessage={handleSendMessage}
+              onMessageAction={handleMessageAction}
               onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
-              onBackToSidebar={() => setMobileView('sidebar')}
+              onBackToSidebar={() => {
+                navigate('/app/chats');
+                setMobileView('sidebar');
+              }}
             />
           </div>
 
@@ -353,36 +463,27 @@ const ChatScreen = () => {
               isOpen={isDrawerOpen}
               onClose={() => setIsDrawerOpen(false)}
             />
-          </div>
-        </div>
-      )}
+            </div>
+          </>
+        ) : (
+          <Outlet context={{
+            onStartChat: handleStartChatWithContact,
+            onOpenNewChat: () => setIsSearchOpen(true),
+            conversations,
+            onJumpToChat: (contactName) => {
+              const found = conversations.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase()));
+              if (found) {
+                navigate(`/app/chats/${found.id}`);
+                setMobileView('chat');
+              } else {
+                navigate('/app/chats');
+              }
+            }
+          }} />
+        )}
+      </div>
 
-      {/* Contacts Tab View */}
-      {activeTab === 'contacts' && (
-        <ContactsPage
-          onStartChat={handleStartChatWithContact}
-          onOpenNewChat={() => setIsSearchOpen(true)}
-        />
-      )}
-
-      {/* Starred Messages Tab View */}
-      {activeTab === 'starred' && (
-        <StarredPage
-          onJumpToChat={(contactName) => {
-            const found = conversations.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase()));
-            if (found) setActiveChatId(found.id);
-            setActiveTab('chats');
-            setMobileView('chat');
-          }}
-        />
-      )}
-
-      {/* Settings Tab View */}
-      {activeTab === 'settings' && (
-        <SettingsPage />
-      )}
-
-      {/* 3. User Search Modal */}
+      {/* Global Modals */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}

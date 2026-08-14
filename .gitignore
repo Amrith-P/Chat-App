@@ -10,6 +10,8 @@ Backend/.env
 # Databases
 *.sqlite
 *.sqlite3
+*.sqlite-wal
+*.sqlite-shm
 Backend/database/*.sqlite
 
 # Production builds

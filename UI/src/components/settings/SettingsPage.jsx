@@ -16,20 +16,60 @@ import {
 } from 'react-icons/fa';
 
 const SettingsPage = () => {
-  const { user, logout } = useAuth();
+  const { user, updateProfile, changePassword, revokeAllSessions, logout } = useAuth();
 
-  const [fullName, setFullName] = useState(user?.fullName || 'Amrith P');
-  const [statusBio, setStatusBio] = useState(user?.status || 'Building ChatApp Pro ✨');
+  const [fullName, setFullName] = useState(user?.fullName || '');
+  const [statusBio, setStatusBio] = useState(user?.status || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
   const [readReceipts, setReadReceipts] = useState(true);
   const [themeMode, setThemeMode] = useState('dark');
-  const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const handleSaveProfile = (e) => {
+  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    setProfileError('');
+    setSavedSuccess(false);
+    setIsUpdatingProfile(true);
+
+    try {
+      await updateProfile(fullName, statusBio);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err) {
+      setProfileError(err.message || 'Failed to update profile');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess(false);
+    setIsChangingPassword(true);
+
+    try {
+      await changePassword(currentPassword, newPassword);
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -63,6 +103,12 @@ const SettingsPage = () => {
           </div>
         )}
 
+        {profileError && (
+          <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl flex items-center space-x-3 text-xs font-bold">
+            <span>{profileError}</span>
+          </div>
+        )}
+
         {/* SECTION 1: PROFILE MANAGEMENT */}
         <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6">
           <h3 className="text-base font-bold text-white flex items-center space-x-2">
@@ -74,24 +120,17 @@ const SettingsPage = () => {
             <div className="flex items-center space-x-5">
               <div className="relative">
                 <img
-                  src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName)}`}
+                  src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName || 'User')}`}
                   alt={fullName}
                   className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500/80 shadow-lg"
                 />
-                <button
-                  type="button"
-                  title="Change Avatar"
-                  className="absolute bottom-0 right-0 p-2 bg-emerald-500 text-slate-950 rounded-full shadow-lg hover:bg-emerald-400 transition"
-                >
-                  <FaCamera className="text-xs" />
-                </button>
               </div>
 
               <div className="space-y-1">
-                <h4 className="font-bold text-white text-base">{fullName}</h4>
+                <h4 className="font-bold text-white text-base">{user?.fullName}</h4>
                 <p className="text-xs text-slate-400">{user?.email || 'user@chatapp.com'}</p>
                 <span className="inline-block px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20">
-                  Pro Account Active
+                  Verified Member
                 </span>
               </div>
             </div>
@@ -103,6 +142,7 @@ const SettingsPage = () => {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  required
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
                 />
               </div>
@@ -120,10 +160,86 @@ const SettingsPage = () => {
 
             <button
               type="submit"
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition"
+              disabled={isUpdatingProfile}
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
             >
-              Save Profile Changes
+              {isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}
             </button>
+          </form>
+        </section>
+
+        {/* SECTION 2: CHANGE PASSWORD */}
+        <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6">
+          <h3 className="text-base font-bold text-white flex items-center space-x-2">
+            <FaLock className="text-emerald-400" />
+            <span>Security & Password</span>
+          </h3>
+
+          {passwordSuccess && (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold">
+              Your password has been successfully updated!
+            </div>
+          )}
+
+          {passwordError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-bold">
+              {passwordError}
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isChangingPassword}
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
+            >
+              {isChangingPassword ? 'Updating Password...' : 'Update Password'}
+            </button>
+
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold text-white">Active Sessions</h4>
+                <p className="text-[11px] text-slate-400">Logout from all other browsers and active devices</p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to log out from all devices?')) {
+                    try {
+                      await revokeAllSessions();
+                    } catch (err) {
+                      alert('Failed to revoke sessions');
+                    }
+                  }
+                }}
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs font-bold rounded-xl border border-red-500/20 transition"
+              >
+                Logout All Devices
+              </button>
+            </div>
           </form>
         </section>
 
@@ -235,4 +351,4 @@ const SettingsPage = () => {
   );
 };
 
-export default SettingsPage;
+export default React.memo(SettingsPage);
