@@ -26,7 +26,7 @@ export const getUserChats = (req, res) => {
       WHERE conversationid = c.id 
       ORDER BY id DESC LIMIT 1
     )
-    ORDER BY c.id DESC
+    ORDER BY COALESCE(m.createdat, c.createdat) DESC
   `;
 
   db.all(query, [currentUserId, currentUserId], (err, chats) => {
