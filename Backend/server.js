@@ -12,6 +12,8 @@ import chatRoutes from './routes/chatRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import { initSocket } from './socket/socketHandler.js';
 import { refreshTokenHandler } from './controllers/authController.js';
+import { deleteChat } from './controllers/chatController.js';
+import { protect } from './middleware/auth.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -68,6 +70,7 @@ initSocket(server);
 
 // Top-Level Auth Refresh Handler Fallback
 app.post('/api/auth/refresh', refreshTokenHandler);
+app.delete('/api/chats/:chatId', protect, deleteChat);
 
 // Routes
 app.use('/api/auth', authRoutes);
