@@ -11,6 +11,7 @@ import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import { initSocket } from './socket/socketHandler.js';
+import { refreshTokenHandler } from './controllers/authController.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -64,6 +65,9 @@ app.use('/api', apiLimiter);
 
 // Initialize Socket.IO
 initSocket(server);
+
+// Top-Level Auth Refresh Handler Fallback
+app.post('/api/auth/refresh', refreshTokenHandler);
 
 // Routes
 app.use('/api/auth', authRoutes);
