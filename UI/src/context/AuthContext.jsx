@@ -1,31 +1,42 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiRequest } from '../api/client';
+import { apiRequest, setAccessToken, getAccessToken } from '../api/client';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('chat_token'));
+  const [token, setTokenState] = useState(getAccessToken());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check current session on mount
+  const updateTokenState = (newToken) => {
+    setAccessToken(newToken);
+    setTokenState(newToken);
+  };
+
+  // Check current session on mount (attempts silent refresh first, then /me)
   useEffect(() => {
     const verifySession = async () => {
-      const storedToken = localStorage.getItem('chat_token');
-      if (!storedToken) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const data = await apiRequest('/auth/me');
-        setUser(data.user);
+        // Attempt silent refresh via HttpOnly Cookie
+        const refreshData = await apiRequest('/auth/refresh', 'POST');
+        updateTokenState(refreshData.token);
+        setUser(refreshData.user);
       } catch (err) {
-        console.error('Session validation failed:', err);
-        localStorage.removeItem('chat_token');
-        setToken(null);
-        setUser(null);
+        // If refresh fails, check if we have a valid stored token
+        const existingToken = getAccessToken();
+        if (existingToken) {
+          try {
+            const data = await apiRequest('/auth/me');
+            setUser(data.user);
+          } catch (meErr) {
+            updateTokenState(null);
+            setUser(null);
+          }
+        } else {
+          updateTokenState(null);
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -38,8 +49,7 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const data = await apiRequest('/auth/login', 'POST', { email, password });
-      localStorage.setItem('chat_token', data.token);
-      setToken(data.token);
+      updateTokenState(data.token);
       setUser(data.user);
       return data;
     } catch (err) {
@@ -52,8 +62,7 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const data = await apiRequest('/auth/register', 'POST', { fullName, email, password, avatar });
-      localStorage.setItem('chat_token', data.token);
-      setToken(data.token);
+      updateTokenState(data.token);
       setUser(data.user);
       return data;
     } catch (err) {
@@ -84,10 +93,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('chat_token');
-    setToken(null);
-    setUser(null);
+  const updateProfile = async (fullName, status, avatar) => {
+    setError(null);
+    try {
+      const data = await apiRequest('/users/profile', 'PUT', { fullName, status, avatar });
+      if (data.user) {
+        setUser(data.user);
+      }
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    setError(null);
+    try {
+      const data = await apiRequest('/users/change-password', 'PUT', { currentPassword, newPassword });
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const revokeAllSessions = async () => {
+    setError(null);
+    try {
+      await apiRequest('/auth/revoke-all', 'POST');
+      updateTokenState(null);
+      setUser(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await apiRequest('/auth/logout', 'POST');
+    } catch (err) {
+      // Ignore network errors on logout
+    } finally {
+      updateTokenState(null);
+      setUser(null);
+    }
   };
 
   return (
@@ -102,6 +153,9 @@ export const AuthProvider = ({ children }) => {
         register,
         forgotPassword,
         resetPassword,
+        updateProfile,
+        changePassword,
+        revokeAllSessions,
         logout
       }}
     >

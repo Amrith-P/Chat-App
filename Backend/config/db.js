@@ -17,13 +17,11 @@ if (isPostgres) {
     ssl: { rejectUnauthorized: false }
   });
 
-  // Convert ? placeholders to $1, $2, $3 for Postgres
   const convertPlaceholders = (sql) => {
     let index = 1;
     return sql.replace(/\?/g, () => `$${index++}`);
   };
 
-  // Map PostgreSQL lowercase column keys to camelCase for full JS compatibility
   const normalizeRow = (row) => {
     if (!row || typeof row !== 'object') return row;
     const normalized = {};
@@ -37,9 +35,15 @@ if (isPostgres) {
       if (key === 'userid') normalized.userId = row[key];
       if (key === 'senderid') normalized.senderId = row[key];
       if (key === 'messagetype') normalized.messageType = row[key];
+      if (key === 'replytoid') normalized.replyToId = row[key];
+      if (key === 'isforwarded') normalized.isForwarded = row[key];
+      if (key === 'isedited') normalized.isEdited = row[key];
+      if (key === 'isdeleted') normalized.isDeleted = row[key];
+      if (key === 'readat') normalized.readAt = row[key];
       if (key === 'contactid') normalized.contactId = row[key];
       if (key === 'lastmessage') normalized.lastMessage = row[key];
       if (key === 'lastmessagetime') normalized.lastMessageTime = row[key];
+      if (key === 'emailverified') normalized.emailVerified = row[key];
     }
     return normalized;
   };
@@ -108,6 +112,13 @@ if (isPostgres) {
     }
   });
 
+  // Enable WAL Mode, Foreign Keys & Busy Timeout for SQLite Production Reliability
+  sqliteDb.serialize(() => {
+    sqliteDb.run('PRAGMA foreign_keys = ON;');
+    sqliteDb.run('PRAGMA journal_mode = WAL;');
+    sqliteDb.run('PRAGMA busy_timeout = 5000;');
+  });
+
   dbWrapper = {
     isPostgres: false,
     get: sqliteDb.get.bind(sqliteDb),
@@ -117,10 +128,9 @@ if (isPostgres) {
   };
 }
 
-// Initialize Database Tables
+// Initialize Database Tables, Constraints & Indexes
 export const initDb = () => {
   if (isPostgres) {
-    // PostgreSQL Table Schemas
     const queries = [
       `CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -129,6 +139,7 @@ export const initDb = () => {
         password VARCHAR(255) NOT NULL,
         avatar TEXT,
         status TEXT DEFAULT 'Hey there! I am using ChatApp.',
+        emailVerified BOOLEAN DEFAULT FALSE,
         resetToken TEXT,
         resetTokenExpiry BIGINT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -142,17 +153,50 @@ export const initDb = () => {
 
       `CREATE TABLE IF NOT EXISTS conversation_members (
         id SERIAL PRIMARY KEY,
-        conversationId INTEGER NOT NULL,
-        userId INTEGER NOT NULL,
+        conversationId INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         joinedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
 
       `CREATE TABLE IF NOT EXISTS messages (
         id SERIAL PRIMARY KEY,
-        conversationId INTEGER NOT NULL,
-        senderId INTEGER NOT NULL,
+        conversationId INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        senderId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         content TEXT NOT NULL,
         messageType VARCHAR(50) DEFAULT 'text',
+        replyToId INTEGER,
+        isForwarded BOOLEAN DEFAULT FALSE,
+        isEdited BOOLEAN DEFAULT FALSE,
+        isDeleted BOOLEAN DEFAULT FALSE,
+        readAt TIMESTAMP,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS message_reactions (
+        id SERIAL PRIMARY KEY,
+        messageId INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+        userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        emoji VARCHAR(10) NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS user_sessions (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tokenHash VARCHAR(255) NOT NULL,
+        userAgent TEXT,
+        ipAddress VARCHAR(45),
+        isRevoked BOOLEAN DEFAULT FALSE,
+        expiresAt TIMESTAMP NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS password_resets (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tokenHash VARCHAR(255) NOT NULL,
+        isUsed BOOLEAN DEFAULT FALSE,
+        expiresAt TIMESTAMP NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`
     ];
@@ -163,7 +207,7 @@ export const initDb = () => {
       });
     });
   } else {
-    // SQLite Table Schemas
+    // SQLite Table Schemas with Foreign Keys & Indexes
     dbWrapper.serialize(() => {
       dbWrapper.run(`
         CREATE TABLE IF NOT EXISTS users (
@@ -173,6 +217,7 @@ export const initDb = () => {
           password TEXT NOT NULL,
           avatar TEXT,
           status TEXT DEFAULT 'Hey there! I am using ChatApp.',
+          emailVerified INTEGER DEFAULT 0,
           resetToken TEXT,
           resetTokenExpiry INTEGER,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -193,8 +238,8 @@ export const initDb = () => {
           conversationId INTEGER NOT NULL,
           userId INTEGER NOT NULL,
           joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(conversationId) REFERENCES conversations(id),
-          FOREIGN KEY(userId) REFERENCES users(id)
+          FOREIGN KEY(conversationId) REFERENCES conversations(id) ON DELETE CASCADE,
+          FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -205,11 +250,71 @@ export const initDb = () => {
           senderId INTEGER NOT NULL,
           content TEXT NOT NULL,
           messageType TEXT DEFAULT 'text',
+          replyToId INTEGER,
+          isForwarded INTEGER DEFAULT 0,
+          isEdited INTEGER DEFAULT 0,
+          isDeleted INTEGER DEFAULT 0,
+          readAt DATETIME,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(conversationId) REFERENCES conversations(id),
-          FOREIGN KEY(senderId) REFERENCES users(id)
+          FOREIGN KEY(conversationId) REFERENCES conversations(id) ON DELETE CASCADE,
+          FOREIGN KEY(senderId) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS message_reactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          messageId INTEGER NOT NULL,
+          userId INTEGER NOT NULL,
+          emoji TEXT NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(messageId) REFERENCES messages(id) ON DELETE CASCADE,
+          FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS user_sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId INTEGER NOT NULL,
+          tokenHash TEXT NOT NULL,
+          userAgent TEXT,
+          ipAddress TEXT,
+          isRevoked INTEGER DEFAULT 0,
+          expiresAt DATETIME NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS password_resets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId INTEGER NOT NULL,
+          tokenHash TEXT NOT NULL,
+          isUsed INTEGER DEFAULT 0,
+          expiresAt DATETIME NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Migrations & Columns Addition
+      dbWrapper.run(`ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0`, [], () => {});
+      dbWrapper.run(`ALTER TABLE messages ADD COLUMN replyToId INTEGER`, [], () => {});
+      dbWrapper.run(`ALTER TABLE messages ADD COLUMN isForwarded INTEGER DEFAULT 0`, [], () => {});
+      dbWrapper.run(`ALTER TABLE messages ADD COLUMN isEdited INTEGER DEFAULT 0`, [], () => {});
+      dbWrapper.run(`ALTER TABLE messages ADD COLUMN isDeleted INTEGER DEFAULT 0`, [], () => {});
+      dbWrapper.run(`ALTER TABLE messages ADD COLUMN readAt DATETIME`, [], () => {});
+
+      // Performance Indexing
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_conv_members_user ON conversation_members(userId)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_conv_members_conv ON conversation_members(conversationId)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversationId)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(senderId)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(createdAt)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_reactions_msg ON message_reactions(messageId)`);
     });
   }
 };

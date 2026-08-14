@@ -1,13 +1,28 @@
 import express from 'express';
-import { register, login, forgotPassword, resetPassword, getMe } from '../controllers/authController.js';
+import { 
+  register, 
+  login, 
+  refreshTokenHandler, 
+  logout, 
+  revokeAllSessions, 
+  forgotPassword, 
+  resetPassword, 
+  getMe 
+} from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import { validate } from '../middleware/validate.js';
+import { registerSchema, loginSchema } from '../validation/schemas.js';
 
 const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', login);
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/refresh', refreshTokenHandler);
+router.post('/logout', logout);
+router.post('/revoke-all', protect, revokeAllSessions);
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', authLimiter, resetPassword);
 router.get('/me', protect, getMe);
 
 export default router;

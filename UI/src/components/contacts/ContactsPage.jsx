@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { FaSearch, FaUserPlus, FaComment, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaUserFriends } from 'react-icons/fa';
 import { apiRequest } from '../../api/client';
 
-const ContactsPage = ({ onStartChat, onOpenNewChat }) => {
+const ContactsPage = () => {
+  const { onStartChat, onOpenNewChat } = useOutletContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

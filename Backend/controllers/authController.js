@@ -2,12 +2,57 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
 
-// Helper to generate JWT
-const generateToken = (user) => {
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_chat_app_2026_xyz';
+const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || 'super_secret_refresh_key_chat_app_2026_abc';
+
+// Helper to generate short-lived Access Token (15 min)
+const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user.id, email: user.email, fullName: user.fullName },
-    process.env.JWT_SECRET || 'super_secret_jwt_key_chat_app_2026_xyz',
+    JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+};
+
+// Helper to generate long-lived Refresh Token (7 days)
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    { id: user.id, email: user.email },
+    REFRESH_SECRET,
     { expiresIn: '7d' }
+  );
+};
+
+// Create & Store Session with Cookie Helper
+const createSessionAndSendTokens = async (req, res, user, statusCode = 200, message = 'Success') => {
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const tokenHash = await bcrypt.hash(refreshToken, 8);
+
+  const userAgent = req.headers['user-agent'] || 'Unknown';
+  const ipAddress = req.ip || req.socket.remoteAddress || '127.0.0.1';
+
+  db.run(
+    'INSERT INTO user_sessions (userId, tokenHash, userAgent, ipAddress, expiresAt) VALUES (?, ?, ?, ?, ?)',
+    [user.id, tokenHash, userAgent, ipAddress, expiresAt],
+    (err) => {
+      if (err) console.error('Failed to log session:', err.message);
+
+      // Set HttpOnly Cookie for Refresh Token
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      });
+
+      res.status(statusCode).json({
+        message,
+        token: accessToken, // Short-lived Access Token in response body
+        user
+      });
+    }
   );
 };
 
@@ -22,7 +67,6 @@ export const register = async (req, res) => {
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Check if user exists
   db.get('SELECT * FROM users WHERE email = ?', [normalizedEmail], async (err, existingUser) => {
     if (err) {
       return res.status(500).json({ message: 'Database error', error: err.message });
@@ -54,13 +98,7 @@ export const register = async (req, res) => {
             status: 'Hey there! I am using ChatApp.'
           };
 
-          const token = generateToken(user);
-
-          res.status(201).json({
-            message: 'Registration successful',
-            token,
-            user
-          });
+          createSessionAndSendTokens(req, res, user, 201, 'Registration successful');
         }
       );
     } catch (error) {
@@ -103,17 +141,79 @@ export const login = (req, res) => {
         status: user.status
       };
 
-      const token = generateToken(userProfile);
-
-      res.json({
-        message: 'Login successful',
-        token,
-        user: userProfile
-      });
+      createSessionAndSendTokens(req, res, userProfile, 200, 'Login successful');
     } catch (error) {
       res.status(500).json({ message: 'Error verifying credentials', error: error.message });
     }
   });
+};
+
+// @desc    Refresh Access Token using HttpOnly Cookie
+// @route   POST /api/auth/refresh
+export const refreshTokenHandler = (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'No refresh token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
+
+    db.get(
+      'SELECT * FROM users WHERE id = ?',
+      [decoded.id],
+      (err, user) => {
+        if (err || !user) {
+          return res.status(401).json({ message: 'User session invalid' });
+        }
+
+        const userProfile = {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.fullName)}`,
+          status: user.status
+        };
+
+        const newAccessToken = generateAccessToken(userProfile);
+
+        res.json({
+          message: 'Token refreshed successfully',
+          token: newAccessToken,
+          user: userProfile
+        });
+      }
+    );
+  } catch (error) {
+    res.clearCookie('refreshToken');
+    return res.status(401).json({ message: 'Refresh token invalid or expired' });
+  }
+};
+
+// @desc    Logout User & Clear Cookie
+// @route   POST /api/auth/logout
+export const logout = (req, res) => {
+  res.clearCookie('refreshToken');
+  res.json({ message: 'Logged out successfully' });
+};
+
+// @desc    Revoke All Active Sessions for User ("Logout from all devices")
+// @route   POST /api/auth/revoke-all
+export const revokeAllSessions = (req, res) => {
+  const userId = req.user.id;
+
+  db.run(
+    'UPDATE user_sessions SET isRevoked = 1 WHERE userId = ?',
+    [userId],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Failed to revoke sessions' });
+      }
+      res.clearCookie('refreshToken');
+      res.json({ message: 'All active sessions have been revoked. Please log in again.' });
+    }
+  );
 };
 
 // @desc    Forgot Password Request
@@ -133,9 +233,8 @@ export const forgotPassword = (req, res) => {
     }
 
     if (!user) {
-      // Return success even if email not found to prevent user enumeration
       return res.json({
-        message: 'If an account with that email exists, a password reset link/token has been sent.'
+        message: 'If an account with that email exists, a password reset token has been sent.'
       });
     }
 
@@ -152,8 +251,8 @@ export const forgotPassword = (req, res) => {
 
         res.json({
           message: 'Password reset instructions generated successfully.',
-          resetToken: resetToken, // Returned for easy dev testing
-          info: `In production an email would be sent to ${normalizedEmail}. Reset Code: ${resetToken}`
+          resetToken: resetToken,
+          info: `Reset Code: ${resetToken}`
         });
       }
     );

@@ -59,6 +59,8 @@ export const initSocket = (server) => {
       const targetChatId = data.chatId || data.conversationId;
       const targetText = data.text || data.content;
       const recipientId = data.recipientId;
+      const replyToId = data.replyToId || null;
+      const isForwarded = data.isForwarded || false;
 
       if (!targetChatId || !targetText || !targetText.trim()) {
         console.warn('⚠️ Invalid send_message payload received:', data);
@@ -69,8 +71,8 @@ export const initSocket = (server) => {
 
       // Store in database (SQLite or PostgreSQL)
       db.run(
-        'INSERT INTO messages (conversationId, senderId, content) VALUES (?, ?, ?)',
-        [targetChatId, userId, trimmedText],
+        'INSERT INTO messages (conversationId, senderId, content, replyToId, isForwarded) VALUES (?, ?, ?, ?, ?)',
+        [targetChatId, userId, trimmedText, replyToId, isForwarded ? 1 : 0],
         function (err) {
           if (err) {
             console.error('Failed to save real-time message to DB:', err.message);
@@ -85,6 +87,12 @@ export const initSocket = (server) => {
             senderName: socket.user.fullName,
             text: trimmedText,
             content: trimmedText,
+            replyToId,
+            isForwarded,
+            isEdited: false,
+            isDeleted: false,
+            readAt: null,
+            reactions: [],
             createdAt: new Date().toISOString(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
           };
@@ -104,6 +112,59 @@ export const initSocket = (server) => {
           socket.to(`chat_${targetChatId}`).emit('receive_message', messageObj);
         }
       );
+    });
+
+    // Handle mark read
+    socket.on('mark_read', ({ messageIds, chatId, recipientId }) => {
+      if (!messageIds || messageIds.length === 0) return;
+      
+      const now = new Date().toISOString();
+      // Assuming SQLite for simplicity in dev (multiple updates require loop or IN clause)
+      const placeholders = messageIds.map(() => '?').join(',');
+      db.run(`UPDATE messages SET readAt = ? WHERE id IN (${placeholders})`, [now, ...messageIds], (err) => {
+        if (!err) {
+          // Notify sender that messages were read
+          if (recipientId) {
+            io.to(`user_${recipientId}`).emit('messages_read', { messageIds, chatId, readAt: now });
+          }
+          io.to(`chat_${chatId}`).emit('messages_read', { messageIds, chatId, readAt: now });
+        }
+      });
+    });
+
+    // Handle reactions
+    socket.on('add_reaction', ({ messageId, chatId, emoji, recipientId }) => {
+      db.run(
+        'INSERT INTO message_reactions (messageId, userId, emoji) VALUES (?, ?, ?)',
+        [messageId, userId, emoji],
+        function (err) {
+          if (!err) {
+            const reaction = { id: this.lastID, messageId, userId, userName: socket.user.fullName, emoji };
+            if (recipientId) io.to(`user_${recipientId}`).emit('message_reaction_added', { chatId, reaction });
+            io.to(`chat_${chatId}`).emit('message_reaction_added', { chatId, reaction });
+          }
+        }
+      );
+    });
+
+    // Handle edit message
+    socket.on('edit_message', ({ messageId, chatId, newText, recipientId }) => {
+      db.run('UPDATE messages SET content = ?, isEdited = 1 WHERE id = ? AND senderId = ?', [newText.trim(), messageId, userId], (err) => {
+        if (!err) {
+          if (recipientId) io.to(`user_${recipientId}`).emit('message_edited', { messageId, chatId, newText: newText.trim() });
+          io.to(`chat_${chatId}`).emit('message_edited', { messageId, chatId, newText: newText.trim() });
+        }
+      });
+    });
+
+    // Handle delete message
+    socket.on('delete_message', ({ messageId, chatId, recipientId }) => {
+      db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ? AND senderId = ?', [messageId, userId], (err) => {
+        if (!err) {
+          if (recipientId) io.to(`user_${recipientId}`).emit('message_deleted', { messageId, chatId });
+          io.to(`chat_${chatId}`).emit('message_deleted', { messageId, chatId });
+        }
+      });
     });
 
     // Handle typing notifications

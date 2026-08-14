@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { 
   FaComments, 
   FaCommentAlt, 
@@ -11,7 +12,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 
-const NavDock = ({ activeTab, setActiveTab, unreadCount = 0 }) => {
+const NavDock = ({ unreadCount = 0 }) => {
   const { user, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(true);
 
@@ -38,29 +39,32 @@ const NavDock = ({ activeTab, setActiveTab, unreadCount = 0 }) => {
           <nav className="flex flex-col space-y-3">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
               return (
-                <button
+                <NavLink
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  to={`/app/${item.id}`}
                   title={item.label}
-                  className={`relative w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 group ${
+                  className={({ isActive }) => `relative w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 group ${
                     isActive
                       ? 'bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
-                  <Icon className={`text-xl transition ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} />
-                  {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full" />}
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-full flex items-center justify-center shadow-sm">
-                      {item.badge}
-                    </span>
+                  {({ isActive }) => (
+                    <>
+                      <Icon className={`text-xl transition ${isActive ? 'scale-110' : 'group-hover:scale-105'}`} />
+                      {isActive && <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-400 rounded-r-full" />}
+                      {item.badge && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-full flex items-center justify-center shadow-sm">
+                          {item.badge}
+                        </span>
+                      )}
+                      <span className="absolute left-16 bg-slate-800 text-white text-xs font-semibold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap z-50 shadow-lg border border-slate-700">
+                        {item.label}
+                      </span>
+                    </>
                   )}
-                  <span className="absolute left-16 bg-slate-800 text-white text-xs font-semibold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap z-50 shadow-lg border border-slate-700">
-                    {item.label}
-                  </span>
-                </button>
+                </NavLink>
               );
             })}
           </nav>
@@ -103,25 +107,28 @@ const NavDock = ({ activeTab, setActiveTab, unreadCount = 0 }) => {
       <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 flex items-center justify-around px-2 z-40 select-none">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
           return (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+              to={`/app/${item.id}`}
+              className={({ isActive }) => `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
                 isActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <div className="relative">
-                <Icon className="text-lg" />
-                {item.badge && (
-                  <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 text-slate-950 font-black text-[9px] rounded-full flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] mt-0.5 font-medium">{item.label}</span>
-            </button>
+              {({ isActive }) => (
+                <>
+                  <div className="relative">
+                    <Icon className="text-lg" />
+                    {item.badge && (
+                      <span className="absolute -top-1 -right-2 w-3.5 h-3.5 bg-emerald-500 text-slate-950 font-black text-[9px] rounded-full flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] mt-0.5 font-medium">{item.label}</span>
+                </>
+              )}
+            </NavLink>
           );
         })}
 

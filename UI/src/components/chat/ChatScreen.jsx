@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { apiRequest } from '../../api/client';
@@ -7,17 +8,37 @@ import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ContactDrawer from './ContactDrawer';
 import SearchModal from './SearchModal';
-import ContactsPage from '../contacts/ContactsPage';
-import StarredPage from '../starred/StarredPage';
-import SettingsPage from '../settings/SettingsPage';
+
+const parseDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  // Support SQLite format by replacing space with 'T' and adding 'Z' for UTC if not present
+  let iso = String(dateStr);
+  if (!iso.includes('T')) iso = iso.replace(' ', 'T') + 'Z';
+  const d = new Date(iso);
+  return isNaN(d) ? new Date() : d;
+};
 
 const ChatScreen = () => {
   const { user } = useAuth();
   const { socket, isConnected, onlineUsers, emitSendMessage, emitTyping } = useSocket();
 
-  const [activeTab, setActiveTab] = useState('chats'); // 'chats' | 'contacts' | 'starred' | 'settings'
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isChatsRoute = location.pathname.includes('/app/chats');
+  
+  // Extract dynamic chatId from /app/chats/:chatId
+  const urlChatId = isChatsRoute ? location.pathname.split('/app/chats/')[1] : null;
+
   const [conversations, setConversations] = useState([]);
-  const [activeChatId, setActiveChatId] = useState(null);
+  const [activeChatId, setActiveChatId] = useState(urlChatId || null);
+
+  useEffect(() => {
+    if (urlChatId && String(urlChatId) !== String(activeChatId)) {
+      setActiveChatId(urlChatId);
+    } else if (!urlChatId && activeChatId) {
+      setActiveChatId(null);
+    }
+  }, [urlChatId]);
   const [messagesMap, setMessagesMap] = useState({});
 
   // Mobile View Toggle ('sidebar' | 'chat')
@@ -39,11 +60,12 @@ const ChatScreen = () => {
           avatar: c.avatar || c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.name || 'User')}`,
           recipientId: c.contactId || c.recipientId,
           lastMessage: c.lastMessage || 'No messages yet. Say hi!',
-          time: c.time || (c.lastMessageTime ? new Date(c.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New'),
+          time: c.time || (c.lastMessageTime ? parseDate(c.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New'),
+          timestamp: c.lastMessageTime ? parseDate(c.lastMessageTime).getTime() : 0,
           unreadCount: c.unreadCount || 0,
           isOnline: onlineUsers.has(c.contactId || c.recipientId),
           status: c.status || 'Available'
-        }));
+        })).sort((a, b) => b.timestamp - a.timestamp);
 
         setConversations(formatted);
       }
@@ -68,8 +90,15 @@ const ChatScreen = () => {
             id: m.id,
             senderId: m.senderId,
             isMe: m.senderId === user?.id,
-            text: m.content || m.text,
-            time: new Date(m.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            text: m.text,
+            replyToId: m.replyToId,
+            isForwarded: Boolean(m.isForwarded),
+            isEdited: Boolean(m.isEdited),
+            isDeleted: Boolean(m.isDeleted),
+            readAt: m.readAt,
+            reactions: m.reactions || [],
+            time: parseDate(m.createdAt || m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: parseDate(m.createdAt || m.time).toLocaleDateString()
           }));
 
           setMessagesMap((prev) => ({
@@ -98,7 +127,6 @@ const ChatScreen = () => {
 
     const handleReceiveMessage = (msg) => {
       const isMyMessage = msg.senderId === user?.id;
-      // Sender already appended their message locally; ignore duplicate broadcast
       if (isMyMessage) return;
 
       const chatKey = msg.conversationId || msg.chatId;
@@ -124,7 +152,14 @@ const ChatScreen = () => {
         senderId: msg.senderId,
         isMe: isMyMessage,
         text: msgContent,
-        time: new Date(msg.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        replyToId: msg.replyToId,
+        isForwarded: msg.isForwarded,
+        isEdited: msg.isEdited,
+        isDeleted: msg.isDeleted,
+        readAt: msg.readAt,
+        reactions: msg.reactions || [],
+        time: parseDate(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: parseDate(msg.createdAt).toLocaleDateString()
       };
 
       // Append message to active messages map
@@ -143,7 +178,6 @@ const ChatScreen = () => {
         setConversations((prev) => {
           const exists = prev.some((c) => String(c.id) === String(chatKey));
           if (!exists) {
-            // Re-fetch conversations to include new room
             fetchDbConversations();
             return prev;
           }
@@ -153,23 +187,75 @@ const ChatScreen = () => {
                   ...c,
                   lastMessage: msgContent,
                   time: 'Just now',
+                  timestamp: Date.now(),
                   unreadCount: String(activeChatId) === String(chatKey) ? 0 : (c.unreadCount || 0) + 1,
                   hasUnread: String(activeChatId) !== String(chatKey)
                 }
               : c
-          );
+          ).sort((a, b) => b.timestamp - a.timestamp);
         });
 
-        if (!activeChatId) {
-          setActiveChatId(chatKey);
+        if (!activeChatId) setActiveChatId(chatKey);
+        
+        // Mark as read immediately if chat is open
+        if (String(activeChatId) === String(chatKey) && socket) {
+          socket.emit('mark_read', { messageIds: [formattedMsg.id], chatId: chatKey });
         }
       }
     };
 
+    const handleMessagesRead = ({ messageIds, chatId, readAt }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => messageIds.includes(m.id) ? { ...m, readAt } : m)
+        };
+      });
+    };
+
+    const handleReactionAdded = ({ chatId, reaction }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => m.id === reaction.messageId ? { ...m, reactions: [...(m.reactions || []), reaction] } : m)
+        };
+      });
+    };
+
+    const handleMessageEdited = ({ messageId, chatId, newText }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => m.id === messageId ? { ...m, text: newText, isEdited: true } : m)
+        };
+      });
+    };
+
+    const handleMessageDeleted = ({ messageId, chatId }) => {
+      setMessagesMap((prev) => {
+        const existing = prev[chatId] || [];
+        return {
+          ...prev,
+          [chatId]: existing.map(m => m.id === messageId ? { ...m, text: '🚫 This message was deleted', isDeleted: true } : m)
+        };
+      });
+    };
+
     socket.on('receive_message', handleReceiveMessage);
+    socket.on('messages_read', handleMessagesRead);
+    socket.on('message_reaction_added', handleReactionAdded);
+    socket.on('message_edited', handleMessageEdited);
+    socket.on('message_deleted', handleMessageDeleted);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
+      socket.off('messages_read', handleMessagesRead);
+      socket.off('message_reaction_added', handleReactionAdded);
+      socket.off('message_edited', handleMessageEdited);
+      socket.off('message_deleted', handleMessageDeleted);
     };
   }, [socket, activeChatId, user]);
 
@@ -177,7 +263,7 @@ const ChatScreen = () => {
   const activeMessages = activeChatId ? (messagesMap[activeChatId] || []) : [];
 
   // Handle Send Message (Persist to Backend REST + Socket.IO Broadcast)
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, options = {}) => {
     if (!activeChatId) return;
 
     const newMsg = {
@@ -185,7 +271,14 @@ const ChatScreen = () => {
       senderId: user?.id || 'me',
       isMe: true,
       text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      replyToId: options.replyToId,
+      isForwarded: options.isForwarded,
+      isEdited: false,
+      isDeleted: false,
+      readAt: null,
+      reactions: [],
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString()
     };
 
     // Update local state instantly for zero-latency UX
@@ -197,9 +290,9 @@ const ChatScreen = () => {
     setConversations((prev) =>
       prev.map((c) =>
         c.id === activeChatId
-          ? { ...c, lastMessage: text, time: 'Just now', unreadCount: 0 }
+          ? { ...c, lastMessage: text, time: 'Just now', timestamp: Date.now(), unreadCount: 0 }
           : c
-      )
+      ).sort((a, b) => b.timestamp - a.timestamp)
     );
 
     // Emit Real-Time Socket.IO event
@@ -208,22 +301,42 @@ const ChatScreen = () => {
       conversationId: activeChatId,
       recipientId: activeChat?.recipientId || activeChat?.contactId,
       text,
-      content: text
+      content: text,
+      replyToId: options.replyToId,
+      isForwarded: options.isForwarded
     });
 
     // Persist via REST API
     try {
       await apiRequest('/messages', 'POST', {
         conversationId: activeChatId,
-        content: text
+        content: text,
+        replyToId: options.replyToId,
+        isForwarded: options.isForwarded
       });
     } catch (err) {
       console.error('Failed to persist message via REST:', err.message);
     }
   };
 
+  const handleMessageAction = (action, payload) => {
+    if (!socket || !activeChatId) return;
+    const recipientId = activeChat?.recipientId || activeChat?.contactId;
+
+    if (action === 'delete') {
+      socket.emit('delete_message', { messageId: payload.messageId, chatId: activeChatId, recipientId });
+    } else if (action === 'edit') {
+      socket.emit('edit_message', { messageId: payload.messageId, newText: payload.newText, chatId: activeChatId, recipientId });
+    } else if (action === 'react') {
+      socket.emit('add_reaction', { messageId: payload.messageId, emoji: payload.emoji, chatId: activeChatId, recipientId });
+    }
+  };
+
   // Handle starting a 1-on-1 chat from Contacts or Search
   const handleStartChatWithContact = async (contact) => {
+    setIsSearchOpen(false);
+    setIsDrawerOpen(false); // Also close drawer just in case
+
     try {
       const recipientId = contact.id || contact.contactId;
       if (recipientId) {
@@ -233,8 +346,7 @@ const ChatScreen = () => {
           const convId = chatObj.id;
 
           await fetchDbConversations();
-          setActiveChatId(convId);
-          setActiveTab('chats');
+          navigate(`/app/chats/${convId}`);
           setMobileView('chat');
           return;
         }
@@ -243,7 +355,7 @@ const ChatScreen = () => {
       console.log('Failed to create/get chat from backend:', err.message);
     }
 
-    setActiveTab('chats');
+    navigate('/app/chats');
     setMobileView('chat');
   };
 
@@ -252,21 +364,23 @@ const ChatScreen = () => {
   return (
     <div className="h-screen w-full flex bg-slate-950 text-white font-sans overflow-hidden relative">
       
-      {/* 1. Vertical Navigation Dock */}
-      <NavDock activeTab={activeTab} setActiveTab={setActiveTab} unreadCount={totalUnreadCount} />
+      {/* Navigation Dock */}
+      <NavDock unreadCount={totalUnreadCount} />
 
-      {/* 2. Main Content Area depending on activeTab */}
-      {activeTab === 'chats' && (
-        <div className="flex-1 flex h-full overflow-hidden">
-          {/* Chat Sidebar */}
-          <div className={`w-full md:w-80 lg:w-96 shrink-0 h-full ${
-            mobileView === 'sidebar' ? 'block' : 'hidden md:block'
-          }`}>
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {isChatsRoute ? (
+          <>
+            {/* Chats Tab View */}
+            {/* Chat List Sidebar */}
+            <div className={`w-full md:w-80 lg:w-96 flex flex-col shrink-0 border-r border-slate-800 transition-all duration-300 ${
+              mobileView === 'sidebar' ? 'block' : 'hidden md:flex'
+            }`}>
             <ChatSidebar
               conversations={conversations}
               activeChatId={activeChatId}
               onSelectChat={(id) => {
-                setActiveChatId(id);
+                navigate(`/app/chats/${id}`);
                 setMobileView('chat');
                 setConversations((prev) =>
                   prev.map((c) => (String(c.id) === String(id) ? { ...c, unreadCount: 0, hasUnread: false } : c))
@@ -284,8 +398,12 @@ const ChatScreen = () => {
               activeChat={activeChat}
               messages={activeMessages}
               onSendMessage={handleSendMessage}
+              onMessageAction={handleMessageAction}
               onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
-              onBackToSidebar={() => setMobileView('sidebar')}
+              onBackToSidebar={() => {
+                navigate('/app/chats');
+                setMobileView('sidebar');
+              }}
             />
           </div>
 
@@ -298,36 +416,27 @@ const ChatScreen = () => {
               isOpen={isDrawerOpen}
               onClose={() => setIsDrawerOpen(false)}
             />
-          </div>
-        </div>
-      )}
+            </div>
+          </>
+        ) : (
+          <Outlet context={{
+            onStartChat: handleStartChatWithContact,
+            onOpenNewChat: () => setIsSearchOpen(true),
+            conversations,
+            onJumpToChat: (contactName) => {
+              const found = conversations.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase()));
+              if (found) {
+                navigate(`/app/chats/${found.id}`);
+                setMobileView('chat');
+              } else {
+                navigate('/app/chats');
+              }
+            }
+          }} />
+        )}
+      </div>
 
-      {/* Contacts Tab View */}
-      {activeTab === 'contacts' && (
-        <ContactsPage
-          onStartChat={handleStartChatWithContact}
-          onOpenNewChat={() => setIsSearchOpen(true)}
-        />
-      )}
-
-      {/* Starred Messages Tab View */}
-      {activeTab === 'starred' && (
-        <StarredPage
-          onJumpToChat={(contactName) => {
-            const found = conversations.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase()));
-            if (found) setActiveChatId(found.id);
-            setActiveTab('chats');
-            setMobileView('chat');
-          }}
-        />
-      )}
-
-      {/* Settings Tab View */}
-      {activeTab === 'settings' && (
-        <SettingsPage />
-      )}
-
-      {/* 3. User Search Modal */}
+      {/* Global Modals */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}

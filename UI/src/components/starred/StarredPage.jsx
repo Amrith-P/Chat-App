@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { FaStar, FaSearch, FaArrowRight, FaTrash, FaCopy } from 'react-icons/fa';
 
-const StarredPage = ({ onJumpToChat }) => {
+const StarredPage = () => {
+  const { onJumpToChat } = useOutletContext();
   const [starredMessages, setStarredMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
