@@ -259,12 +259,12 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
               }
 
               return (
-                <div key={msg.id} className={`flex flex-col group ${isMe ? 'items-end' : 'items-start'} mb-2 w-full max-w-full overflow-hidden`}>
+                <div key={msg.id} className={`flex flex-col group ${isMe ? 'items-end' : 'items-start'} mb-2.5 w-full max-w-full`}>
                   
-                  <div className={`relative min-w-[100px] max-w-[80%] sm:max-w-xs md:max-w-md lg:max-w-lg p-2.5 rounded-2xl text-sm transition-all duration-200 ${
+                  <div className={`relative min-w-[100px] max-w-[82%] sm:max-w-xs md:max-w-md lg:max-w-lg px-3 py-2.5 rounded-2xl text-sm transition-all duration-200 ${
                     isMe
-                      ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white rounded-tr-none shadow-lg self-end'
-                      : 'bg-slate-800 border border-slate-700 text-slate-100 rounded-tl-none shadow-md self-start'
+                      ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white shadow-lg self-end mr-2 sm:mr-4'
+                      : 'bg-slate-800 border border-slate-700 text-slate-100 shadow-md self-start ml-2 sm:ml-4'
                   }`}>
                     
                     {/* Forwarded Badge */}
