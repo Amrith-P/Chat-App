@@ -21,8 +21,12 @@ initDb();
 const app = express();
 const server = http.createServer(app);
 
-// Security Headers with Helmet
-app.use(helmet());
+// Security Headers with Helmet (configured for cross-origin APIs)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 
 // Cookie Parser Middleware
 app.use(cookieParser());
@@ -37,14 +41,16 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, Postman) or matched allowed origins
-      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      // Allow requests with no origin (like mobile apps, curl, Postman) or any Vercel domain / allowed origins
+      if (!origin || allowedOrigins.includes(origin) || (typeof origin === 'string' && (origin.endsWith('.vercel.app') || origin.includes('vercel.app')))) {
         callback(null, true);
       } else {
-        callback(new Error('CORS Policy: Request origin not allowed'));
+        callback(null, false);
       }
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
   })
 );
 

@@ -261,7 +261,7 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
               return (
                 <div key={msg.id} className={`flex flex-col group ${isMe ? 'items-end' : 'items-start'} mb-2`}>
                   
-                  <div className={`relative min-w-[120px] max-w-[85%] sm:max-w-xs md:max-w-md lg:max-w-lg p-2 rounded-2xl text-sm transition-all duration-200 ${
+                  <div className={`relative min-w-[120px] max-w-[90%] sm:max-w-xs md:max-w-md lg:max-w-lg p-2.5 rounded-2xl text-sm transition-all duration-200 ${
                     isMe
                       ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white rounded-tr-none shadow-lg'
                       : 'bg-slate-800 border border-slate-700 text-slate-100 rounded-tl-none shadow-md'
@@ -292,14 +292,14 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
                     )}
 
                     {/* Main Content */}
-                    <div className="px-1.5 pb-4">
-                      <p className={`leading-relaxed break-words text-sm ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
+                    <div className="px-1 pt-0.5 pb-5">
+                      <p className={`leading-relaxed break-words whitespace-pre-wrap text-sm ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
                         {msgText}
                       </p>
                     </div>
 
                     {/* Footer Time & Status */}
-                    <div className={`absolute bottom-1.5 right-2 flex items-center space-x-1 text-[9px] ${isMe ? 'text-emerald-200' : 'text-slate-400'}`}>
+                    <div className={`absolute bottom-1 right-2 flex items-center space-x-1 text-[10px] ${isMe ? 'text-emerald-200/90' : 'text-slate-400'}`}>
                       {msg.isEdited && <span className="italic mr-1">Edited</span>}
                       <span>{msg.time || '10:45 AM'}</span>
                       {tickIcon}
