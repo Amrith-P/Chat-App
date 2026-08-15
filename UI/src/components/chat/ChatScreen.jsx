@@ -230,11 +230,17 @@ const ChatScreen = () => {
     };
 
     const handleMessageDeleted = ({ messageId, chatId }) => {
+      const targetChatId = chatId || activeChatId;
+      if (!targetChatId) return;
       setMessagesMap((prev) => {
-        const existing = prev[chatId] || [];
+        const existing = prev[targetChatId] || [];
         return {
           ...prev,
-          [chatId]: existing.map(m => m.id === messageId ? { ...m, text: '🚫 This message was deleted', isDeleted: true } : m)
+          [targetChatId]: existing.map((m) =>
+            String(m.id) === String(messageId)
+              ? { ...m, text: '🚫 This message was deleted', isDeleted: true }
+              : m
+          )
         };
       });
     };
@@ -324,16 +330,58 @@ const ChatScreen = () => {
     }
   };
 
-  const handleMessageAction = (action, payload) => {
-    if (!socket || !activeChatId) return;
+  const handleMessageAction = async (action, payload) => {
+    if (!activeChatId) return;
     const recipientId = activeChat?.recipientId || activeChat?.contactId;
 
     if (action === 'delete') {
-      socket.emit('delete_message', { messageId: payload.messageId, chatId: activeChatId, recipientId });
+      const targetMsgId = payload.messageId;
+
+      // 1. Optimistic zero-latency local update
+      setMessagesMap((prev) => {
+        const existing = prev[activeChatId] || [];
+        return {
+          ...prev,
+          [activeChatId]: existing.map((m) =>
+            String(m.id) === String(targetMsgId)
+              ? { ...m, text: '🚫 This message was deleted', isDeleted: true }
+              : m
+          )
+        };
+      });
+
+      // 2. Real-time Socket.IO emission
+      if (socket && isConnected) {
+        socket.emit('delete_message', { messageId: targetMsgId, chatId: activeChatId, recipientId });
+      }
+
+      // 3. REST API fallback persistence
+      try {
+        await apiRequest(`/messages/${targetMsgId}`, 'DELETE');
+      } catch (err) {
+        // Ignored if socket already processed
+      }
     } else if (action === 'edit') {
-      socket.emit('edit_message', { messageId: payload.messageId, newText: payload.newText, chatId: activeChatId, recipientId });
+      const targetMsgId = payload.messageId;
+      const newText = payload.newText;
+
+      setMessagesMap((prev) => {
+        const existing = prev[activeChatId] || [];
+        return {
+          ...prev,
+          [activeChatId]: existing.map((m) =>
+            String(m.id) === String(targetMsgId) ? { ...m, text: newText, isEdited: true } : m
+          )
+        };
+      });
+
+      if (socket && isConnected) {
+        socket.emit('edit_message', { messageId: targetMsgId, newText, chatId: activeChatId, recipientId });
+      }
     } else if (action === 'react') {
-      socket.emit('add_reaction', { messageId: payload.messageId, emoji: payload.emoji, chatId: activeChatId, recipientId });
+      if (socket && isConnected) {
+        socket.emit('add_reaction', { messageId: payload.messageId, emoji: payload.emoji, chatId: activeChatId, recipientId });
+      }
     }
   };
 

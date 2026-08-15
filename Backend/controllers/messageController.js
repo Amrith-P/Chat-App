@@ -137,3 +137,21 @@ export const clearMessagesByChatId = (req, res) => {
     res.json({ success: true, message: 'Chat messages cleared successfully', chatId });
   });
 };
+
+// @desc    Delete a message by ID
+// @route   DELETE /api/messages/:id
+export const deleteMessage = (req, res) => {
+  const messageId = req.params.id || req.params.messageId;
+
+  if (!messageId) {
+    return res.status(400).json({ message: 'Message ID is required' });
+  }
+
+  db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], (err) => {
+    if (err) {
+      console.error('Failed to delete message:', err.message);
+      return res.status(500).json({ message: 'Failed to delete message', error: err.message });
+    }
+    res.json({ success: true, message: 'Message deleted successfully', messageId });
+  });
+};
