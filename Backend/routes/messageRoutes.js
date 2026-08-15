@@ -9,6 +9,8 @@ const router = express.Router();
 router.get('/:chatId', protect, getMessagesByChatId);
 router.post('/', protect, validate(sendMessageSchema), sendMessage);
 router.delete('/chat/:chatId', protect, clearMessagesByChatId);
+router.post('/chat/:chatId/clear', protect, clearMessagesByChatId);
 router.delete('/:chatId/clear', protect, clearMessagesByChatId);
+router.post('/:chatId/clear', protect, clearMessagesByChatId);
 
 export default router;

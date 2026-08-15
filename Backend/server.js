@@ -12,7 +12,8 @@ import chatRoutes from './routes/chatRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import { initSocket } from './socket/socketHandler.js';
 import { refreshTokenHandler } from './controllers/authController.js';
-import { deleteChat } from './controllers/chatController.js';
+import { deleteChat, clearChatMessages } from './controllers/chatController.js';
+import { clearMessagesByChatId } from './controllers/messageController.js';
 import { protect } from './middleware/auth.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -70,6 +71,13 @@ initSocket(server);
 
 // Top-Level Auth Refresh Handler Fallback
 app.post('/api/auth/refresh', refreshTokenHandler);
+
+// Top-Level Explicit Clear Chat Routes (POST & DELETE)
+app.delete('/api/chats/:chatId/messages', protect, clearChatMessages);
+app.post('/api/chats/:chatId/messages/clear', protect, clearChatMessages);
+app.post('/api/chats/:chatId/clear', protect, clearChatMessages);
+app.delete('/api/messages/chat/:chatId', protect, clearMessagesByChatId);
+app.post('/api/messages/chat/:chatId/clear', protect, clearMessagesByChatId);
 
 // Routes
 app.use('/api/auth', authRoutes);

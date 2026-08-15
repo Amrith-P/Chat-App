@@ -40,7 +40,11 @@ export const useChatActions = (setConversations, setMessagesMap, activeChatId, s
           try {
             res = await apiRequest(`/messages/chat/${chatId}`, 'DELETE');
           } catch (err2) {
-            res = await apiRequest(`/chats/${chatId}/clear`, 'DELETE');
+            try {
+              res = await apiRequest(`/chats/${chatId}/clear`, 'POST');
+            } catch (err3) {
+              res = await apiRequest(`/messages/chat/${chatId}/clear`, 'POST');
+            }
           }
         }
 
