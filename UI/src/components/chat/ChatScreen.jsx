@@ -433,6 +433,44 @@ const ChatScreen = () => {
     }
   };
 
+  // Handle clearing message history of a conversation
+  const handleClearChat = async (chatId) => {
+    try {
+      await apiRequest(`/chats/${chatId}/messages`, 'DELETE');
+      setMessagesMap((prev) => ({
+        ...prev,
+        [chatId]: []
+      }));
+      setConversations((prev) =>
+        prev.map((c) =>
+          String(c.id) === String(chatId)
+            ? { ...c, lastMessage: 'Messages cleared', time: 'Just now' }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error('Failed to clear chat:', err.message);
+    }
+  };
+
+  // Handle toggling favorite/starred status of a conversation
+  const handleToggleFavoriteChat = async (chatId) => {
+    try {
+      const res = await apiRequest(`/chats/${chatId}/favorite`, 'POST');
+      if (res && res.success) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            String(c.id) === String(chatId)
+              ? { ...c, isFavorite: Boolean(res.isFavorite) }
+              : c
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle favorite chat:', err.message);
+    }
+  };
+
   const handleSelectChat = useCallback((id) => {
     navigate(`/app/chats/${id}`);
     setMobileView('chat');
@@ -473,6 +511,8 @@ const ChatScreen = () => {
               onSelectChat={handleSelectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
               onDeleteChat={handleDeleteChat}
+              onClearChat={handleClearChat}
+              onToggleFavorite={handleToggleFavoriteChat}
               onStartChatWithContact={handleStartChatWithContact}
             />
           </div>
@@ -492,6 +532,8 @@ const ChatScreen = () => {
                 setMobileView('sidebar');
               }}
               onDeleteChat={handleDeleteChat}
+              onClearChat={handleClearChat}
+              onToggleFavorite={handleToggleFavoriteChat}
             />
           </div>
 

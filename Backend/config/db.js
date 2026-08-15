@@ -209,6 +209,14 @@ export const initDb = () => {
         isUsed BOOLEAN DEFAULT FALSE,
         expiresAt TIMESTAMP NOT NULL,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS favorite_chats (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        conversationId INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(userId, conversationId)
       );`
     ];
 
@@ -323,6 +331,18 @@ export const initDb = () => {
           expiresAt DATETIME NOT NULL,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS favorite_chats (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId INTEGER NOT NULL,
+          conversationId INTEGER NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(userId, conversationId),
+          FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY(conversationId) REFERENCES conversations(id) ON DELETE CASCADE
         )
       `);
 

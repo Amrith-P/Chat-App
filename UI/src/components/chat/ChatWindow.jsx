@@ -16,7 +16,8 @@ import {
   FaShare,
   FaPen,
   FaSmile,
-  FaEllipsisV
+  FaEllipsisV,
+  FaBroom
 } from 'react-icons/fa';
 import CallModal from './CallModal';
 import ConfirmModal from '../common/ConfirmModal';
@@ -32,7 +33,17 @@ const POPULAR_EMOJIS = [
   '🤙', '👌', '🖐️', '⭐', '🎈', '🎉'
 ];
 
-const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onToggleDrawer, onBackToSidebar, onDeleteChat }) => {
+const ChatWindow = ({ 
+  activeChat, 
+  messages, 
+  onSendMessage, 
+  onMessageAction, 
+  onToggleDrawer, 
+  onBackToSidebar, 
+  onDeleteChat,
+  onClearChat,
+  onToggleFavorite 
+}) => {
   const [inputText, setInputText] = useState('');
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
@@ -40,6 +51,10 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
   const [isSearchInChatOpen, setIsSearchInChatOpen] = useState(false);
   const [chatSearchTerm, setChatSearchTerm] = useState('');
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
+
+  // Clear & Delete Chat Confirmation States
+  const [isClearChatConfirmOpen, setIsClearChatConfirmOpen] = useState(false);
+  const [isDeleteChatConfirmOpen, setIsDeleteChatConfirmOpen] = useState(false);
 
   // Call Modal State
   const [isCallOpen, setIsCallOpen] = useState(false);
@@ -53,7 +68,6 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
 
   // Delete Confirm Modal States
   const [deleteConfirmMsgId, setDeleteConfirmMsgId] = useState(null);
-  const [isDeleteChatConfirmOpen, setIsDeleteChatConfirmOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -169,8 +183,11 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
               )}
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white truncate max-w-[140px] sm:max-w-xs">
-                {activeChat.name}
+              <h3 className="font-bold text-sm text-white truncate max-w-[140px] sm:max-w-xs flex items-center space-x-1">
+                <span>{activeChat.name}</span>
+                {activeChat.isFavorite && (
+                  <FaStar className="text-amber-400 text-xs shrink-0 drop-shadow ml-1" title="Favorite Chat" />
+                )}
               </h3>
               <p className="text-[11px] md:text-xs text-emerald-400 font-medium truncate">
                 {activeChat.isOnline ? 'Online • Available' : 'Last seen recently'}
@@ -235,17 +252,44 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
             </button>
 
             {isHeaderMenuOpen && (
-              <div className="absolute right-0 top-12 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 w-44 z-30">
+              <div className="absolute right-0 top-12 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 w-48 z-30">
+                {/* 1. Contact Info */}
                 <button
                   onClick={() => {
                     setIsHeaderMenuOpen(false);
                     onToggleDrawer();
                   }}
-                  className="w-full px-4 py-2.5 text-left text-xs font-medium text-slate-300 hover:bg-slate-800 flex items-center space-x-2 transition"
+                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-300 hover:bg-slate-800 flex items-center space-x-2 transition"
                 >
                   <FaInfoCircle className="text-xs text-slate-400" />
                   <span>Contact Info</span>
                 </button>
+
+                {/* 2. Add to / Remove from Favorites */}
+                <button
+                  onClick={() => {
+                    setIsHeaderMenuOpen(false);
+                    if (onToggleFavorite) onToggleFavorite(activeChat.id);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-amber-400 hover:bg-amber-500/10 flex items-center space-x-2 transition"
+                >
+                  <FaStar className={`text-xs ${activeChat.isFavorite ? 'text-amber-400' : 'text-slate-400'}`} />
+                  <span>{activeChat.isFavorite ? 'Remove Favorite' : 'Add to Favorites'}</span>
+                </button>
+
+                {/* 3. Clear Chat */}
+                <button
+                  onClick={() => {
+                    setIsHeaderMenuOpen(false);
+                    setIsClearChatConfirmOpen(true);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-cyan-400 hover:bg-cyan-500/10 flex items-center space-x-2 transition"
+                >
+                  <FaBroom className="text-xs" />
+                  <span>Clear Chat</span>
+                </button>
+
+                {/* 4. Delete Chat */}
                 <button
                   onClick={() => {
                     setIsHeaderMenuOpen(false);
@@ -553,6 +597,22 @@ const ChatWindow = ({ activeChat, messages, onSendMessage, onMessageAction, onTo
         message="Are you sure you want to delete this message? This will remove the message for everyone."
         confirmText="Delete"
         confirmVariant="danger"
+      />
+
+      {/* Clear Chat Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isClearChatConfirmOpen}
+        onClose={() => setIsClearChatConfirmOpen(false)}
+        onConfirm={() => {
+          setIsClearChatConfirmOpen(false);
+          if (onClearChat && activeChat) {
+            onClearChat(activeChat.id);
+          }
+        }}
+        title="Clear Chat Messages"
+        message={`Are you sure you want to clear all message history with ${activeChat?.name || 'this contact'}? This action cannot be undone.`}
+        confirmText="Clear History"
+        confirmVariant="warning"
       />
 
       {/* Delete Chat Confirmation Modal */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   FaSearch, 
   FaPlus, 
@@ -10,14 +10,46 @@ import {
   FaTimes,
   FaArrowRight,
   FaEllipsisV,
-  FaTrash
+  FaTrash,
+  FaStar,
+  FaBroom,
+  FaRegStar
 } from 'react-icons/fa';
 import { apiRequest } from '../../api/client';
+import ConfirmModal from '../common/ConfirmModal';
 
-const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat, onDeleteChat, onStartChatWithContact }) => {
+const ChatSidebar = ({ 
+  conversations, 
+  activeChatId, 
+  onSelectChat, 
+  onOpenNewChat, 
+  onDeleteChat, 
+  onClearChat, 
+  onToggleFavorite, 
+  onStartChatWithContact 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'favorites'
   const [activeMenuChatId, setActiveMenuChatId] = useState(null);
+  const [clearConfirmChatId, setClearConfirmChatId] = useState(null);
+
+  const unreadCountTotal = useMemo(() => {
+    return conversations.filter((c) => (c.unreadCount > 0 || c.hasUnread)).length;
+  }, [conversations]);
+
+  const favoritesCountTotal = useMemo(() => {
+    return conversations.filter((c) => Boolean(c.isFavorite || c.isStarred)).length;
+  }, [conversations]);
+
+  const displayConversations = useMemo(() => {
+    if (filter === 'unread') {
+      return conversations.filter((c) => (c.unreadCount > 0 || c.hasUnread));
+    }
+    if (filter === 'favorites') {
+      return conversations.filter((c) => Boolean(c.isFavorite || c.isStarred));
+    }
+    return conversations;
+  }, [conversations, filter]);
 
   // Grouped Search State
   const [searchResults, setSearchResults] = useState({
@@ -144,33 +176,44 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
           <div className="flex items-center space-x-1.5 pt-1">
             <button
               onClick={() => setFilter('all')}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition flex items-center space-x-1 ${
                 filter === 'all'
-                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
-              All
+              <span>All</span>
+              <span className="text-[10px] opacity-80">({conversations.length})</span>
             </button>
             <button
               onClick={() => setFilter('unread')}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition flex items-center space-x-1 ${
                 filter === 'unread'
-                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
-              Unread
+              <span>Unread</span>
+              {unreadCountTotal > 0 && (
+                <span className="px-1.5 py-0.2 bg-blue-500 text-white font-black text-[9px] rounded-full">
+                  {unreadCountTotal}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setFilter('favorites')}
-              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition flex items-center space-x-1 ${
                 filter === 'favorites'
-                  ? 'bg-emerald-500 text-slate-950 font-bold'
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
                   : 'text-slate-400 hover:bg-slate-800'
               }`}
             >
-              Favorites
+              <span>Favorites</span>
+              {favoritesCountTotal > 0 && (
+                <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full">
+                  {favoritesCountTotal}
+                </span>
+              )}
             </button>
           </div>
         )}
@@ -307,9 +350,9 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
       ) : (
         /* STANDARD CONVERSATION LIST */
         <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-          {conversations.length === 0 ? (
+          {displayConversations.length === 0 ? (
             <div className="py-12 text-center text-slate-500 text-xs space-y-2">
-              <p>No conversations found.</p>
+              <p>{filter === 'all' ? 'No conversations found.' : `No ${filter} conversations.`}</p>
               <button
                 onClick={onOpenNewChat}
                 className="text-emerald-400 font-semibold hover:underline"
@@ -318,7 +361,7 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
               </button>
             </div>
           ) : (
-            conversations.map((chat) => {
+            displayConversations.map((chat) => {
               const isActive = String(chat.id) === String(activeChatId);
               const isUnread = (chat.unreadCount > 0 || chat.hasUnread) && !isActive;
 
@@ -349,10 +392,13 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
 
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center space-x-2 truncate pr-2">
+                      <div className="flex items-center space-x-1.5 truncate pr-2">
                         <h3 className={`text-sm truncate ${isActive ? 'font-bold text-white' : 'font-semibold text-slate-200'}`}>
                           {chat.name}
                         </h3>
+                        {chat.isFavorite && (
+                          <FaStar className="text-amber-400 text-xs shrink-0 drop-shadow" title="Favorite Chat" />
+                        )}
                         {isUnread && (
                           <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-lg shadow-blue-500/50 animate-pulse shrink-0" title="Unread Message" />
                         )}
@@ -391,7 +437,36 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
                     </button>
 
                     {activeMenuChatId === chat.id && (
-                      <div className="absolute right-0 top-8 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 w-36 z-30">
+                      <div className="absolute right-0 top-8 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 w-44 z-30">
+                        {/* 1. Add to / Remove from Favorites */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuChatId(null);
+                            if (onToggleFavorite) onToggleFavorite(chat.id);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-amber-400 hover:bg-amber-500/10 flex items-center space-x-2 transition"
+                        >
+                          <FaStar className={`text-xs ${chat.isFavorite ? 'text-amber-400' : 'text-slate-400'}`} />
+                          <span>{chat.isFavorite ? 'Remove Favorite' : 'Add to Favorites'}</span>
+                        </button>
+
+                        {/* 2. Clear Chat */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuChatId(null);
+                            setClearConfirmChatId(chat.id);
+                          }}
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-cyan-400 hover:bg-cyan-500/10 flex items-center space-x-2 transition"
+                        >
+                          <FaBroom className="text-xs" />
+                          <span>Clear Chat</span>
+                        </button>
+
+                        {/* 3. Delete Chat */}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -399,7 +474,7 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
                             setActiveMenuChatId(null);
                             if (onDeleteChat) onDeleteChat(chat.id);
                           }}
-                          className="w-full px-3 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 flex items-center space-x-2 transition"
+                          className="w-full px-3.5 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 flex items-center space-x-2 transition border-t border-slate-800"
                         >
                           <FaTrash className="text-xs" />
                           <span>Delete Chat</span>
@@ -412,6 +487,22 @@ const ChatSidebar = ({ conversations, activeChatId, onSelectChat, onOpenNewChat,
             })
           )}
         </div>
+      )}
+
+      {/* Clear Chat Confirm Modal */}
+      {clearConfirmChatId && (
+        <ConfirmModal
+          isOpen={Boolean(clearConfirmChatId)}
+          title="Clear Chat Messages"
+          message="Are you sure you want to clear all message history in this chat? This action cannot be undone."
+          confirmText="Clear History"
+          type="warning"
+          onConfirm={() => {
+            if (onClearChat) onClearChat(clearConfirmChatId);
+            setClearConfirmChatId(null);
+          }}
+          onCancel={() => setClearConfirmChatId(null)}
+        />
       )}
 
     </div>

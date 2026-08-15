@@ -17,11 +17,13 @@ export const getUserChats = (req, res) => {
       u.avatar,
       u.status,
       m.content AS lastmessage,
-      m.createdat AS lastmsgtime
+      m.createdat AS lastmsgtime,
+      fc.id AS isfavorite
     FROM conversations c
     JOIN conversation_members cm1 ON c.id = cm1.conversationid AND cm1.userid = ?
     JOIN conversation_members cm2 ON c.id = cm2.conversationid AND cm2.userid != ?
     JOIN users u ON cm2.userid = u.id
+    LEFT JOIN favorite_chats fc ON c.id = fc.conversationid AND fc.userid = ?
     LEFT JOIN messages m ON m.id = (
       SELECT id FROM messages 
       WHERE conversationid = c.id 
@@ -30,7 +32,7 @@ export const getUserChats = (req, res) => {
     ORDER BY COALESCE(m.createdat, c.createdat) DESC
   `;
 
-  db.all(query, [currentUserId, currentUserId], (err, chats) => {
+  db.all(query, [currentUserId, currentUserId, currentUserId], (err, chats) => {
     if (err) {
       console.error('Error fetching chats:', err);
       return res.status(500).json({ message: 'Failed to fetch conversations', error: err.message });
@@ -49,7 +51,8 @@ export const getUserChats = (req, res) => {
         lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? null,
         time: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? 'New',
         unreadCount: 0,
-        isOnline: isUserOnline(cId)
+        isOnline: isUserOnline(cId),
+        isFavorite: Boolean(chat.isFavorite || chat.isfavorite)
       };
     });
 
@@ -153,16 +156,77 @@ export const deleteChat = (req, res) => {
     return res.status(400).json({ message: 'Chat ID is required' });
   }
 
-  // Delete messages, conversation members, and the conversation directly
+  // Delete messages, conversation members, favorite records, and the conversation directly
   db.run('DELETE FROM messages WHERE conversationid = ? OR conversationId = ?', [chatId, chatId], () => {
     db.run('DELETE FROM conversation_members WHERE conversationid = ? OR conversationId = ?', [chatId, chatId], () => {
-      db.run('DELETE FROM conversations WHERE id = ?', [chatId], (delErr) => {
-        if (delErr) {
-          console.error('Failed to delete chat:', delErr.message);
-          return res.status(500).json({ message: 'Failed to delete chat', error: delErr.message });
-        }
-        res.json({ success: true, message: 'Chat deleted successfully', chatId });
+      db.run('DELETE FROM favorite_chats WHERE conversationid = ? OR conversationId = ?', [chatId, chatId], () => {
+        db.run('DELETE FROM conversations WHERE id = ?', [chatId], (delErr) => {
+          if (delErr) {
+            console.error('Failed to delete chat:', delErr.message);
+            return res.status(500).json({ message: 'Failed to delete chat', error: delErr.message });
+          }
+          res.json({ success: true, message: 'Chat deleted successfully', chatId });
+        });
       });
     });
   });
+};
+
+// @desc    Clear all message history in a conversation without deleting the chat
+// @route   DELETE /api/chats/:chatId/messages
+export const clearChatMessages = (req, res) => {
+  const chatId = req.params.chatId || req.params.id;
+
+  if (!chatId) {
+    return res.status(400).json({ message: 'Chat ID is required' });
+  }
+
+  db.run('DELETE FROM messages WHERE conversationid = ? OR conversationId = ?', [chatId, chatId], (err) => {
+    if (err) {
+      console.error('Failed to clear chat messages:', err.message);
+      return res.status(500).json({ message: 'Failed to clear chat messages', error: err.message });
+    }
+    res.json({ success: true, message: 'Chat messages cleared successfully', chatId });
+  });
+};
+
+// @desc    Toggle favorite/starred status of a chat
+// @route   POST /api/chats/:chatId/favorite
+export const toggleFavoriteChat = (req, res) => {
+  const chatId = req.params.chatId || req.params.id;
+  const currentUserId = req.user?.id;
+
+  if (!chatId || !currentUserId) {
+    return res.status(400).json({ message: 'Chat ID and User ID are required' });
+  }
+
+  db.get(
+    'SELECT id FROM favorite_chats WHERE userId = ? AND (conversationId = ? OR conversationid = ?)',
+    [currentUserId, chatId, chatId],
+    (err, existing) => {
+      if (err) {
+        return res.status(500).json({ message: 'Database query error', error: err.message });
+      }
+
+      if (existing) {
+        db.run('DELETE FROM favorite_chats WHERE id = ?', [existing.id], (delErr) => {
+          if (delErr) {
+            return res.status(500).json({ message: 'Failed to remove favorite', error: delErr.message });
+          }
+          res.json({ success: true, isFavorite: false, chatId });
+        });
+      } else {
+        db.run(
+          'INSERT INTO favorite_chats (userId, conversationId) VALUES (?, ?)',
+          [currentUserId, chatId],
+          (insErr) => {
+            if (insErr) {
+              return res.status(500).json({ message: 'Failed to add favorite', error: insErr.message });
+            }
+            res.json({ success: true, isFavorite: true, chatId });
+          }
+        );
+      }
+    }
+  );
 };
