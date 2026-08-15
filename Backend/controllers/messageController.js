@@ -119,3 +119,21 @@ export const sendMessage = (req, res) => {
     }
   );
 };
+
+// @desc    Clear messages by chatId
+// @route   DELETE /api/messages/chat/:chatId
+export const clearMessagesByChatId = (req, res) => {
+  const chatId = req.params.chatId || req.params.id;
+
+  if (!chatId) {
+    return res.status(400).json({ message: 'Chat ID is required' });
+  }
+
+  db.run('DELETE FROM messages WHERE conversationid = ? OR conversationId = ?', [chatId, chatId], (err) => {
+    if (err) {
+      console.error('Failed to clear chat messages:', err.message);
+      return res.status(500).json({ message: 'Failed to clear chat messages', error: err.message });
+    }
+    res.json({ success: true, message: 'Chat messages cleared successfully', chatId });
+  });
+};

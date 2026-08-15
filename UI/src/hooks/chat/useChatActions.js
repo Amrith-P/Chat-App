@@ -33,7 +33,17 @@ export const useChatActions = (setConversations, setMessagesMap, activeChatId, s
   const clearChat = useCallback(
     async (chatId) => {
       try {
-        await apiRequest(`/chats/${chatId}/messages`, 'DELETE');
+        let res;
+        try {
+          res = await apiRequest(`/chats/${chatId}/messages`, 'DELETE');
+        } catch (err1) {
+          try {
+            res = await apiRequest(`/messages/chat/${chatId}`, 'DELETE');
+          } catch (err2) {
+            res = await apiRequest(`/chats/${chatId}/clear`, 'DELETE');
+          }
+        }
+
         if (setMessagesMap) {
           setMessagesMap((prev) => ({
             ...prev,
