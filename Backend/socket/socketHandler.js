@@ -88,8 +88,10 @@ export const initSocket = (server) => {
             return;
           }
 
+          const tempId = data.tempId || null;
           const messageObj = {
             id: this.lastID || Date.now(),
+            tempId: tempId,
             chatId: targetChatId,
             conversationId: targetChatId,
             senderId: userId,

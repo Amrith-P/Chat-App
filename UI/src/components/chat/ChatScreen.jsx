@@ -245,7 +245,29 @@ const ChatScreen = () => {
       });
     };
 
+    const handleMessageSent = (serverMsg) => {
+      if (!serverMsg) return;
+      const chatKey = serverMsg.chatId || serverMsg.conversationId;
+      const tempId = serverMsg.tempId;
+      const realId = serverMsg.id;
+
+      if (!chatKey || !realId) return;
+
+      setMessagesMap((prev) => {
+        const existing = prev[chatKey] || [];
+        return {
+          ...prev,
+          [chatKey]: existing.map((m) =>
+            (tempId && String(m.id) === String(tempId)) || String(m.id) === String(realId)
+              ? { ...m, id: realId, senderId: serverMsg.senderId, isMe: true }
+              : m
+          )
+        };
+      });
+    };
+
     socket.on('receive_message', handleReceiveMessage);
+    socket.on('message_sent', handleMessageSent);
     socket.on('messages_read', handleMessagesRead);
     socket.on('message_reaction_added', handleReactionAdded);
     socket.on('message_edited', handleMessageEdited);
@@ -253,6 +275,7 @@ const ChatScreen = () => {
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
+      socket.off('message_sent', handleMessageSent);
       socket.off('messages_read', handleMessagesRead);
       socket.off('message_reaction_added', handleReactionAdded);
       socket.off('message_edited', handleMessageEdited);
@@ -265,7 +288,7 @@ const ChatScreen = () => {
   }, [activeChatId, conversations]);
 
   const activeMessages = useMemo(() => {
-    return activeChatId ? (messagesMap[activeChatId] || []) : [];
+    return activeChatId ? messagesMap[activeChatId] || [] : [];
   }, [activeChatId, messagesMap]);
 
   // Handle Send Message (Persist to Backend REST + Socket.IO Broadcast)
@@ -274,8 +297,9 @@ const ChatScreen = () => {
 
     playChimeSound('send');
 
+    const tempId = Date.now();
     const newMsg = {
-      id: Date.now(),
+      id: tempId,
       senderId: user?.id || 'me',
       isMe: true,
       text,
@@ -306,6 +330,7 @@ const ChatScreen = () => {
     // 1. Emit via Real-Time Socket.IO (Socket backend handles DB persistence & broadcast)
     if (socket && isConnected) {
       emitSendMessage({
+        tempId: tempId,
         chatId: activeChatId,
         conversationId: activeChatId,
         recipientId: activeChat?.recipientId || activeChat?.contactId,
@@ -317,13 +342,26 @@ const ChatScreen = () => {
     } else {
       // 2. Fallback to REST API ONLY if real-time socket engine is disconnected
       try {
-        await apiRequest('/messages', 'POST', {
+        const res = await apiRequest('/messages', 'POST', {
           chatId: activeChatId,
           conversationId: activeChatId,
           content: text,
           replyToId: options.replyToId || null,
           isForwarded: Boolean(options.isForwarded)
         });
+
+        if (res && res.message && res.message.id) {
+          const realId = res.message.id;
+          setMessagesMap((prev) => {
+            const existing = prev[activeChatId] || [];
+            return {
+              ...prev,
+              [activeChatId]: existing.map((m) =>
+                String(m.id) === String(tempId) ? { ...m, id: realId } : m
+              )
+            };
+          });
+        }
       } catch (err) {
         console.error('Failed to persist message via REST:', err.message);
       }
