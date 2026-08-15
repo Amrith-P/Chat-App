@@ -17,7 +17,8 @@ import {
   FaPen,
   FaSmile,
   FaEllipsisV,
-  FaBroom
+  FaBroom,
+  FaChevronDown
 } from 'react-icons/fa';
 import CallModal from './CallModal';
 import ConfirmModal from '../common/ConfirmModal';
@@ -65,11 +66,19 @@ const ChatWindow = ({
   const [editingMsg, setEditingMsg] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
   const [starredMsgIds, setStarredMsgIds] = useState(new Set());
+  const [activeMessageMenuId, setActiveMessageMenuId] = useState(null);
 
   // Delete Confirm Modal States
   const [deleteConfirmMsgId, setDeleteConfirmMsgId] = useState(null);
 
   const messagesEndRef = useRef(null);
+
+  // Close message options menu on outside click
+  useEffect(() => {
+    const handleOutsideClick = () => setActiveMessageMenuId(null);
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
 
   // Auto scroll to latest message
   useEffect(() => {
@@ -397,7 +406,24 @@ const ChatWindow = ({
                       {tickIcon}
                     </div>
 
-                    {/* BUBBLE HOVER ACTIONS MENU */}
+                    {/* Down Arrow Menu Trigger Button for Mobile & Desktop */}
+                    {!msg.isDeleted && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMessageMenuId(activeMessageMenuId === msg.id ? null : msg.id);
+                        }}
+                        className={`absolute top-1 right-1 p-1 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition z-10 ${
+                          activeMessageMenuId === msg.id ? 'opacity-100 bg-slate-700/60 text-white' : 'opacity-70 md:opacity-0 md:group-hover:opacity-100'
+                        }`}
+                        title="Message options"
+                      >
+                        <FaChevronDown className="text-[10px]" />
+                      </button>
+                    )}
+
+                    {/* BUBBLE HOVER ACTIONS MENU (Desktop Quick Bar) */}
                     {!msg.isDeleted && (
                       <div className={`absolute -top-9 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-20 ${
                         isMe ? 'right-0' : 'left-0'
@@ -428,15 +454,113 @@ const ChatWindow = ({
                           <FaCopy className="text-xs" />
                         </button>
                         {isMe && (
-                          <>
-                            <button onClick={() => { setEditingMsg(msg); setInputText(msgText); }} className="p-2 text-slate-400 hover:text-blue-400 transition" title="Edit">
-                              <FaPen className="text-xs" />
-                            </button>
-                            <button onClick={() => setDeleteConfirmMsgId(msg.id)} className="p-2 text-slate-400 hover:text-red-400 transition" title="Delete">
-                              <FaTrash className="text-xs" />
-                            </button>
-                          </>
+                          <button onClick={() => { setEditingMsg(msg); setInputText(msgText); }} className="p-2 text-slate-400 hover:text-blue-400 transition" title="Edit">
+                            <FaPen className="text-xs" />
+                          </button>
                         )}
+                        <button onClick={() => setDeleteConfirmMsgId(msg.id)} className="p-2 text-slate-400 hover:text-red-400 transition" title="Delete">
+                          <FaTrash className="text-xs" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* BUBBLE DROPDOWN OPTIONS MENU (Mobile & Click) */}
+                    {activeMessageMenuId === msg.id && !msg.isDeleted && (
+                      <div
+                        className={`absolute top-6 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-1.5 w-44 z-40 ${
+                          isMe ? 'right-1' : 'right-1'
+                        }`}
+                      >
+                        {/* Quick Reactions Bar */}
+                        <div className="flex items-center justify-around px-2 py-1.5 border-b border-slate-800">
+                          {REACTIONS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onMessageAction('react', { messageId: msg.id, emoji });
+                                setActiveMessageMenuId(null);
+                              }}
+                              className="hover:scale-125 transition-transform text-base p-0.5"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Reply */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReplyingTo({ id: msg.id, text: msgText, sender: isMe ? 'You' : activeChat.name });
+                            setActiveMessageMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-200 hover:bg-slate-800 flex items-center space-x-2.5 transition"
+                        >
+                          <FaReply className="text-xs text-emerald-400" />
+                          <span>Reply</span>
+                        </button>
+
+                        {/* Forward */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSendMessage(msgText, { isForwarded: true });
+                            setActiveMessageMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-200 hover:bg-slate-800 flex items-center space-x-2.5 transition"
+                        >
+                          <FaShare className="text-xs text-emerald-400" />
+                          <span>Forward</span>
+                        </button>
+
+                        {/* Copy */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyMessage(msgText);
+                            setActiveMessageMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-200 hover:bg-slate-800 flex items-center space-x-2.5 transition"
+                        >
+                          <FaCopy className="text-xs text-emerald-400" />
+                          <span>Copy</span>
+                        </button>
+
+                        {/* Edit (Sent messages only) */}
+                        {isMe && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingMsg(msg);
+                              setInputText(msgText);
+                              setActiveMessageMenuId(null);
+                            }}
+                            className="w-full px-4 py-2 text-left text-xs font-semibold text-blue-400 hover:bg-blue-500/10 flex items-center space-x-2.5 transition"
+                          >
+                            <FaPen className="text-xs" />
+                            <span>Edit</span>
+                          </button>
+                        )}
+
+                        {/* Delete (Both Sent & Received messages!) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmMsgId(msg.id);
+                            setActiveMessageMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 flex items-center space-x-2.5 transition border-t border-slate-800/80"
+                        >
+                          <FaTrash className="text-xs" />
+                          <span>Delete Message</span>
+                        </button>
                       </div>
                     )}
                   </div>

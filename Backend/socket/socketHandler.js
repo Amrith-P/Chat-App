@@ -168,7 +168,7 @@ export const initSocket = (server) => {
 
     // Handle delete message
     socket.on('delete_message', ({ messageId, chatId, recipientId }) => {
-      db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ? AND senderId = ?', [messageId, userId], (err) => {
+      db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], (err) => {
         if (!err) {
           if (recipientId) io.to(`user_${recipientId}`).emit('message_deleted', { messageId, chatId });
           io.to(`chat_${chatId}`).emit('message_deleted', { messageId, chatId });
