@@ -707,21 +707,28 @@ const ChatWindow = ({
       />
 
       {/* Delete Message Confirmation Modal */}
-      <ConfirmModal
-        isOpen={Boolean(deleteConfirmMsgId)}
-        onClose={() => setDeleteConfirmMsgId(null)}
-        onConfirm={() => {
-          if (deleteConfirmMsgId) {
-            onMessageAction('delete', { messageId: deleteConfirmMsgId });
-            showToast('Message deleted');
-            setDeleteConfirmMsgId(null);
-          }
-        }}
-        title="Delete Message"
-        message="Are you sure you want to delete this message? This will remove the message for everyone."
-        confirmText="Delete"
-        confirmVariant="danger"
-      />
+      {(() => {
+        const targetConfirmMsg = messages.find(m => String(m.id) === String(deleteConfirmMsgId));
+        const isSentByMe = Boolean(targetConfirmMsg?.isMe || targetConfirmMsg?.senderId === 'me');
+
+        return (
+          <ConfirmModal
+            isOpen={Boolean(deleteConfirmMsgId)}
+            onClose={() => setDeleteConfirmMsgId(null)}
+            onConfirm={() => {
+              if (deleteConfirmMsgId) {
+                onMessageAction('delete', { messageId: deleteConfirmMsgId, isMe: isSentByMe });
+                showToast(isSentByMe ? 'Message deleted for everyone' : 'Message removed');
+                setDeleteConfirmMsgId(null);
+              }
+            }}
+            title={isSentByMe ? "Delete Message for Everyone" : "Delete Message for Me"}
+            message={isSentByMe ? "Are you sure you want to delete this message? It will be replaced with a deleted placeholder for everyone in this chat." : "Are you sure you want to delete this message? It will be removed from your chat view only."}
+            confirmText="Delete"
+            confirmVariant="danger"
+          />
+        );
+      })()}
 
       {/* Clear Chat Confirmation Modal */}
       <ConfirmModal

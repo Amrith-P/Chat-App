@@ -336,30 +336,42 @@ const ChatScreen = () => {
 
     if (action === 'delete') {
       const targetMsgId = payload.messageId;
+      const currentMsgs = messagesMap[activeChatId] || [];
+      const targetMsg = currentMsgs.find((m) => String(m.id) === String(targetMsgId));
+      const isSentByMe = payload.isMe !== undefined ? payload.isMe : Boolean(targetMsg?.isMe);
 
-      // 1. Optimistic zero-latency local update
-      setMessagesMap((prev) => {
-        const existing = prev[activeChatId] || [];
-        return {
-          ...prev,
-          [activeChatId]: existing.map((m) =>
-            String(m.id) === String(targetMsgId)
-              ? { ...m, text: '🚫 This message was deleted', isDeleted: true }
-              : m
-          )
-        };
-      });
+      if (isSentByMe) {
+        // --- SENT MESSAGE: Delete for Everyone ---
+        setMessagesMap((prev) => {
+          const existing = prev[activeChatId] || [];
+          return {
+            ...prev,
+            [activeChatId]: existing.map((m) =>
+              String(m.id) === String(targetMsgId)
+                ? { ...m, text: '🚫 This message was deleted', isDeleted: true }
+                : m
+            )
+          };
+        });
 
-      // 2. Real-time Socket.IO emission
-      if (socket && isConnected) {
-        socket.emit('delete_message', { messageId: targetMsgId, chatId: activeChatId, recipientId });
-      }
+        if (socket && isConnected) {
+          socket.emit('delete_message', { messageId: targetMsgId, chatId: activeChatId, recipientId });
+        }
 
-      // 3. REST API fallback persistence
-      try {
-        await apiRequest(`/messages/${targetMsgId}`, 'DELETE');
-      } catch (err) {
-        // Ignored if socket already processed
+        try {
+          await apiRequest(`/messages/${targetMsgId}`, 'DELETE');
+        } catch (err) {
+          // Ignored if processed
+        }
+      } else {
+        // --- RECEIVED MESSAGE: Delete for Me ONLY (Remove from local view) ---
+        setMessagesMap((prev) => {
+          const existing = prev[activeChatId] || [];
+          return {
+            ...prev,
+            [activeChatId]: existing.filter((m) => String(m.id) !== String(targetMsgId))
+          };
+        });
       }
     } else if (action === 'edit') {
       const targetMsgId = payload.messageId;
