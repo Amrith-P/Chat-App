@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../hooks/settings/useSettings';
+import { useSettingsForm } from '../../hooks/settings/useSettingsForm';
 import { 
   FaUser, 
   FaBell, 
@@ -16,7 +17,7 @@ import {
 } from 'react-icons/fa';
 
 const SettingsPage = () => {
-  const { user, updateProfile, changePassword, revokeAllSessions, logout } = useAuth();
+  const { user, updateProfile, changePassword, revokeAllSessions, logout } = useSettings();
 
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [statusBio, setStatusBio] = useState(user?.status || '');

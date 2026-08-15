@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../hooks/auth/useAuth';
+import { useSocket } from '../../hooks/socket/useSocket';
+import { useSocketEvent } from '../../hooks/socket/useSocketEvent';
+import { useChatList } from '../../hooks/chat/useChatList';
+import { useChatSelection } from '../../hooks/chat/useChatSelection';
+import { useChatActions } from '../../hooks/chat/useChatActions';
 import { apiRequest } from '../../api/client';
 import { sendSystemNotification } from '../../utils/notification';
 import NavDock from '../layout/NavDock';
@@ -12,7 +16,6 @@ import SearchModal from './SearchModal';
 
 const parseDate = (dateStr) => {
   if (!dateStr) return new Date();
-  // Support SQLite format by replacing space with 'T' and adding 'Z' for UTC if not present
   let iso = String(dateStr);
   if (!iso.includes('T')) iso = iso.replace(' ', 'T') + 'Z';
   const d = new Date(iso);
@@ -21,29 +24,24 @@ const parseDate = (dateStr) => {
 
 const ChatScreen = () => {
   const { user } = useAuth();
-  const { socket, isConnected, onlineUsers, emitSendMessage, emitTyping } = useSocket();
+  const { socket, isConnected, emitSendMessage } = useSocket();
+  const { conversations, setConversations, refreshConversations } = useChatList();
+  const { 
+    activeChatId, 
+    setActiveChatId, 
+    mobileView, 
+    setMobileView, 
+    isChatsRoute, 
+    selectChat 
+  } = useChatSelection(setConversations);
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isChatsRoute = location.pathname.includes('/app/chats');
-  
-  // Extract dynamic chatId from /app/chats/:chatId
-  const urlChatId = isChatsRoute ? location.pathname.split('/app/chats/')[1] : null;
-
-  const [conversations, setConversations] = useState([]);
-  const [activeChatId, setActiveChatId] = useState(urlChatId || null);
-
-  useEffect(() => {
-    if (urlChatId && String(urlChatId) !== String(activeChatId)) {
-      setActiveChatId(urlChatId);
-    } else if (!urlChatId && activeChatId) {
-      setActiveChatId(null);
-    }
-  }, [urlChatId]);
   const [messagesMap, setMessagesMap] = useState({});
-
-  // Mobile View Toggle ('sidebar' | 'chat')
-  const [mobileView, setMobileView] = useState('sidebar');
+  const { deleteChat, clearChat, toggleFavoriteChat } = useChatActions(
+    setConversations,
+    setMessagesMap,
+    activeChatId,
+    setMobileView
+  );
 
   // Modals & Drawers
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -386,10 +384,9 @@ const ChatScreen = () => {
     }
   };
 
-  // Handle starting a 1-on-1 chat from Contacts or Search
   const handleStartChatWithContact = async (contact) => {
     setIsSearchOpen(false);
-    setIsDrawerOpen(false); // Also close drawer just in case
+    setIsDrawerOpen(false);
 
     try {
       const recipientId = contact.id || contact.contactId;
@@ -399,9 +396,8 @@ const ChatScreen = () => {
           const chatObj = res.chat || res.conversation;
           const convId = chatObj.id;
 
-          await fetchDbConversations();
-          navigate(`/app/chats/${convId}`);
-          setMobileView('chat');
+          await refreshConversations();
+          selectChat(convId);
           return;
         }
       }
@@ -409,75 +405,8 @@ const ChatScreen = () => {
       console.log('Failed to create/get chat from backend:', err.message);
     }
 
-    navigate('/app/chats');
-    setMobileView('chat');
+    selectChat('');
   };
-
-  // Handle deleting a conversation
-  const handleDeleteChat = async (chatId) => {
-    try {
-      await apiRequest(`/chats/${chatId}`, 'DELETE');
-      setConversations((prev) => prev.filter((c) => String(c.id) !== String(chatId)));
-      setMessagesMap((prev) => {
-        const updated = { ...prev };
-        delete updated[chatId];
-        return updated;
-      });
-
-      if (String(activeChatId) === String(chatId)) {
-        navigate('/app/chats');
-        setMobileView('sidebar');
-      }
-    } catch (err) {
-      console.error('Failed to delete chat:', err.message);
-    }
-  };
-
-  // Handle clearing message history of a conversation
-  const handleClearChat = async (chatId) => {
-    try {
-      await apiRequest(`/chats/${chatId}/messages`, 'DELETE');
-      setMessagesMap((prev) => ({
-        ...prev,
-        [chatId]: []
-      }));
-      setConversations((prev) =>
-        prev.map((c) =>
-          String(c.id) === String(chatId)
-            ? { ...c, lastMessage: 'Messages cleared', time: 'Just now' }
-            : c
-        )
-      );
-    } catch (err) {
-      console.error('Failed to clear chat:', err.message);
-    }
-  };
-
-  // Handle toggling favorite/starred status of a conversation
-  const handleToggleFavoriteChat = async (chatId) => {
-    try {
-      const res = await apiRequest(`/chats/${chatId}/favorite`, 'POST');
-      if (res && res.success) {
-        setConversations((prev) =>
-          prev.map((c) =>
-            String(c.id) === String(chatId)
-              ? { ...c, isFavorite: Boolean(res.isFavorite) }
-              : c
-          )
-        );
-      }
-    } catch (err) {
-      console.error('Failed to toggle favorite chat:', err.message);
-    }
-  };
-
-  const handleSelectChat = useCallback((id) => {
-    navigate(`/app/chats/${id}`);
-    setMobileView('chat');
-    setConversations((prev) =>
-      prev.map((c) => (String(c.id) === String(id) ? { ...c, unreadCount: 0, hasUnread: false } : c))
-    );
-  }, [navigate]);
 
   const totalUnreadCount = useMemo(() => {
     return conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
@@ -508,11 +437,11 @@ const ChatScreen = () => {
             <ChatSidebar
               conversations={conversations}
               activeChatId={activeChatId}
-              onSelectChat={handleSelectChat}
+              onSelectChat={selectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
-              onDeleteChat={handleDeleteChat}
-              onClearChat={handleClearChat}
-              onToggleFavorite={handleToggleFavoriteChat}
+              onDeleteChat={deleteChat}
+              onClearChat={clearChat}
+              onToggleFavorite={toggleFavoriteChat}
               onStartChatWithContact={handleStartChatWithContact}
             />
           </div>
@@ -528,12 +457,12 @@ const ChatScreen = () => {
               onMessageAction={handleMessageAction}
               onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
               onBackToSidebar={() => {
-                navigate('/app/chats');
+                selectChat('');
                 setMobileView('sidebar');
               }}
-              onDeleteChat={handleDeleteChat}
-              onClearChat={handleClearChat}
-              onToggleFavorite={handleToggleFavoriteChat}
+              onDeleteChat={deleteChat}
+              onClearChat={clearChat}
+              onToggleFavorite={toggleFavoriteChat}
             />
           </div>
 

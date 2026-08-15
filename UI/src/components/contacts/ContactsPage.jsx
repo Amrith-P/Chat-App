@@ -1,39 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { FaSearch, FaUserPlus, FaComment, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaUserFriends } from 'react-icons/fa';
-import { apiRequest } from '../../api/client';
+import { useContacts } from '../../hooks/users/useContacts';
 
 const ContactsPage = () => {
   const { onStartChat, onOpenNewChat } = useOutletContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [contacts, setContacts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchContacts = async () => {
-      setIsLoading(true);
-      try {
-        const data = await apiRequest(`/users/search?q=${encodeURIComponent(searchTerm)}`);
-        if (data && data.users) {
-          const formatted = data.users.map((u) => ({
-            id: u.id,
-            name: u.fullName,
-            email: u.email,
-            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.fullName)}`,
-            status: u.status || 'Hey there! I am using ChatApp.',
-            isOnline: true
-          }));
-          setContacts(formatted);
-        }
-      } catch (err) {
-        console.error('Failed to fetch contacts:', err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchContacts();
-  }, [searchTerm]);
+  const { contacts, loading: isLoading } = useContacts();
 
   return (
     <div className="flex-1 h-full bg-slate-950 flex flex-col overflow-hidden select-none">

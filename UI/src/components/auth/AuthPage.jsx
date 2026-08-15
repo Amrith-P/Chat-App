@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/auth/useAuth';
+import { useLogin } from '../../hooks/auth/useLogin';
+import { useRegister } from '../../hooks/auth/useRegister';
 import { 
   FaComments, 
   FaLock, 
@@ -18,28 +20,22 @@ import {
   FaSyncAlt
 } from 'react-icons/fa';
 
-const defaultSeeds = ['Alex', 'Sarah', 'Felix', 'Mimi', 'Jack', 'Luna', 'Zack', 'Maya'];
-
 const AuthPage = () => {
-  const { login, register, forgotPassword, resetPassword, error, setError } = useAuth();
+  const { forgotPassword, resetPassword, error, setError } = useAuth();
+  const { performLogin, performDemoLogin, loading: isLoginLoading } = useLogin();
+  const { 
+    performRegister, 
+    avatarSeeds, 
+    selectedAvatar, 
+    randomizeAvatars, 
+    selectAvatar, 
+    loading: isRegisterLoading 
+  } = useRegister();
 
   const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot' | 'reset'
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-
-  // Avatar Selection State
-  const [avatarSeeds, setAvatarSeeds] = useState(defaultSeeds);
-  const [selectedAvatar, setSelectedAvatar] = useState(
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${defaultSeeds[0]}`
-  );
-
-  const handleRandomizeAvatars = () => {
-    const randomSuffix = Math.floor(Math.random() * 1000);
-    const newSeeds = defaultSeeds.map((seed) => `${seed}_${randomSuffix}`);
-    setAvatarSeeds(newSeeds);
-    setSelectedAvatar(`https://api.dicebear.com/7.x/avataaars/svg?seed=${newSeeds[0]}`);
-  };
 
   // Form States
   const [formData, setFormData] = useState({
@@ -64,58 +60,24 @@ const AuthPage = () => {
   // Handle Login Submission
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.email || !formData.password) {
-      setError('Please fill in both email and password.');
-      return;
-    }
-
     setIsSubmitting(true);
-    try {
-      await login(formData.email, formData.password);
-    } catch (err) {
-      // Error handled in AuthContext
-    } finally {
-      setIsSubmitting(false);
-    }
+    await performLogin(formData.email, formData.password);
+    setIsSubmitting(false);
   };
 
   // Handle Quick Demo Login
   const handleDemoLogin = async () => {
     setIsSubmitting(true);
-    setError(null);
-    try {
-      try {
-        await login('alex.demo@chatapp.com', 'password123');
-      } catch (loginErr) {
-        await register('Alex Morgan (Demo)', 'alex.demo@chatapp.com', 'password123');
-      }
-    } catch (err) {
-      setError('Demo login failed: ' + err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await performDemoLogin();
+    setIsSubmitting(false);
   };
 
   // Handle Register Submission
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.email || !formData.password) {
-      setError('Please fill in all registration fields.');
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
-
     setIsSubmitting(true);
-    try {
-      await register(formData.fullName, formData.email, formData.password, selectedAvatar);
-    } catch (err) {
-      // Handled in context
-    } finally {
-      setIsSubmitting(false);
-    }
+    await performRegister(formData.fullName, formData.email, formData.password);
+    setIsSubmitting(false);
   };
 
   // Handle Forgot Password Submission
@@ -374,7 +336,7 @@ const AuthPage = () => {
                   </label>
                   <button
                     type="button"
-                    onClick={handleRandomizeAvatars}
+                    onClick={randomizeAvatars}
                     className="flex items-center space-x-1.5 text-[11px] text-emerald-400 hover:text-emerald-300 font-bold bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-lg transition border border-emerald-500/20"
                   >
                     <FaSyncAlt className="text-[10px]" />
@@ -404,7 +366,7 @@ const AuthPage = () => {
                         <button
                           key={seed}
                           type="button"
-                          onClick={() => setSelectedAvatar(avatarUrl)}
+                          onClick={() => selectAvatar(avatarUrl)}
                           className={`w-9 h-9 rounded-full overflow-hidden border-2 transition transform hover:scale-110 flex items-center justify-center bg-slate-950 ${
                             isSelected
                               ? 'border-emerald-400 ring-2 ring-emerald-500/50 scale-105'

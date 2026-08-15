@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { FaStar, FaSearch, FaArrowRight, FaTrash, FaCopy } from 'react-icons/fa';
+import { useStarredMessages } from '../../hooks/starred/useStarredMessages';
 
 const StarredPage = () => {
   const { onJumpToChat } = useOutletContext();
-  const [starredMessages, setStarredMessages] = useState([]);
+  const { starredMessages, unstarMessage: handleUnstar } = useStarredMessages();
   const [searchTerm, setSearchTerm] = useState('');
-
-  const handleUnstar = (id) => {
-    setStarredMessages((prev) => prev.filter((msg) => msg.id !== id));
-  };
 
   const filtered = starredMessages.filter(
     (m) =>
