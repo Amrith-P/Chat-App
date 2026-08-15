@@ -70,7 +70,6 @@ initSocket(server);
 
 // Top-Level Auth Refresh Handler Fallback
 app.post('/api/auth/refresh', refreshTokenHandler);
-app.delete('/api/chats/:chatId', protect, deleteChat);
 
 // Routes
 app.use('/api/auth', authRoutes);
