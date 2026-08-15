@@ -12,8 +12,8 @@ const router = express.Router();
 
 router.get('/', protect, getUserChats);
 router.post('/', protect, createOrGetDirectChat);
-router.delete('/:chatId', protect, deleteChat);
 router.delete('/:chatId/messages', protect, clearChatMessages);
 router.post('/:chatId/favorite', protect, toggleFavoriteChat);
+router.delete('/:chatId', protect, deleteChat);
 
 export default router;

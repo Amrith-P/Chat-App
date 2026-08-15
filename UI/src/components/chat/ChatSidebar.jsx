@@ -501,7 +501,7 @@ const ChatSidebar = ({
             if (onClearChat) onClearChat(clearConfirmChatId);
             setClearConfirmChatId(null);
           }}
-          onCancel={() => setClearConfirmChatId(null)}
+          onClose={() => setClearConfirmChatId(null)}
         />
       )}
 

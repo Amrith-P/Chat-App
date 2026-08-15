@@ -10,6 +10,8 @@ const ConfirmModal = ({
   confirmText = 'Delete', 
   confirmVariant = 'danger' 
 }) => {
+  const handleClose = onClose || onCancel || (() => {});
+
   if (!isOpen) return null;
 
   return (
@@ -24,15 +26,15 @@ const ConfirmModal = ({
         </div>
         <div className="flex items-center space-x-3 pt-2">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="flex-1 py-2.5 px-4 rounded-xl border border-slate-800 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition"
           >
             Cancel
           </button>
           <button
             onClick={() => {
-              onConfirm();
-              onClose();
+              if (onConfirm) onConfirm();
+              handleClose();
             }}
             className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold transition ${
               confirmVariant === 'danger'
