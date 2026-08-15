@@ -47,53 +47,6 @@ const ChatScreen = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Fetch Real Conversations from Database Backend
-  const fetchDbConversations = async () => {
-    try {
-      const data = await apiRequest('/chats');
-      if (data && data.chats) {
-        const formatted = data.chats.map((c) => {
-          const rawTime = c.lastMessageTime || c.time;
-          const isSpecial = !rawTime || rawTime === 'Just now' || rawTime === 'New';
-          const displayTime = isSpecial ? (rawTime || 'New') : parseDate(rawTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-          return {
-            id: c.id,
-            name: c.name || c.recipientName || 'User',
-            email: c.email || c.recipientEmail || '',
-            avatar: c.avatar || c.recipientAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(c.name || 'User')}`,
-            recipientId: c.contactId || c.recipientId,
-            lastMessage: c.lastMessage || 'No messages yet. Say hi!',
-            time: displayTime,
-            timestamp: c.lastMessageTime ? parseDate(c.lastMessageTime).getTime() : 0,
-            unreadCount: c.unreadCount || 0,
-            isOnline: Boolean(c.isOnline) || onlineUsers.has(Number(c.contactId || c.recipientId)) || onlineUsers.has(String(c.contactId || c.recipientId)),
-            status: c.status || 'Available'
-          };
-        }).sort((a, b) => b.timestamp - a.timestamp);
-
-        setConversations(formatted);
-      }
-    } catch (err) {
-      console.log('Error fetching backend conversations:', err.message);
-    }
-  };
-
-  useEffect(() => {
-    fetchDbConversations();
-  }, [user]);
-
-  // Dynamically update isOnline status for conversations when onlineUsers set changes
-  useEffect(() => {
-    setConversations((prev) =>
-      prev.map((c) => {
-        const contactId = c.contactId || c.recipientId;
-        const isOnline = onlineUsers.has(Number(contactId)) || onlineUsers.has(String(contactId));
-        return { ...c, isOnline };
-      })
-    );
-  }, [onlineUsers]);
-
   // Fetch Message History for Active Database Chat
   useEffect(() => {
     if (!activeChatId) return;
@@ -220,7 +173,7 @@ const ChatScreen = () => {
         setConversations((prev) => {
           const exists = prev.some((c) => String(c.id) === String(chatKey));
           if (!exists) {
-            fetchDbConversations();
+            refreshConversations();
             return prev;
           }
           return prev.map((c) =>
