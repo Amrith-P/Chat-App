@@ -166,14 +166,39 @@ export const initSocket = (server) => {
       });
     });
 
-    // Handle delete message
-    socket.on('delete_message', ({ messageId, chatId, recipientId }) => {
-      db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], (err) => {
-        if (!err) {
-          if (recipientId) io.to(`user_${recipientId}`).emit('message_deleted', { messageId, chatId });
-          io.to(`chat_${chatId}`).emit('message_deleted', { messageId, chatId });
-        }
-      });
+    // Handle delete message (distinguishing deleteType: 'everyone' vs 'me')
+    socket.on('delete_message', ({ messageId, chatId, recipientId, deleteType = 'everyone' }) => {
+      if (!messageId) return;
+
+      if (deleteType === 'me') {
+        db.run(
+          'INSERT INTO deleted_messages_for_user (messageId, userId) VALUES (?, ?) ON CONFLICT DO NOTHING',
+          [messageId, userId],
+          (err) => {
+            if (!err) {
+              socket.emit('message_deleted_me', { messageId, chatId });
+            }
+          }
+        );
+      } else {
+        db.get('SELECT senderid, senderId FROM messages WHERE id = ?', [messageId], (err, msg) => {
+          if (err || !msg) return;
+          const msgSenderId = msg.senderid || msg.senderId;
+
+          if (String(msgSenderId) !== String(userId)) {
+            return socket.emit('error', { message: 'Unauthorized: Only the sender can delete a message for everyone' });
+          }
+
+          db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], (uErr) => {
+            if (!uErr) {
+              db.run('DELETE FROM message_reactions WHERE messageid = ? OR messageId = ?', [messageId, messageId], () => {});
+
+              if (recipientId) io.to(`user_${recipientId}`).emit('message_deleted', { messageId, chatId, deleteType: 'everyone' });
+              if (chatId) io.to(`chat_${chatId}`).emit('message_deleted', { messageId, chatId, deleteType: 'everyone' });
+            }
+          });
+        });
+      }
     });
 
     // Handle typing notifications

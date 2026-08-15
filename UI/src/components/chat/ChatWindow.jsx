@@ -708,25 +708,61 @@ const ChatWindow = ({
 
       {/* Delete Message Confirmation Modal */}
       {(() => {
+        if (!deleteConfirmMsgId) return null;
         const targetConfirmMsg = messages.find(m => String(m.id) === String(deleteConfirmMsgId));
         const isSentByMe = Boolean(targetConfirmMsg?.isMe || targetConfirmMsg?.senderId === 'me');
 
         return (
-          <ConfirmModal
-            isOpen={Boolean(deleteConfirmMsgId)}
-            onClose={() => setDeleteConfirmMsgId(null)}
-            onConfirm={() => {
-              if (deleteConfirmMsgId) {
-                onMessageAction('delete', { messageId: deleteConfirmMsgId, isMe: isSentByMe });
-                showToast(isSentByMe ? 'Message deleted for everyone' : 'Message removed');
-                setDeleteConfirmMsgId(null);
-              }
-            }}
-            title={isSentByMe ? "Delete Message for Everyone" : "Delete Message for Me"}
-            message={isSentByMe ? "Are you sure you want to delete this message? It will be replaced with a deleted placeholder for everyone in this chat." : "Are you sure you want to delete this message? It will be removed from your chat view only."}
-            confirmText="Delete"
-            confirmVariant="danger"
-          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-4 text-center select-none">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mx-auto text-xl">
+                <FaTrash />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white mb-1">Delete Message</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {isSentByMe 
+                    ? "Choose whether to delete this message for everyone or only from your view."
+                    : "This message will be removed from your view. The sender will still see it."
+                  }
+                </p>
+              </div>
+              <div className="flex flex-col space-y-2 pt-2">
+                {isSentByMe && (
+                  <button
+                    onClick={() => {
+                      onMessageAction('delete', { messageId: deleteConfirmMsgId, deleteType: 'everyone' });
+                      showToast('Message deleted for everyone');
+                      setDeleteConfirmMsgId(null);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20 transition"
+                  >
+                    Delete for Everyone
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    onMessageAction('delete', { messageId: deleteConfirmMsgId, deleteType: 'me' });
+                    showToast('Message deleted for me');
+                    setDeleteConfirmMsgId(null);
+                  }}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition ${
+                    isSentByMe 
+                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' 
+                      : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20'
+                  }`}
+                >
+                  Delete for Me
+                </button>
+                <button
+                  onClick={() => setDeleteConfirmMsgId(null)}
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-800 text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         );
       })()}
 

@@ -17,6 +17,7 @@ export const getUserChats = (req, res) => {
       u.avatar,
       u.status,
       m.content AS lastmessage,
+      m.isdeleted AS isdeleted,
       m.createdat AS lastmsgtime,
       fc.id AS isfavorite
     FROM conversations c
@@ -27,12 +28,13 @@ export const getUserChats = (req, res) => {
     LEFT JOIN messages m ON m.id = (
       SELECT id FROM messages 
       WHERE conversationid = c.id 
+        AND id NOT IN (SELECT messageId FROM deleted_messages_for_user WHERE userId = ?)
       ORDER BY id DESC LIMIT 1
     )
     ORDER BY COALESCE(m.createdat, c.createdat) DESC
   `;
 
-  db.all(query, [currentUserId, currentUserId, currentUserId], (err, chats) => {
+  db.all(query, [currentUserId, currentUserId, currentUserId, currentUserId], (err, chats) => {
     if (err) {
       console.error('Error fetching chats:', err);
       return res.status(500).json({ message: 'Failed to fetch conversations', error: err.message });
@@ -40,6 +42,15 @@ export const getUserChats = (req, res) => {
 
     const formattedChats = (chats || []).map((chat) => {
       const cId = chat.contactId ?? chat.contactid;
+      const rawLastMsg = chat.lastMessage ?? chat.lastmessage;
+      const isDeletedGlobally = Boolean(chat.isDeleted || chat.isdeleted);
+      let displayLastMsg = 'No messages yet. Say hi!';
+      if (rawLastMsg !== undefined && rawLastMsg !== null && rawLastMsg !== '') {
+        displayLastMsg = isDeletedGlobally ? '🚫 This message was deleted' : rawLastMsg;
+      } else if (isDeletedGlobally) {
+        displayLastMsg = '🚫 This message was deleted';
+      }
+
       return {
         id: chat.id,
         contactId: cId,
@@ -47,7 +58,7 @@ export const getUserChats = (req, res) => {
         email: chat.email,
         avatar: chat.avatar,
         status: chat.status,
-        lastMessage: chat.lastMessage ?? chat.lastmessage ?? 'No messages yet. Say hi!',
+        lastMessage: displayLastMsg,
         lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? null,
         time: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? 'New',
         unreadCount: 0,

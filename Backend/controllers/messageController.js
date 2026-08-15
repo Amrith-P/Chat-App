@@ -20,8 +20,9 @@ export const getMessagesByChatId = (req, res) => {
          FROM messages m
          JOIN users u ON m.senderid = u.id
          WHERE m.conversationid = ?
+           AND m.id NOT IN (SELECT messageId FROM deleted_messages_for_user WHERE userId = ?)
          ORDER BY m.id ASC`,
-        [chatId],
+        [chatId, currentUserId],
         (mErr, messages) => {
           if (mErr) {
             return res.status(500).json({ message: 'Error loading message history' });
@@ -48,7 +49,8 @@ export const getMessagesByChatId = (req, res) => {
               }
 
               const formattedMessages = messages.map((m) => {
-                let text = m.isDeleted ? '🚫 This message was deleted' : m.text;
+                const isGloballyDeleted = Boolean(m.isDeleted);
+                let text = isGloballyDeleted ? '🚫 This message was deleted' : m.text;
                 return {
                   id: m.id,
                   chatId: m.conversationId,
@@ -56,15 +58,15 @@ export const getMessagesByChatId = (req, res) => {
                   senderName: m.senderName,
                   isMe: m.senderId === currentUserId,
                   text: text,
-                  messageType: m.messageType,
-                  replyToId: m.replyToId,
-                  isForwarded: Boolean(m.isForwarded),
-                  isEdited: Boolean(m.isEdited),
-                  isDeleted: Boolean(m.isDeleted),
+                  messageType: isGloballyDeleted ? 'text' : m.messageType,
+                  replyToId: isGloballyDeleted ? null : m.replyToId,
+                  isForwarded: isGloballyDeleted ? false : Boolean(m.isForwarded),
+                  isEdited: isGloballyDeleted ? false : Boolean(m.isEdited),
+                  isDeleted: isGloballyDeleted,
                   readAt: m.readAt,
                   createdAt: m.createdAt,
                   time: m.createdAt,
-                  reactions: reactionsMap[m.id] || []
+                  reactions: isGloballyDeleted ? [] : (reactionsMap[m.id] || [])
                 };
               });
 
@@ -138,20 +140,84 @@ export const clearMessagesByChatId = (req, res) => {
   });
 };
 
-// @desc    Delete a message by ID
-// @route   DELETE /api/messages/:id
-export const deleteMessage = (req, res) => {
-  const messageId = req.params.id || req.params.messageId;
+// @desc    Delete a message for everyone (Sender only)
+// @route   DELETE /api/messages/:id/everyone
+export const deleteMessageForEveryone = (req, res) => {
+  const messageId = req.params.id;
+  const userId = req.user.id;
 
   if (!messageId) {
     return res.status(400).json({ message: 'Message ID is required' });
   }
 
-  db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], (err) => {
-    if (err) {
-      console.error('Failed to delete message:', err.message);
-      return res.status(500).json({ message: 'Failed to delete message', error: err.message });
+  db.get('SELECT * FROM messages WHERE id = ?', [messageId], (err, msg) => {
+    if (err || !msg) {
+      return res.status(404).json({ message: 'Message not found' });
     }
-    res.json({ success: true, message: 'Message deleted successfully', messageId });
+
+    const msgSenderId = msg.senderid || msg.senderId;
+
+    if (String(msgSenderId) !== String(userId)) {
+      return res.status(403).json({ message: 'Not authorized: Only the sender can delete a message for everyone' });
+    }
+
+    db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], (updateErr) => {
+      if (updateErr) {
+        return res.status(500).json({ message: 'Failed to delete message for everyone', error: updateErr.message });
+      }
+
+      db.run('DELETE FROM message_reactions WHERE messageid = ? OR messageId = ?', [messageId, messageId], () => {});
+
+      const chatId = msg.conversationid || msg.conversationId;
+
+      res.json({
+        success: true,
+        message: 'Message deleted for everyone',
+        messageId,
+        chatId
+      });
+    });
+  });
+};
+
+// @desc    Delete a message for me (Current user only)
+// @route   DELETE /api/messages/:id/me
+export const deleteMessageForMe = (req, res) => {
+  const messageId = req.params.id;
+  const userId = req.user.id;
+
+  if (!messageId) {
+    return res.status(400).json({ message: 'Message ID is required' });
+  }
+
+  db.get('SELECT * FROM messages WHERE id = ?', [messageId], (err, msg) => {
+    if (err || !msg) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    const chatId = msg.conversationid || msg.conversationId;
+
+    db.get('SELECT * FROM conversation_members WHERE conversationid = ? AND userid = ?', [chatId, userId], (mErr, member) => {
+      if (mErr || !member) {
+        return res.status(403).json({ message: 'Not authorized: You do not belong to this conversation' });
+      }
+
+      db.run(
+        'INSERT INTO deleted_messages_for_user (messageId, userId) VALUES (?, ?) ON CONFLICT DO NOTHING',
+        [messageId, userId],
+        (insErr) => {
+          if (insErr && !insErr.message.includes('UNIQUE')) {
+            return res.status(500).json({ message: 'Failed to delete message for user', error: insErr.message });
+          }
+
+          res.json({
+            success: true,
+            message: 'Message deleted for me',
+            messageId,
+            chatId
+          });
+        }
+      );
+    });
   });
 };

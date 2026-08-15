@@ -336,35 +336,33 @@ const ChatScreen = () => {
 
     if (action === 'delete') {
       const targetMsgId = payload.messageId;
-      const currentMsgs = messagesMap[activeChatId] || [];
-      const targetMsg = currentMsgs.find((m) => String(m.id) === String(targetMsgId));
-      const isSentByMe = payload.isMe !== undefined ? payload.isMe : Boolean(targetMsg?.isMe);
+      const deleteType = payload.deleteType || (payload.isMe ? 'everyone' : 'me');
 
-      if (isSentByMe) {
-        // --- SENT MESSAGE: Delete for Everyone ---
+      if (deleteType === 'everyone') {
+        // --- DELETE FOR EVERYONE ---
         setMessagesMap((prev) => {
           const existing = prev[activeChatId] || [];
           return {
             ...prev,
             [activeChatId]: existing.map((m) =>
               String(m.id) === String(targetMsgId)
-                ? { ...m, text: '🚫 This message was deleted', isDeleted: true }
+                ? { ...m, text: '🚫 This message was deleted', isDeleted: true, reactions: [] }
                 : m
             )
           };
         });
 
         if (socket && isConnected) {
-          socket.emit('delete_message', { messageId: targetMsgId, chatId: activeChatId, recipientId });
+          socket.emit('delete_message', { messageId: targetMsgId, chatId: activeChatId, recipientId, deleteType: 'everyone' });
         }
 
         try {
-          await apiRequest(`/messages/${targetMsgId}`, 'DELETE');
+          await apiRequest(`/messages/${targetMsgId}/everyone`, 'DELETE');
         } catch (err) {
-          // Ignored if processed
+          console.error('Failed to delete for everyone via REST:', err.message);
         }
       } else {
-        // --- RECEIVED MESSAGE: Delete for Me ONLY (Remove from local view) ---
+        // --- DELETE FOR ME ONLY ---
         setMessagesMap((prev) => {
           const existing = prev[activeChatId] || [];
           return {
@@ -372,6 +370,16 @@ const ChatScreen = () => {
             [activeChatId]: existing.filter((m) => String(m.id) !== String(targetMsgId))
           };
         });
+
+        if (socket && isConnected) {
+          socket.emit('delete_message', { messageId: targetMsgId, chatId: activeChatId, recipientId, deleteType: 'me' });
+        }
+
+        try {
+          await apiRequest(`/messages/${targetMsgId}/me`, 'DELETE');
+        } catch (err) {
+          console.error('Failed to delete for me via REST:', err.message);
+        }
       }
     } else if (action === 'edit') {
       const targetMsgId = payload.messageId;

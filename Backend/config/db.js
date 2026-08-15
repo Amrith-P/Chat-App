@@ -217,6 +217,14 @@ export const initDb = () => {
         conversationId INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(userId, conversationId)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS deleted_messages_for_user (
+        id SERIAL PRIMARY KEY,
+        messageId INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+        userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(messageId, userId)
       );`
     ];
 
@@ -346,6 +354,18 @@ export const initDb = () => {
         )
       `);
 
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS deleted_messages_for_user (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          messageId INTEGER NOT NULL,
+          userId INTEGER NOT NULL,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(messageId, userId),
+          FOREIGN KEY(messageId) REFERENCES messages(id) ON DELETE CASCADE,
+          FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
       // Migrations & Columns Addition
       dbWrapper.run(`ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN replyToId INTEGER`, [], () => {});
@@ -362,6 +382,7 @@ export const initDb = () => {
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(senderId)`);
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(createdAt)`);
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_reactions_msg ON message_reactions(messageId)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_del_msg_user ON deleted_messages_for_user(messageId, userId)`);
     });
   }
 };
