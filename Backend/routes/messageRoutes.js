@@ -4,7 +4,8 @@ import {
   sendMessage, 
   clearMessagesByChatId, 
   deleteMessageForEveryone,
-  deleteMessageForMe
+  deleteMessageForMe,
+  deleteMessage
 } from '../controllers/messageController.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -22,5 +23,6 @@ router.delete('/:id/everyone', protect, deleteMessageForEveryone);
 router.post('/:id/everyone', protect, deleteMessageForEveryone);
 router.delete('/:id/me', protect, deleteMessageForMe);
 router.post('/:id/me', protect, deleteMessageForMe);
+router.delete('/:id', protect, deleteMessage);
 
 export default router;

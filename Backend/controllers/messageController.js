@@ -221,3 +221,32 @@ export const deleteMessageForMe = (req, res) => {
     });
   });
 };
+
+// @desc    Delete a message legacy fallback
+// @route   DELETE /api/messages/:id
+export const deleteMessage = (req, res) => {
+  const messageId = req.params.id;
+  const userId = req.user.id;
+
+  if (!messageId) {
+    return res.status(400).json({ message: 'Message ID is required' });
+  }
+
+  db.get('SELECT senderid, senderId FROM messages WHERE id = ?', [messageId], (err, msg) => {
+    if (err || !msg) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    const msgSenderId = msg.senderid || msg.senderId;
+
+    if (String(msgSenderId) === String(userId)) {
+      db.run('UPDATE messages SET content = "", isDeleted = 1 WHERE id = ?', [messageId], () => {
+        return res.json({ success: true, message: 'Message deleted for everyone', messageId });
+      });
+    } else {
+      db.run('INSERT INTO deleted_messages_for_user (messageId, userId) VALUES (?, ?) ON CONFLICT DO NOTHING', [messageId, userId], () => {
+        return res.json({ success: true, message: 'Message deleted for me', messageId });
+      });
+    }
+  });
+};
