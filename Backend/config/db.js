@@ -9,10 +9,11 @@ const __dirname = path.dirname(__filename);
 
 const isPostgres = Boolean(process.env.DATABASE_URL);
 let dbWrapper = {};
+let pool = null;
 
 if (isPostgres) {
   console.log('🐘 Connecting to PostgreSQL Database via DATABASE_URL...');
-  const pool = new pg.Pool({
+  pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
@@ -265,32 +266,38 @@ export const initDb = () => {
       );`
     ];
 
-    queries.forEach((q) => {
-      dbWrapper.run(q, [], (err) => {
-        if (err) console.error('PostgreSQL Table Init Error:', err.message);
-      });
-    });
+    (async () => {
+      for (const q of queries) {
+        try {
+          await pool.query(q);
+        } catch (err) {
+          console.error('PostgreSQL Table Init Error:', err.message);
+        }
+      }
 
-    const alterQueries = [
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Hey there! I am using ChatApp.';`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS emailVerified BOOLEAN DEFAULT FALSE;`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetToken TEXT;`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetTokenExpiry BIGINT;`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS replyToId INTEGER;`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isForwarded BOOLEAN DEFAULT FALSE;`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isEdited BOOLEAN DEFAULT FALSE;`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isDeleted BOOLEAN DEFAULT FALSE;`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS readAt TIMESTAMP;`,
-      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS name VARCHAR(255);`,
-      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS description TEXT;`,
-      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS avatar TEXT;`,
-      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS adminId INTEGER;`,
-      `ALTER TABLE conversation_members ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'member';`
-    ];
+      const alterQueries = [
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Hey there! I am using ChatApp.';`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS emailVerified BOOLEAN DEFAULT FALSE;`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetToken TEXT;`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetTokenExpiry BIGINT;`,
+        `ALTER TABLE messages ADD COLUMN IF NOT EXISTS replyToId INTEGER;`,
+        `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isForwarded BOOLEAN DEFAULT FALSE;`,
+        `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isEdited BOOLEAN DEFAULT FALSE;`,
+        `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isDeleted BOOLEAN DEFAULT FALSE;`,
+        `ALTER TABLE messages ADD COLUMN IF NOT EXISTS readAt TIMESTAMP;`,
+        `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS name VARCHAR(255);`,
+        `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS description TEXT;`,
+        `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS avatar TEXT;`,
+        `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS adminId INTEGER;`,
+        `ALTER TABLE conversation_members ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'member';`
+      ];
 
-    alterQueries.forEach((q) => {
-      dbWrapper.run(q, [], () => {});
-    });
+      for (const q of alterQueries) {
+        try {
+          await pool.query(q);
+        } catch (err) {}
+      }
+    })();
   } else {
     // SQLite Table Schemas with Foreign Keys & Indexes
     dbWrapper.serialize(() => {
