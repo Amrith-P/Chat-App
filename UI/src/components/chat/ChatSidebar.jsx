@@ -390,49 +390,87 @@ const ChatSidebar = ({
               </p>
             ) : (
               <div className="space-y-2">
-                {searchResults.users.map((u) => (
-                  <div
-                    key={u.id}
-                    onClick={() => {
-                      if (onStartChatWithContact) {
-                        onStartChatWithContact(u);
-                      } else if (onOpenNewChat) {
-                        onOpenNewChat();
-                      }
-                      setSearchTerm('');
-                    }}
-                    className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 hover:border-purple-500/30 cursor-pointer transition space-y-2 group shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="relative">
-                          <img
-                            src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.fullName)}`}
-                            alt={u.fullName}
-                            className="w-9 h-9 rounded-full border border-slate-700 object-cover group-hover:border-purple-400/60 transition"
-                          />
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                {searchResults.users.map((u) => {
+                  const rel = u.relationship || 'none';
+                  const isFriend = rel === 'friend';
+                  const isOutgoing = rel === 'request_sent';
+                  const isIncoming = rel === 'request_received';
+
+                  return (
+                    <div
+                      key={u.id}
+                      className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 transition space-y-2 group shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="relative">
+                            <img
+                              src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.fullName)}`}
+                              alt={u.fullName}
+                              className="w-9 h-9 rounded-full border border-slate-700 object-cover group-hover:border-emerald-400/60 transition"
+                            />
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-white group-hover:text-emerald-300 transition">{u.fullName}</h4>
+                            <p className="text-[10px] text-slate-400 truncate max-w-[130px]">{u.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition">{u.fullName}</h4>
-                          <p className="text-[10px] text-slate-400 truncate max-w-[140px]">{u.email}</p>
-                        </div>
+
+                        {/* DYNAMIC RELATIONSHIP ACTION BUTTON */}
+                        {isFriend ? (
+                          <button
+                            onClick={() => {
+                              if (onStartChatWithContact) onStartChatWithContact(u);
+                              setSearchTerm('');
+                            }}
+                            className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-bold rounded-lg transition shadow-sm"
+                          >
+                            Message
+                          </button>
+                        ) : isOutgoing ? (
+                          <span className="px-2 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-semibold rounded-lg">
+                            Request Sent
+                          </span>
+                        ) : isIncoming ? (
+                          <button
+                            onClick={async () => {
+                              if (onAcceptRequest && u.incomingRequestId) {
+                                await onAcceptRequest(u.incomingRequestId);
+                                setSearchTerm('');
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-emerald-500 text-slate-950 text-[10px] font-bold rounded-lg transition"
+                          >
+                            Accept
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              if (onSendFriendRequest || onOpenNewChat) {
+                                try {
+                                  await (onSendFriendRequest ? onSendFriendRequest(u.id) : onOpenNewChat());
+                                  setSearchTerm('');
+                                } catch (e) {}
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 text-[10px] font-bold rounded-lg transition border border-emerald-500/30"
+                          >
+                            + Add Friend
+                          </button>
+                        )}
                       </div>
 
-                      <button className="px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-slate-950 text-[10px] font-bold rounded-lg transition border border-purple-500/20">
-                        Start Chat
-                      </button>
+                      {/* Detailed Status & Join Info */}
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
+                        <span className="italic truncate max-w-[160px]">"{u.status || 'Available on ChatApp Pro'}"</span>
+                        <span className="text-slate-500 shrink-0 font-medium">
+                          {isFriend ? '✓ Friend' : isOutgoing ? 'Pending' : 'User'}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Detailed Status & Join Info */}
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
-                      <span className="italic truncate max-w-[160px]">"{u.status || 'Hey there! I am using ChatApp.'}"</span>
-                      <span className="text-slate-500 shrink-0 font-medium">
-                        {u.createdAt ? `Joined ${new Date(u.createdAt).toLocaleDateString([], { month: 'short', year: 'numeric' })}` : 'Member'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

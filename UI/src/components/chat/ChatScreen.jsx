@@ -565,6 +565,7 @@ const ChatScreen = () => {
               onRejectRequest={rejectFriendRequest}
               onCancelRequest={cancelFriendRequest}
               onRemoveFriend={removeFriend}
+              onSendFriendRequest={sendFriendRequest}
               loadingSocial={loadingSocial}
             />
           </div>
@@ -599,6 +600,8 @@ const ChatScreen = () => {
               onClose={() => setIsDrawerOpen(false)}
               onLeaveGroup={handleLeaveGroup}
               onDeleteGroup={handleDeleteGroup}
+              onSendFriendRequest={sendFriendRequest}
+              onRemoveFriend={removeFriend}
             />
             </div>
           </>

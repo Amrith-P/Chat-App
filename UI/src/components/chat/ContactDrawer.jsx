@@ -18,12 +18,24 @@ import ConfirmModal from '../common/ConfirmModal';
 import { useGroupChat } from '../../hooks/chat/useGroupChat';
 import { useAuth } from '../../hooks/auth/useAuth';
 
-const ContactDrawer = ({ contact, isOpen, onClose, onLeaveGroup, onDeleteGroup }) => {
+import { useFriends } from '../../hooks/social/useFriends';
+
+const ContactDrawer = ({ 
+  contact, 
+  isOpen, 
+  onClose, 
+  onLeaveGroup, 
+  onDeleteGroup, 
+  onSendFriendRequest,
+  onRemoveFriend 
+}) => {
   const { user } = useAuth();
+  const { friends, incomingRequests, outgoingRequests, sendFriendRequest } = useFriends();
   const { getGroupMembers, removeGroupMember, updateMemberRole } = useGroupChat();
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [addingFriendId, setAddingFriendId] = useState(null);
 
   const isGroup = Boolean(contact?.isGroup);
   const currentUserId = user?.id;
@@ -131,6 +143,70 @@ const ContactDrawer = ({ contact, isOpen, onClose, onLeaveGroup, onDeleteGroup }
               {isGroup ? `${members.length || contact.memberCount || 1} members` : contact.email}
             </p>
           </div>
+
+          {/* Relationship Action / Status Badge for 1-on-1 */}
+          {!isGroup && (() => {
+            const targetId = Number(contact.contactId || contact.id);
+            const isFriend = friends.some((f) => Number(f.id) === targetId);
+            const isOutgoing = outgoingRequests.some((r) => Number(r.receiverId) === targetId);
+            const isIncoming = incomingRequests.some((r) => Number(r.senderId) === targetId);
+            const isSelf = targetId === Number(currentUserId);
+
+            if (isSelf) return null;
+
+            if (isFriend) {
+              return (
+                <div className="pt-1 flex items-center space-x-2 justify-center">
+                  <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl flex items-center space-x-1">
+                    <span>✓ Confirmed Friends</span>
+                  </span>
+                </div>
+              );
+            }
+
+            if (isOutgoing) {
+              return (
+                <div className="pt-1 flex items-center justify-center">
+                  <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold rounded-xl">
+                    ⏳ Friend Request Pending
+                  </span>
+                </div>
+              );
+            }
+
+            if (isIncoming) {
+              return (
+                <div className="pt-1 flex items-center justify-center">
+                  <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-xl">
+                    🔔 Sent You a Friend Request
+                  </span>
+                </div>
+              );
+            }
+
+            return (
+              <div className="pt-1">
+                <button
+                  disabled={addingFriendId === targetId}
+                  onClick={async () => {
+                    setAddingFriendId(targetId);
+                    try {
+                      const fn = onSendFriendRequest || sendFriendRequest;
+                      await fn(targetId);
+                    } catch (err) {
+                      alert(err.message || 'Failed to send request');
+                    } finally {
+                      setAddingFriendId(null);
+                    }
+                  }}
+                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  <FaUserPlus />
+                  <span>{addingFriendId === targetId ? 'Sending...' : '+ Add Friend'}</span>
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Quick Action Buttons for 1-on-1 */}
@@ -214,23 +290,50 @@ const ContactDrawer = ({ contact, isOpen, onClose, onLeaveGroup, onDeleteGroup }
                         </div>
                       </div>
 
-                      {/* Admin Controls for other members */}
-                      {isCurrentAdmin && !isMe && (
+                      {/* Member Actions (Add Friend & Admin Controls) */}
+                      {!isMe && (
                         <div className="flex items-center space-x-1 shrink-0">
-                          <button
-                            onClick={() => handleToggleRole(m.id, m.fullName || m.name, m.role)}
-                            title={isAdmin ? 'Demote to Member' : 'Promote to Admin'}
-                            className="p-1.5 text-amber-400 hover:bg-slate-800 rounded-lg transition text-xs"
-                          >
-                            <FaShieldVirus />
-                          </button>
-                          <button
-                            onClick={() => handleRemoveMember(m.id, m.fullName || m.name)}
-                            title="Remove Member"
-                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition text-xs"
-                          >
-                            <FaUserMinus />
-                          </button>
+                          {/* Mini Add Friend button if not friends */}
+                          {!friends.some((f) => Number(f.id) === Number(m.id)) && 
+                           !outgoingRequests.some((r) => Number(r.receiverId) === Number(m.id)) && (
+                            <button
+                              disabled={addingFriendId === Number(m.id)}
+                              onClick={async () => {
+                                setAddingFriendId(Number(m.id));
+                                try {
+                                  const fn = onSendFriendRequest || sendFriendRequest;
+                                  await fn(Number(m.id));
+                                } catch (err) {
+                                  alert(err.message || 'Failed to send friend request');
+                                } finally {
+                                  setAddingFriendId(null);
+                                }
+                              }}
+                              title="Add Friend"
+                              className="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition text-xs flex items-center space-x-1 border border-emerald-500/30"
+                            >
+                              <FaUserPlus />
+                            </button>
+                          )}
+
+                          {isCurrentAdmin && (
+                            <>
+                              <button
+                                onClick={() => handleToggleRole(m.id, m.fullName || m.name, m.role)}
+                                title={isAdmin ? 'Demote to Member' : 'Promote to Admin'}
+                                className="p-1.5 text-amber-400 hover:bg-slate-800 rounded-lg transition text-xs"
+                              >
+                                <FaShieldVirus />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveMember(m.id, m.fullName || m.name)}
+                                title="Remove Member"
+                                className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition text-xs"
+                              >
+                                <FaUserMinus />
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
