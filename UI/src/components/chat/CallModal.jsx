@@ -8,6 +8,38 @@ import {
 } from 'react-icons/fa';
 import { useCall } from '../../context/CallContext';
 
+// Dedicated VideoStream component for reliable DOM element binding & autoPlay
+const VideoStream = ({ stream, isMuted = false, className = '' }) => {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const videoNode = videoRef.current;
+    if (!videoNode) return;
+
+    if (stream) {
+      videoNode.srcObject = stream;
+      const playPromise = videoNode.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Video play error (handled):', err);
+        });
+      }
+    } else {
+      videoNode.srcObject = null;
+    }
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={isMuted}
+      className={className}
+    />
+  );
+};
+
 const CallModal = () => {
   const { 
     callState, 
@@ -22,23 +54,7 @@ const CallModal = () => {
     toggleVideo 
   } = useCall();
 
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
   const [callDuration, setCallDuration] = useState(0);
-
-  // Attach local stream to video element
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
-
-  // Attach remote stream to video element
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
 
   // Call duration counter
   useEffect(() => {
@@ -73,10 +89,9 @@ const CallModal = () => {
           
           {callType === 'video' && remoteStream ? (
             /* Live Remote Video Stream */
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
+            <VideoStream
+              stream={remoteStream}
+              isMuted={false}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -96,7 +111,7 @@ const CallModal = () => {
                 <p className="text-xs text-emerald-400 font-semibold mt-1">
                   {callState === 'calling' 
                     ? 'Calling...' 
-                    : (callType === 'video' ? 'HD Video Call' : 'Voice Call')}
+                    : (callType === 'video' ? 'HD Video Call Connected' : 'Voice Call Connected')}
                 </p>
                 {callState === 'connected' && (
                   <p className="text-sm text-emerald-400 font-mono font-bold mt-2">
@@ -111,11 +126,9 @@ const CallModal = () => {
           {callType === 'video' && (
             <div className="absolute bottom-4 right-4 w-28 h-36 bg-slate-900 rounded-2xl border-2 border-slate-700 overflow-hidden shadow-xl z-20">
               {!isVideoOff && localStream ? (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
+                <VideoStream
+                  stream={localStream}
+                  isMuted={true}
                   className="w-full h-full object-cover transform -scale-x-100"
                 />
               ) : (

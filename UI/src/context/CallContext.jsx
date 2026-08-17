@@ -67,9 +67,14 @@ export const CallProvider = ({ children }) => {
 
     // Remote Stream listener
     pc.ontrack = (event) => {
+      console.log('📡 WebRTC ontrack event received:', event);
       if (event.streams && event.streams[0]) {
         remoteStreamRef.current = event.streams[0];
         setRemoteStream(event.streams[0]);
+      } else if (event.track) {
+        const newStream = new MediaStream([event.track]);
+        remoteStreamRef.current = newStream;
+        setRemoteStream(newStream);
       }
     };
 
