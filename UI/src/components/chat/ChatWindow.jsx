@@ -20,7 +20,6 @@ import {
   FaBroom,
   FaChevronDown
 } from 'react-icons/fa';
-import CallModal from './CallModal';
 import ConfirmModal from '../common/ConfirmModal';
 import { useCall } from '../../context/CallContext';
 
@@ -706,14 +705,6 @@ const ChatWindow = ({
         </div>
 
       </footer>
-
-      {/* Audio / Video Call Modal */}
-      <CallModal
-        isOpen={isCallOpen}
-        onClose={() => setIsCallOpen(false)}
-        contact={activeChat}
-        callType={callType}
-      />
 
       {/* Delete Message Confirmation Modal */}
       {(() => {
