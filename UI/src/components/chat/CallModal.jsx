@@ -1,24 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FaPhoneSlash, 
   FaMicrophone, 
   FaMicrophoneSlash, 
   FaVideo, 
-  FaVideoSlash, 
-  FaVolumeUp, 
-  FaVolumeMute, 
-  FaExpand, 
-  FaCompress 
+  FaVideoSlash 
 } from 'react-icons/fa';
+import { useCall } from '../../context/CallContext';
 
-const CallModal = ({ isOpen, onClose, contact, callType = 'audio' }) => {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(callType === 'audio');
-  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+const CallModal = () => {
+  const { 
+    callState, 
+    callType, 
+    peerContact, 
+    localStream, 
+    remoteStream, 
+    isMuted, 
+    isVideoOff, 
+    endCall, 
+    toggleMute, 
+    toggleVideo 
+  } = useCall();
+
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
   const [callDuration, setCallDuration] = useState(0);
 
+  // Attach local stream to video element
   useEffect(() => {
-    if (!isOpen) {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  // Attach remote stream to video element
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
+  // Call duration counter
+  useEffect(() => {
+    if (callState !== 'connected') {
       setCallDuration(0);
       return;
     }
@@ -28,9 +52,11 @@ const CallModal = ({ isOpen, onClose, contact, callType = 'audio' }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen]);
+  }, [callState]);
 
-  if (!isOpen || !contact) return null;
+  if ((callState !== 'calling' && callState !== 'connected') || !peerContact) {
+    return null;
+  }
 
   const formatDuration = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -43,60 +69,62 @@ const CallModal = ({ isOpen, onClose, contact, callType = 'audio' }) => {
       <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col relative h-[520px]">
         
         {/* Background / Video Feed Area */}
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950">
+        <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-slate-950">
           
-          {!isVideoOff ? (
-            /* Simulated Video Stream */
-            <div className="absolute inset-0 bg-slate-950 flex items-center justify-center">
-              <img
-                src={contact.avatar}
-                alt={contact.name}
-                className="w-full h-full object-cover opacity-60 filter blur-sm transform scale-105"
-              />
-              <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs" />
-              
-              {/* Remote Contact Video Frame */}
-              <div className="relative z-10 text-center space-y-3">
-                <img
-                  src={contact.avatar}
-                  alt={contact.name}
-                  className="w-28 h-28 rounded-full border-4 border-emerald-500/80 mx-auto object-cover shadow-2xl"
-                />
-                <h3 className="text-xl font-bold text-white tracking-tight">{contact.name}</h3>
-                <p className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 inline-block">
-                  HD Video Connected • {formatDuration(callDuration)}
-                </p>
-              </div>
-
-              {/* Picture-in-Picture Local User Video Preview */}
-              <div className="absolute bottom-4 right-4 w-28 h-36 bg-slate-900 rounded-2xl border-2 border-slate-700 overflow-hidden shadow-xl">
-                <img
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Me"
-                  alt="My Video"
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute bottom-1.5 left-2 text-[9px] bg-slate-950/80 px-1.5 py-0.5 rounded text-slate-300">You</span>
-              </div>
-            </div>
+          {callType === 'video' && remoteStream ? (
+            /* Live Remote Video Stream */
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
           ) : (
-            /* Audio Call Interface */
+            /* Calling / Audio Call Screen */
             <div className="text-center space-y-5 p-6 z-10">
               <div className="relative inline-block">
-                <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
+                <div className={`absolute inset-0 rounded-full bg-emerald-500/20 ${callState === 'calling' ? 'animate-ping' : ''}`} />
                 <img
-                  src={contact.avatar}
-                  alt={contact.name}
-                  className="w-32 h-32 rounded-full border-4 border-emerald-500 mx-auto object-cover shadow-2xl relative z-10"
+                  src={peerContact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(peerContact.name)}`}
+                  alt={peerContact.name}
+                  className="w-28 h-28 rounded-full border-4 border-emerald-500 mx-auto object-cover shadow-2xl relative z-10 bg-slate-800"
                 />
               </div>
 
               <div>
-                <h3 className="text-2xl font-bold text-white tracking-tight">{contact.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">{contact.status || 'ChatApp Pro Voice Call'}</p>
-                <p className="text-sm text-emerald-400 font-mono font-bold mt-2">
-                  {formatDuration(callDuration)}
+                <h3 className="text-2xl font-bold text-white tracking-tight">{peerContact.name}</h3>
+                <p className="text-xs text-emerald-400 font-semibold mt-1">
+                  {callState === 'calling' 
+                    ? 'Calling...' 
+                    : (callType === 'video' ? 'HD Video Call' : 'Voice Call')}
                 </p>
+                {callState === 'connected' && (
+                  <p className="text-sm text-emerald-400 font-mono font-bold mt-2">
+                    {formatDuration(callDuration)}
+                  </p>
+                )}
               </div>
+            </div>
+          )}
+
+          {/* Picture-in-Picture Local Camera Feed */}
+          {callType === 'video' && (
+            <div className="absolute bottom-4 right-4 w-28 h-36 bg-slate-900 rounded-2xl border-2 border-slate-700 overflow-hidden shadow-xl z-20">
+              {!isVideoOff && localStream ? (
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover transform -scale-x-100"
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center text-slate-500 text-xs">
+                  <FaVideoSlash className="text-base mb-1" />
+                  <span>Camera Off</span>
+                </div>
+              )}
+              <span className="absolute bottom-1.5 left-2 text-[9px] bg-slate-950/80 px-1.5 py-0.5 rounded text-slate-300">You</span>
             </div>
           )}
 
@@ -107,7 +135,7 @@ const CallModal = ({ isOpen, onClose, contact, callType = 'audio' }) => {
           
           {/* Mute Mic */}
           <button
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={toggleMute}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg transition ${
               isMuted
                 ? 'bg-red-500/20 border border-red-500/40 text-red-400'
@@ -118,35 +146,24 @@ const CallModal = ({ isOpen, onClose, contact, callType = 'audio' }) => {
             {isMuted ? <FaMicrophoneSlash /> : <FaMicrophone />}
           </button>
 
-          {/* Toggle Video */}
-          <button
-            onClick={() => setIsVideoOff(!isVideoOff)}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg transition ${
-              isVideoOff
-                ? 'bg-slate-800 hover:bg-slate-700 text-slate-400'
-                : 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
-            }`}
-            title={isVideoOff ? 'Turn Video On' : 'Turn Video Off'}
-          >
-            {isVideoOff ? <FaVideoSlash /> : <FaVideo />}
-          </button>
-
-          {/* Speaker Toggle */}
-          <button
-            onClick={() => setIsSpeakerOn(!isSpeakerOn)}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg transition ${
-              !isSpeakerOn
-                ? 'bg-slate-800 text-slate-500'
-                : 'bg-slate-800 hover:bg-slate-700 text-white'
-            }`}
-            title={isSpeakerOn ? 'Speaker On' : 'Speaker Off'}
-          >
-            {isSpeakerOn ? <FaVolumeUp /> : <FaVolumeMute />}
-          </button>
+          {/* Toggle Camera */}
+          {callType === 'video' && (
+            <button
+              onClick={toggleVideo}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg transition ${
+                isVideoOff
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  : 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400'
+              }`}
+              title={isVideoOff ? 'Turn Camera On' : 'Turn Camera Off'}
+            >
+              {isVideoOff ? <FaVideoSlash /> : <FaVideo />}
+            </button>
+          )}
 
           {/* End Call */}
           <button
-            onClick={onClose}
+            onClick={endCall}
             className="w-14 h-14 rounded-2xl bg-red-500 hover:bg-red-400 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-red-500/30 transition transform hover:scale-105"
             title="End Call"
           >

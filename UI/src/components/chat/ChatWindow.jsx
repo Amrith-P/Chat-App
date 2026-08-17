@@ -22,6 +22,7 @@ import {
 } from 'react-icons/fa';
 import CallModal from './CallModal';
 import ConfirmModal from '../common/ConfirmModal';
+import { useCall } from '../../context/CallContext';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -57,9 +58,13 @@ const ChatWindow = ({
   const [isClearChatConfirmOpen, setIsClearChatConfirmOpen] = useState(false);
   const [isDeleteChatConfirmOpen, setIsDeleteChatConfirmOpen] = useState(false);
 
-  // Call Modal State
-  const [isCallOpen, setIsCallOpen] = useState(false);
-  const [callType, setCallType] = useState('audio');
+  // Call State Hook
+  const { startCall } = useCall();
+
+  const handleStartCall = (type = 'video') => {
+    if (!activeChat) return;
+    startCall(activeChat, type);
+  };
 
   // Action States
   const [replyingTo, setReplyingTo] = useState(null);
@@ -121,11 +126,6 @@ const ChatWindow = ({
       }
       return updated;
     });
-  };
-
-  const handleStartCall = (type) => {
-    setCallType(type);
-    setIsCallOpen(true);
   };
 
   if (!activeChat) {

@@ -290,6 +290,58 @@ export const initSocket = (server) => {
       }
     });
 
+    // WebRTC Real-time Calling Signaling
+    socket.on('call_user', (data = {}) => {
+      const { targetUserId, signalData, isVideo } = data;
+      if (!targetUserId) return;
+
+      io.to(`user_${targetUserId}`).emit('incoming_call', {
+        callerId: userId,
+        callerName: socket.user.fullName || socket.user.name,
+        callerAvatar: socket.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(socket.user.fullName || 'User')}`,
+        signalData,
+        isVideo: Boolean(isVideo)
+      });
+    });
+
+    socket.on('accept_call', (data = {}) => {
+      const { targetUserId, signalData } = data;
+      if (!targetUserId) return;
+
+      io.to(`user_${targetUserId}`).emit('call_accepted', {
+        signalData,
+        acceptedByUserId: userId
+      });
+    });
+
+    socket.on('ice_candidate', (data = {}) => {
+      const { targetUserId, candidate } = data;
+      if (!targetUserId || !candidate) return;
+
+      io.to(`user_${targetUserId}`).emit('ice_candidate_received', {
+        candidate,
+        fromUserId: userId
+      });
+    });
+
+    socket.on('reject_call', (data = {}) => {
+      const { targetUserId } = data;
+      if (!targetUserId) return;
+
+      io.to(`user_${targetUserId}`).emit('call_rejected', {
+        rejectedByUserId: userId
+      });
+    });
+
+    socket.on('end_call', (data = {}) => {
+      const { targetUserId } = data;
+      if (!targetUserId) return;
+
+      io.to(`user_${targetUserId}`).emit('call_ended', {
+        endedByUserId: userId
+      });
+    });
+
     // Handle Disconnect
     socket.on('disconnect', () => {
       const userSockets = onlineUsers.get(userId);
