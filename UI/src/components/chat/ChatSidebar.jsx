@@ -15,8 +15,9 @@ import {
   FaBroom,
   FaRegStar
 } from 'react-icons/fa';
-import { apiRequest } from '../../api/client';
-import ConfirmModal from '../common/ConfirmModal';
+import FriendsTab from '../social/FriendsTab';
+import RequestsTab from '../social/RequestsTab';
+import { FaBell, FaComments } from 'react-icons/fa';
 
 const ChatSidebar = ({ 
   conversations, 
@@ -27,7 +28,18 @@ const ChatSidebar = ({
   onDeleteChat, 
   onClearChat, 
   onToggleFavorite, 
-  onStartChatWithContact 
+  onStartChatWithContact,
+  activeTab = 'chats',
+  onTabChange,
+  friends = [],
+  incomingRequests = [],
+  outgoingRequests = [],
+  incomingCount = 0,
+  onAcceptRequest,
+  onRejectRequest,
+  onCancelRequest,
+  onRemoveFriend,
+  loadingSocial = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // 'all' | 'unread' | 'favorites'
@@ -133,39 +145,108 @@ const ChatSidebar = ({
   return (
     <div className="w-full h-full bg-slate-900/90 border-r border-slate-800 flex flex-col select-none relative">
       
-      {/* HEADER */}
-      <div className="p-4 border-b border-slate-800 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-bold text-white tracking-tight">Messages</h2>
-            <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">
-              {conversations.length}
+      {/* SOCIAL NAVIGATION TAB BAR */}
+      <div className="flex items-center justify-between p-2 bg-slate-950/80 border-b border-slate-800 shrink-0">
+        <button
+          onClick={() => onTabChange && onTabChange('chats')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 ${
+            activeTab === 'chats'
+              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <FaCommentDots className="text-xs" />
+          <span>Chats</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange && onTabChange('friends')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 ${
+            activeTab === 'friends'
+              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <FaUserFriends className="text-xs" />
+          <span>Friends</span>
+          <span className="text-[10px] opacity-80">({friends.length})</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange && onTabChange('requests')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 relative ${
+            activeTab === 'requests'
+              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <FaBell className="text-xs" />
+          <span>Requests</span>
+          {incomingCount > 0 && (
+            <span className="px-1.5 py-0.2 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full animate-bounce">
+              {incomingCount}
             </span>
-          </div>
+          )}
+        </button>
+      </div>
 
-          <div className="flex items-center space-x-1.5">
-            <button
-              onClick={onOpenCreateGroup}
-              title="Create New Group"
-              className="w-9 h-9 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl flex items-center justify-center font-bold transition border border-slate-700/60"
-            >
-              <FaUserFriends className="text-sm" />
-            </button>
-            <button
-              onClick={onOpenNewChat}
-              title="Start New Chat"
-              className="w-9 h-9 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl flex items-center justify-center font-bold transition shadow-lg shadow-emerald-500/20"
-            >
-              <FaPlus className="text-sm" />
-            </button>
-          </div>
-        </div>
+      {/* RENDER CONDITIONAL TABS */}
+      {activeTab === 'friends' ? (
+        <FriendsTab
+          friends={friends}
+          loading={loadingSocial}
+          onStartChat={(f) => {
+            if (onTabChange) onTabChange('chats');
+            onStartChatWithContact(f);
+          }}
+          onRemoveFriend={onRemoveFriend}
+          onOpenGlobalSearch={onOpenNewChat}
+        />
+      ) : activeTab === 'requests' ? (
+        <RequestsTab
+          incomingRequests={incomingRequests}
+          outgoingRequests={outgoingRequests}
+          loading={loadingSocial}
+          onAccept={onAcceptRequest}
+          onReject={onRejectRequest}
+          onCancel={onCancelRequest}
+        />
+      ) : (
+        /* STANDARD CHATS TAB VIEW */
+        <>
+          {/* HEADER */}
+          <div className="p-4 border-b border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <h2 className="text-xl font-bold text-white tracking-tight">Messages</h2>
+                <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full">
+                  {conversations.length}
+                </span>
+              </div>
 
-        {/* SEARCH BAR */}
-        <div className="relative">
-          <FaSearch className="absolute left-3.5 top-3 text-slate-500 text-xs" />
-          <input
-            type="text"
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={onOpenCreateGroup}
+                  title="Create New Group"
+                  className="w-9 h-9 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl flex items-center justify-center font-bold transition border border-slate-700/60"
+                >
+                  <FaUserFriends className="text-sm" />
+                </button>
+                <button
+                  onClick={onOpenNewChat}
+                  title="Add Friend / Search Users"
+                  className="w-9 h-9 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl flex items-center justify-center font-bold transition shadow-lg shadow-emerald-500/20"
+                >
+                  <FaPlus className="text-sm" />
+                </button>
+              </div>
+            </div>
+
+            {/* SEARCH BAR */}
+            <div className="relative">
+              <FaSearch className="absolute left-3.5 top-3 text-slate-500 text-xs" />
+              <input
+                type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search contacts, messages, or users..."
@@ -503,6 +584,8 @@ const ChatSidebar = ({
             })
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* Clear Chat Confirm Modal */}

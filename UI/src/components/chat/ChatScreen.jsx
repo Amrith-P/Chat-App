@@ -15,6 +15,7 @@ import ContactDrawer from './ContactDrawer';
 import SearchModal from './SearchModal';
 import CreateGroupModal from './CreateGroupModal';
 import { useGroupChat } from '../../hooks/chat/useGroupChat';
+import { useFriends } from '../../hooks/social/useFriends';
 
 const parseDate = (dateStr) => {
   if (!dateStr) return new Date();
@@ -45,8 +46,23 @@ const ChatScreen = () => {
     setMobileView
   );
 
-  // Group Chat Hook
+  // Group Chat & Friends Hooks
   const { createGroup, leaveGroup: leaveGroupApi, deleteGroup: deleteGroupApi } = useGroupChat();
+  const { 
+    friends, 
+    incomingRequests, 
+    outgoingRequests, 
+    incomingCount, 
+    loading: loadingSocial, 
+    sendFriendRequest, 
+    acceptFriendRequest, 
+    rejectFriendRequest, 
+    cancelFriendRequest, 
+    removeFriend 
+  } = useFriends();
+
+  // Active Sidebar Tab State ('chats' | 'friends' | 'requests')
+  const [activeTab, setActiveTab] = useState('chats');
 
   // Modals & Drawers
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -539,6 +555,17 @@ const ChatScreen = () => {
               onClearChat={clearChat}
               onToggleFavorite={toggleFavoriteChat}
               onStartChatWithContact={handleStartChatWithContact}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              friends={friends}
+              incomingRequests={incomingRequests}
+              outgoingRequests={outgoingRequests}
+              incomingCount={incomingCount}
+              onAcceptRequest={acceptFriendRequest}
+              onRejectRequest={rejectFriendRequest}
+              onCancelRequest={cancelFriendRequest}
+              onRemoveFriend={removeFriend}
+              loadingSocial={loadingSocial}
             />
           </div>
 
@@ -599,6 +626,8 @@ const ChatScreen = () => {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectUser={handleStartChatWithContact}
+        onSendFriendRequest={sendFriendRequest}
+        onAcceptRequest={acceptFriendRequest}
       />
 
       <CreateGroupModal

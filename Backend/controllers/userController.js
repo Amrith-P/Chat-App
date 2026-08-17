@@ -1,34 +1,99 @@
 import bcrypt from 'bcryptjs';
 import db from '../config/db.js';
 
-// @desc    Search users by name or email
+// @desc    Search users by name or email with relationship status
 // @route   GET /api/users/search?q=query
 export const searchUsers = (req, res) => {
-  const query = req.query.q || '';
+  const query = (req.query.q || '').trim();
   const currentUserId = Number(req.user.id);
 
-  if (!query.trim()) {
-    // Return recommended active users excluding self
-    db.all(
-      'SELECT id, fullName, email, avatar, status, createdAt FROM users WHERE id != ? LIMIT 10',
-      [currentUserId],
-      (err, users) => {
-        if (err) return res.status(500).json({ message: 'Database query failed' });
-        res.json({ users });
+  const baseSelect = `
+    SELECT u.id, u.fullName, u.email, u.avatar, u.status, u.createdAt,
+      CASE 
+        WHEN f.id IS NOT NULL THEN 'friend'
+        WHEN fr_out.id IS NOT NULL THEN 'request_sent'
+        WHEN fr_inc.id IS NOT NULL THEN 'request_received'
+        ELSE 'none'
+      END as relationship,
+      fr_inc.id as incomingRequestId
+    FROM users u
+    LEFT JOIN friendships f ON (
+      (f.user_one_id = LEAST(?, u.id) AND f.user_two_id = GREATEST(?, u.id)) OR
+      (f.user_one_id = ? AND f.user_two_id = u.id) OR
+      (f.user_one_id = u.id AND f.user_two_id = ?)
+    )
+    LEFT JOIN friend_requests fr_out ON (fr_out.sender_id = ? AND fr_out.receiver_id = u.id AND fr_out.status = 'pending')
+    LEFT JOIN friend_requests fr_inc ON (fr_inc.sender_id = u.id AND fr_inc.receiver_id = ? AND fr_inc.status = 'pending')
+    WHERE u.id != ?
+  `;
+
+  if (!query) {
+    const sql = `${baseSelect} LIMIT 15`;
+    const params = [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId];
+    db.all(sql, params, (err, users) => {
+      if (err) {
+        // SQLite LEAST/GREATEST fallback if standard SQL syntax differs
+        const fallbackSql = `
+          SELECT u.id, u.fullName, u.email, u.avatar, u.status, u.createdAt,
+            CASE 
+              WHEN f.id IS NOT NULL THEN 'friend'
+              WHEN fr_out.id IS NOT NULL THEN 'request_sent'
+              WHEN fr_inc.id IS NOT NULL THEN 'request_received'
+              ELSE 'none'
+            END as relationship,
+            fr_inc.id as incomingRequestId
+          FROM users u
+          LEFT JOIN friendships f ON (
+            (f.user_one_id = ? AND f.user_two_id = u.id) OR (f.user_one_id = u.id AND f.user_two_id = ?)
+          )
+          LEFT JOIN friend_requests fr_out ON (fr_out.sender_id = ? AND fr_out.receiver_id = u.id AND fr_out.status = 'pending')
+          LEFT JOIN friend_requests fr_inc ON (fr_inc.sender_id = u.id AND fr_inc.receiver_id = ? AND fr_inc.status = 'pending')
+          WHERE u.id != ?
+          LIMIT 15
+        `;
+        db.all(fallbackSql, [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId], (fErr, fUsers) => {
+          if (fErr) return res.status(500).json({ message: 'Database query failed' });
+          res.json({ users: fUsers || [] });
+        });
+        return;
       }
-    );
+      res.json({ users: users || [] });
+    });
     return;
   }
 
-  const searchTerm = `%${query.trim()}%`;
-  db.all(
-    'SELECT id, fullName, email, avatar, status, createdAt FROM users WHERE id != ? AND (fullName LIKE ? OR email LIKE ?) LIMIT 15',
-    [currentUserId, searchTerm, searchTerm],
-    (err, users) => {
-      if (err) return res.status(500).json({ message: 'Database search error' });
-      res.json({ users });
+  const searchTerm = `%${query}%`;
+  const sql = `${baseSelect} AND (u.fullName LIKE ? OR u.email LIKE ?) LIMIT 20`;
+  const params = [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, searchTerm, searchTerm];
+  
+  db.all(sql, params, (err, users) => {
+    if (err) {
+      const fallbackSql = `
+        SELECT u.id, u.fullName, u.email, u.avatar, u.status, u.createdAt,
+          CASE 
+            WHEN f.id IS NOT NULL THEN 'friend'
+            WHEN fr_out.id IS NOT NULL THEN 'request_sent'
+            WHEN fr_inc.id IS NOT NULL THEN 'request_received'
+            ELSE 'none'
+          END as relationship,
+          fr_inc.id as incomingRequestId
+        FROM users u
+        LEFT JOIN friendships f ON (
+          (f.user_one_id = ? AND f.user_two_id = u.id) OR (f.user_one_id = u.id AND f.user_two_id = ?)
+        )
+        LEFT JOIN friend_requests fr_out ON (fr_out.sender_id = ? AND fr_out.receiver_id = u.id AND fr_out.status = 'pending')
+        LEFT JOIN friend_requests fr_inc ON (fr_inc.sender_id = u.id AND fr_inc.receiver_id = ? AND fr_inc.status = 'pending')
+        WHERE u.id != ? AND (u.fullName LIKE ? OR u.email LIKE ?)
+        LIMIT 20
+      `;
+      db.all(fallbackSql, [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, searchTerm, searchTerm], (fErr, fUsers) => {
+        if (fErr) return res.status(500).json({ message: 'Database search error' });
+        res.json({ users: fUsers || [] });
+      });
+      return;
     }
-  );
+    res.json({ users: users || [] });
+  });
 };
 
 // @desc    Get detailed user profile by ID

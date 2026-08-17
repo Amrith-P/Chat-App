@@ -245,6 +245,23 @@ export const initDb = () => {
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_read_at TIMESTAMP,
         UNIQUE(group_id, user_id)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS friend_requests (
+        id SERIAL PRIMARY KEY,
+        sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS friendships (
+        id SERIAL PRIMARY KEY,
+        user_one_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_two_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_one_id, user_two_id)
       );`
     ];
 
@@ -423,6 +440,31 @@ export const initDb = () => {
         )
       `);
 
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS friend_requests (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sender_id INTEGER NOT NULL,
+          receiver_id INTEGER NOT NULL,
+          status TEXT DEFAULT 'pending',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS friendships (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_one_id INTEGER NOT NULL,
+          user_two_id INTEGER NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_one_id, user_two_id),
+          FOREIGN KEY(user_one_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY(user_two_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
       // Migrations & Columns Addition
       dbWrapper.run(`ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN replyToId INTEGER`, [], () => {});
@@ -447,6 +489,9 @@ export const initDb = () => {
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_del_msg_user ON deleted_messages_for_user(messageId, userId)`);
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id)`);
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_freq_receiver ON friend_requests(receiver_id)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_freq_sender ON friend_requests(sender_id)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_friendships_users ON friendships(user_one_id, user_two_id)`);
     });
   }
 };

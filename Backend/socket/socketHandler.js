@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
+import { areUsersFriends } from '../middleware/friendshipMiddleware.js';
 
 // Map of userId -> Set of active socket IDs
 const onlineUsers = new Map();
@@ -120,7 +121,7 @@ export const initSocket = (server) => {
     });
 
     // Handle real-time sending of messages
-    socket.on('send_message', (data = {}) => {
+    socket.on('send_message', async (data = {}) => {
       const targetChatId = data.chatId || data.conversationId;
       const targetText = data.text || data.content;
       const recipientId = data.recipientId;
@@ -130,6 +131,15 @@ export const initSocket = (server) => {
       if (!targetChatId || !targetText || !targetText.trim()) {
         console.warn('⚠️ Invalid send_message payload received:', data);
         return;
+      }
+
+      // If direct recipient, verify friendship
+      if (recipientId) {
+        const isFriends = await areUsersFriends(userId, recipientId);
+        if (!isFriends) {
+          socket.emit('error', { message: 'Forbidden: You must be confirmed friends to send private messages' });
+          return;
+        }
       }
 
       const trimmedText = targetText.trim();

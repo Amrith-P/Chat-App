@@ -1,5 +1,6 @@
 import db from '../config/db.js';
 import { isUserOnline } from '../socket/socketHandler.js';
+import { areUsersFriends } from '../middleware/friendshipMiddleware.js';
 
 // @desc    Get all conversations (direct + group) for the logged in user
 // @route   GET /api/chats
@@ -102,7 +103,7 @@ export const getUserChats = (req, res) => {
 
 // @desc    Create or find direct 1-on-1 chat with target user
 // @route   POST /api/chats
-export const createOrGetDirectChat = (req, res) => {
+export const createOrGetDirectChat = async (req, res) => {
   const currentUserId = req.user.id;
   const { recipientId } = req.body;
 
@@ -112,6 +113,15 @@ export const createOrGetDirectChat = (req, res) => {
 
   if (Number(recipientId) === Number(currentUserId)) {
     return res.status(400).json({ message: 'Cannot create a chat with yourself' });
+  }
+
+  // Enforce Friendship check
+  const isFriends = await areUsersFriends(currentUserId, recipientId);
+  if (!isFriends) {
+    return res.status(403).json({
+      message: 'Forbidden: You can only start private chats with confirmed friends',
+      code: 'FRIENDSHIP_REQUIRED'
+    });
   }
 
   // Check if a direct conversation already exists between these 2 users

@@ -1,4 +1,5 @@
 import db from '../config/db.js';
+import { areUsersFriends } from '../middleware/friendshipMiddleware.js';
 
 // @desc    Get messages for a conversation
 // @route   GET /api/messages/:chatId
@@ -90,36 +91,62 @@ export const sendMessage = (req, res) => {
     return res.status(400).json({ message: 'Chat ID and message content are required' });
   }
 
-  db.run(
-    'INSERT INTO messages (conversationid, senderid, content, messagetype, replytoid, isforwarded) VALUES (?, ?, ?, ?, ?, ?)',
-    [targetChatId, senderId, content.trim(), messageType, replyToId, isForwarded ? 1 : 0],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ message: 'Failed to send message', error: err.message });
-      }
-
-      const newMessage = {
-        id: this.lastID,
-        chatId: targetChatId,
-        conversationId: targetChatId,
-        senderId,
-        isMe: true,
-        text: content.trim(),
-        content: content.trim(),
-        messageType,
-        replyToId,
-        isForwarded: Boolean(isForwarded),
-        isEdited: false,
-        isDeleted: false,
-        readAt: null,
-        reactions: [],
-        createdAt: new Date().toISOString(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      res.status(201).json({ message: newMessage });
+  // Verify conversation type and friendship if direct chat
+  db.get('SELECT id, type FROM conversations WHERE id = ?', [targetChatId], (cErr, conv) => {
+    if (cErr || !conv) {
+      return res.status(404).json({ message: 'Conversation not found' });
     }
-  );
+
+    if (conv.type === 'direct') {
+      db.get('SELECT userId FROM conversation_members WHERE conversationId = ? AND userId != ?', [targetChatId, senderId], async (mErr, otherMember) => {
+        if (otherMember) {
+          const isFriends = await areUsersFriends(senderId, otherMember.userId);
+          if (!isFriends) {
+            return res.status(403).json({
+              message: 'Forbidden: You must be friends to send messages in a private chat',
+              code: 'FRIENDSHIP_REQUIRED'
+            });
+          }
+        }
+        executeSendMessage();
+      });
+    } else {
+      executeSendMessage();
+    }
+  });
+
+  const executeSendMessage = () => {
+    db.run(
+      'INSERT INTO messages (conversationid, senderid, content, messagetype, replytoid, isforwarded) VALUES (?, ?, ?, ?, ?, ?)',
+      [targetChatId, senderId, content.trim(), messageType, replyToId, isForwarded ? 1 : 0],
+      function (err) {
+        if (err) {
+          return res.status(500).json({ message: 'Failed to send message', error: err.message });
+        }
+
+        const newMessage = {
+          id: this.lastID,
+          chatId: targetChatId,
+          conversationId: targetChatId,
+          senderId,
+          isMe: true,
+          text: content.trim(),
+          content: content.trim(),
+          messageType,
+          replyToId,
+          isForwarded: Boolean(isForwarded),
+          isEdited: false,
+          isDeleted: false,
+          readAt: null,
+          reactions: [],
+          createdAt: new Date().toISOString(),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        res.status(201).json({ message: newMessage });
+      }
+    );
+  };
 };
 
 // @desc    Clear messages by chatId

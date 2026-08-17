@@ -11,6 +11,7 @@ import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 import groupRoutes from './routes/groupRoutes.js';
+import friendRoutes from './routes/friendRoutes.js';
 import { initSocket } from './socket/socketHandler.js';
 import { refreshTokenHandler } from './controllers/authController.js';
 import { deleteChat, clearChatMessages } from './controllers/chatController.js';
@@ -86,6 +87,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/friends', friendRoutes);
+app.use('/api/friend-requests', friendRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

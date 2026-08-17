@@ -1,1581 +1,2731 @@
-Application Overview
+Yes. The better architecture is to change the application from **"any user can start chatting with any other user"** to a **friend-based messaging system**:
 
-ChatApp Pro is a full-stack real-time messaging application designed to provide a WhatsApp-like private messaging experience through a web browser.
+**Search user → Send Friend Request → Other user accepts → They become friends → Chat becomes available.**
 
-The application consists of:
+Before friendship is established, there should be **no normal chat access** between those users.
 
-Frontend
-React
-Vite
-JavaScript
-Tailwind CSS
-React Router DOM
-Context API / React state
-Socket.IO Client
-Axios/fetch for REST API communication
-Backend
-Node.js
-Express.js
-Socket.IO
-SQLite
-JWT authentication
-bcrypt password hashing
-Communication architecture
+Here is a complete prompt you can give to your coding agent.
 
-The application uses two communication mechanisms simultaneously:
+# Implement Friend-Based Messaging System in ChatApp Pro
 
-                     ChatApp Pro
-                          │
-              ┌───────────┴───────────┐
-              │                       │
-        REST API                 Socket.IO
-              │                       │
-       Persistent data          Real-time data
-              │                       │
-           SQLite              WebSocket connection
-REST API is responsible for:
-Registration
-Login
-Authentication
-User search
-User profile retrieval
-Chat creation/retrieval
-Message persistence
-Historical message retrieval
-Other database operations
-Socket.IO is responsible for:
-Instant messages
-Typing indicators
-Online/offline status
-Read receipts
-Emoji reactions
-Real-time UI updates
-2. Overall User Journey
+You are working on an existing full-stack real-time messaging application called **ChatApp Pro**.
 
-The complete user journey is:
+The application currently allows users to search for other users and start private conversations. Change this behavior into a proper **friend-based social messaging system**.
 
-Application Opens
-       ↓
-Check Authentication Token
-       ↓
- ┌─────┴─────┐
- │           │
-Token       No Token
-Valid        │
- │           ↓
- ↓         Login
-Dashboard    ↓
- │         Authentication
- ↓           ↓
-Search Users
-       ↓
-Select User
-       ↓
-Start / Open Chat
-       ↓
-Load Previous Messages
-       ↓
-Connect Socket
-       ↓
-Send / Receive Messages
-       ↓
-Typing / Read / Reactions
-       ↓
-Continue Conversations
-       ↓
-Logout
-       ↓
-Disconnect Socket
-       ↓
-Clear Authentication
-       ↓
-Login Page
-3. Application Startup
+The new rule is:
 
-When the user opens the application, React starts through Vite.
+> **Users can only start a private chat after both users have become friends.**
 
-The frontend first determines whether the user already has an authenticated session.
+A user must first send a friend request. The other user must accept the request. Only after acceptance should the two users be allowed to communicate through private chat.
 
-Typically, the application checks:
+Do not create a separate application or rewrite the existing architecture.
 
-localStorage
+First inspect the existing codebase and integrate this feature into the existing:
+
+* React
+* Vite
+* JavaScript
+* Tailwind CSS
+* Shadcn UI
+* React Router DOM
+* Node.js
+* Express
+* SQLite
+* JWT
+* Socket.IO
+* Existing Context/state management
+* Existing chat components
+
+The existing group-chat functionality should continue to work alongside this new friend system.
+
+---
+
+# 1. New Application Concept
+
+The application should now work like this:
+
+```text
+User searches for another user
+            ↓
+User views profile
+            ↓
+User clicks "Add Friend"
+            ↓
+Friend request is created
+            ↓
+Recipient receives real-time notification
+            ↓
+Recipient opens "Requests"
+            ↓
+Recipient sees request
+            ↓
+Accept
      ↓
-JWT token
+Both users become friends
+            ↓
+"Message" button becomes available
+            ↓
+Private chat can now be started
+```
+
+If the recipient rejects the request:
+
+```text
+Request rejected
+        ↓
+No friendship
+        ↓
+No chat
+```
+
+If the recipient accepts:
+
+```text
+Friendship created
+        ↓
+Both users appear in each other's Friends list
+        ↓
+Private conversation becomes available
+```
+
+---
+
+# 2. Important Business Rule
+
+This is the most important requirement:
+
+## Users cannot privately message non-friends.
+
+The backend must enforce this.
+
+Do NOT simply hide the "Message" button on the frontend.
 
 For example:
 
-authToken = stored JWT
-
-The application then decides:
-
-If token exists
-
-The user is considered potentially authenticated.
-
-The application:
-
-Retrieves the token.
-Restores authentication state.
-Loads the user information.
-Establishes the Socket.IO connection.
-Redirects the user to the main application/dashboard.
-If token does not exist
-
-The user is redirected to:
-
-/login
-4. Login Flow
-Login Screen
-
-The login page contains:
-
-Application logo
-Email input
-Password input
-Login button
-Link to registration
-Validation/error messages
-
-Example:
-
-┌──────────────────────────────────────┐
-│              ChatApp                 │
-│                                      │
-│         Welcome Back                 │
-│                                      │
-│ Email                                │
-│ ┌──────────────────────────────────┐ │
-│ │ user@example.com                 │ │
-│ └──────────────────────────────────┘ │
-│                                      │
-│ Password                             │
-│ ┌──────────────────────────────────┐ │
-│ │ ••••••••••                       │ │
-│ └──────────────────────────────────┘ │
-│                                      │
-│        [       Login       ]         │
-│                                      │
-│ Don't have an account? Register      │
-└──────────────────────────────────────┘
-5. Login Validation
-
-When the user clicks Login, the frontend validates the form.
-
-Typical checks:
-
-Email
-Required
-Valid email format
-Password
-Required
-
-If validation fails:
-
-Login
- ↓
-Validation
- ↓
-Invalid
- ↓
-Show error
-
-The API request is not sent until the basic validation succeeds.
-
-6. Login API Request
-
-The frontend sends:
-
-POST /api/auth/login
-
-with something similar to:
-
-{
-  "email": "user@example.com",
-  "password": "password"
-}
-7. Backend Authentication
-
-The Express backend receives the request.
-
-The flow is:
-
-Login request
-     ↓
-Find user by email
-     ↓
-User exists?
-   /     \
- No       Yes
- ↓         ↓
-Error    bcrypt.compare()
-             ↓
-       Password correct?
-          /       \
-        No         Yes
-        ↓           ↓
-      Error       Generate JWT
-                      ↓
-                  Return token
-
-The password is never stored as plain text.
-
-The database stores a bcrypt hash.
-
-8. Successful Login
-
-The backend returns information such as:
-
-{
-  "token": "JWT_TOKEN",
-  "user": {
-    "id": 1,
-    "name": "Amrith",
-    "email": "user@example.com"
-  }
-}
-
-The frontend stores the authentication information.
-
-For the implementation you described, the JWT is persisted using browser storage.
-
-Conceptually:
-
-localStorage
- ├── token
- └── user
-9. What Happens Immediately After Login?
-
-Several things happen.
-
-Successful Login
-       ↓
-Store JWT
-       ↓
-Update Auth Context
-       ↓
-Update current user
-       ↓
-Connect Socket.IO
-       ↓
-Join user's private socket room
-       ↓
-Navigate to application
-
-The user is then taken to the main chat interface.
-
-10. Main Application UI
-
-The main interface behaves similarly to WhatsApp Web.
-
-A typical layout:
-
-┌───────────────────────────────────────────────────────────┐
-│ Header                                                     │
-├───────────────────┬───────────────────────────────────────┤
-│                   │                                       │
-│ Search            │ Chat Header                           │
-│                   │                                       │
-│ Conversations     │                                       │
-│                   │                                       │
-│ ───────────────   │                                       │
-│ John              │          Messages                     │
-│ Last message      │                                       │
-│                   │                                       │
-│ Sarah             │                                       │
-│ Last message      │                                       │
-│                   │                                       │
-│ Mike              │                                       │
-│ Last message      │                                       │
-│                   │                                       │
-│                   ├───────────────────────────────────────┤
-│                   │ Message input          Send           │
-└───────────────────┴───────────────────────────────────────┘
-
-The interface consists primarily of:
-
-Application header
-User/profile area
-Search
-Conversation list
-Chat window
-Message input
-Message actions
-11. Authentication Context
-
-The frontend maintains authentication globally.
-
-Conceptually:
-
-AuthContext
-   │
-   ├── currentUser
-   ├── token
-   ├── login()
-   ├── logout()
-   └── authentication status
-
-This allows components throughout the application to know:
-
-Who is currently logged in?
-
-without repeatedly querying the login page.
-
-12. Protected Routes
-
-The application uses protected routes.
-
-For example:
-
-/login
-/register
-
-are public.
-
-But:
-
-/chat
-/dashboard
-/profile
-
-require authentication.
-
-The routing logic is essentially:
-
-User requests protected page
-          ↓
-       Token?
-       /    \
-     No      Yes
-     ↓        ↓
- Login      Allow
-
-This prevents unauthenticated users from directly accessing the chat interface.
-
-13. Socket.IO Connection
-
-After successful authentication, the frontend establishes a persistent Socket.IO connection.
-
-Conceptually:
-
-React Application
-       │
-       │ Socket.IO
-       ↓
-Node.js Socket Server
-
-This connection stays alive while the user is using the application.
-
-The purpose is to allow instant communication without repeatedly polling the server.
-
-14. Private Socket Rooms
-
-Each user can have an isolated room.
-
-Conceptually:
-
+```text
 User A
-Room: user_101
-
-
-User B
-Room: user_205
-
-When User A sends a message to User B:
-
-User A
-  ↓
-Socket Server
-  ↓
-User B's room
-  ↓
-User B
-
-This prevents messages from being broadcast to unrelated users.
-
-15. User Registration
-
-A new user can select:
-
-Create Account / Register
-
-The registration screen contains:
-
-Full name
-Email
-Password
-Confirm password
-Register button
-
-The frontend validates the fields.
-
-The backend:
-
-Checks whether email already exists.
-Hashes password using bcrypt.
-Creates user record.
-Stores profile information.
-Returns registration result.
-16. User Profile
-
-The application stores information such as:
-
-User
-├── ID
-├── Full Name
-├── Email
-├── Profile Picture
-└── Status/Bio
-
-Profile pictures are automatically generated using the configured avatar service.
-
-The profile can be displayed in:
-
-Header
-Search results
-Conversation list
-Chat header
-Profile section
-17. Searching for Users
-
-One of the important functions is finding another registered user.
-
-The user can enter a name/email into the search field.
-
-Example:
-
-Search users...
-
-Suppose the user enters:
-
-rahul
-
-The frontend sends a request to the backend.
-
-Conceptually:
-
-Search input
-     ↓
-API request
-     ↓
-Express
-     ↓
-SQLite
-     ↓
-Matching users
-     ↓
-Frontend
-18. Search Results UI
-
-The results appear below the search field.
-
-Example:
-
-Search users...
-
-
-┌─────────────────────────────┐
-│ 👤 Rahul Kumar              │
-│    rahul@example.com        │
-└─────────────────────────────┘
-
-
-┌─────────────────────────────┐
-│ 👤 Rahul S                  │
-│    rahuls@example.com       │
-└─────────────────────────────┘
-
-The current user should normally not be presented as someone to start a conversation with themselves.
-
-19. Selecting a User
-
-When the user clicks a search result:
-
-Search Result
-      ↓
-Selected User
-      ↓
-Open/Create Chat
-
-The application checks whether a conversation already exists.
-
-Existing conversation
-
-Open it.
-
-No existing conversation
-
-Create/initialize the conversation.
-
-20. Chat Creation
-
-The backend can create a private conversation between:
-
-User A
-+
-User B
-
-Conceptually:
-
-Chat
-├── chatId
-├── participant A
-└── participant B
-
-The frontend then selects that chat.
-
-21. Chat Header
-
-Once a chat is opened, the header displays the other user's information.
-
-For example:
-
-┌─────────────────────────────────────────────┐
-│ 👤 Rahul Kumar                              │
-│    Online                                    │
-└─────────────────────────────────────────────┘
-
-Possible information:
-
-Profile image
-Full name
-Online status
-Last seen/status
-22. Loading Message History
-
-When a conversation opens, the frontend retrieves existing messages from the REST API.
-
-Conceptually:
-
-Open Chat
    ↓
-GET messages
+tries POST /api/messages
    ↓
-Backend
+Backend checks friendship
    ↓
-SQLite
+Not friends
    ↓
-Messages
-   ↓
-Frontend
+403 Forbidden
+```
 
-The messages are then displayed chronologically.
+Even if someone manually calls the API, they must not be able to message another user unless a friendship exists.
 
-Example:
+The same rule must apply to:
 
-          Yesterday
+* REST APIs
+* Socket.IO
+* conversation creation
+* message sending
+* typing indicators
+* read receipts
+* reactions
+* private chat room access
 
+---
 
-              Hello!
-       10:31 AM
+# 3. New Sidebar Structure
 
+Redesign the sidebar navigation to contain clear sections.
 
-How are you?
-       10:32 AM
+Recommended structure:
 
+```text
+┌──────────────────────────────┐
+│ ChatApp Pro                  │
+│                              │
+│ 🔍 Search                    │
+│                              │
+│ 💬 Chats                     │
+│ 👥 Friends                   │
+│ 🔔 Requests             ● 3 │
+│                              │
+│ ──────────────────────────── │
+│                              │
+│ Conversations                │
+│                              │
+│ John                         │
+│ Sarah                        │
+│ Project Team                 │
+│                              │
+└──────────────────────────────┘
+```
 
-              I'm good!
-       10:33 AM
-23. Message Structure
+The exact visual structure should follow the existing application's design.
 
-A message typically contains information such as:
+Do not unnecessarily change the overall layout.
 
-Message
-├── id
-├── chatId
-├── senderId
-├── content
-├── timestamp
-├── read status
-└── reaction information
-24. Sending a Message
+---
 
-The message input is located at the bottom of the chat.
+# 4. Sidebar Tabs
 
-Example:
+Create three primary social/chat sections:
 
-┌─────────────────────────────────────────────┐
-│ Type a message...                     [➤]  │
-└─────────────────────────────────────────────┘
+## Chats
 
-The user types:
+Displays:
 
-Hello Rahul!
+* Private conversations
+* Group conversations
 
-and clicks Send or presses Enter.
+Only private conversations with existing friends should appear.
 
-25. Message Sending Architecture
+---
 
-The application uses the dual communication architecture.
+## Friends
 
-Conceptually:
+Displays the user's friends.
 
-                User types message
-                       ↓
-                    Send
-                       ↓
-             ┌─────────┴─────────┐
-             ↓                   ↓
-         Socket.IO            REST API
-             ↓                   ↓
-      Instant delivery       Persistence
-             ↓                   ↓
-       Receiver UI           SQLite
+Features:
 
-Socket.IO provides the immediate experience.
+* Search friends
+* Friend list
+* Online status if the application already supports it
+* Profile picture
+* Name
+* Message button
+* Friend options menu
 
-The REST API/database ensures the message is permanently stored.
+---
 
-26. Message Appearing Instantly
+## Requests
 
-When User A sends:
+Displays:
 
-Hello!
+* Incoming friend requests
+* Outgoing/pending friend requests
 
-the UI should immediately reflect the outgoing message.
+The Requests tab must display a notification dot/count whenever there are pending incoming requests.
 
-Example:
+---
 
-                          Hello!   ✓
+# 5. Friend Request Notification Dot
 
-The user shouldn't need to refresh the page.
+When a new incoming friend request arrives:
 
-27. Receiver Side
-
-User B is connected to the socket.
-
-The server receives the event and routes it to User B.
-
-User A
-  ↓
-Socket Server
-  ↓
-User B
-  ↓
-React state update
-  ↓
-Message appears
-
-User B sees:
-
-Hello!
-10:45 AM
-
-without refreshing.
-
-28. Message Persistence
-
-At the same time, the message is saved in SQLite.
-
-This is important because Socket.IO alone isn't sufficient for permanent history.
-
-After the user closes the browser:
-
-Message
-   ↓
-SQLite
-   ↓
-Stored permanently
-
-When the user returns later:
-
-Open chat
-   ↓
-Fetch messages
-   ↓
-Previously stored messages appear
-29. Optimistic UI Behavior
-
-A good messaging interface should feel instant.
-
-When the sender clicks Send:
-
-Click Send
-   ↓
-Immediately append message to UI
-   ↓
-Send to backend
-
-This avoids the interface feeling slow while waiting for the database request.
-
-If the server reports an error, the UI can mark the message as failed or remove it.
-
-30. Enter Key Behavior
-
-The message field can support:
-
-Enter → Send
-
-while:
-
-Shift + Enter
-
-can optionally create a new line if multiline messaging is supported.
-
-31. Empty Messages
-
-The application should not send:
-
-""
+```text
+Requests ●
+```
 
 or:
 
-"     "
+```text
+Requests    3
+```
 
-The Send button should either:
+depending on the design.
 
-remain disabled, or
-ignore whitespace-only messages.
-32. Typing Indicator
-
-Socket.IO can be used for typing indicators.
-
-When User A types:
-
-Hello...
-
-the frontend emits a typing event.
-
-Conceptually:
-
-User A
-  ↓
-typing event
-  ↓
-Socket server
-  ↓
-User B
-
-User B sees:
-
-Rahul is typing...
-
-When typing stops:
-
-Rahul
-
-or the indicator disappears.
-
-33. Online/Offline Status
-
-Socket connection state can be used to determine availability.
-
-Conceptually:
-
-Socket connected
-      ↓
-User online
-
-
-Socket disconnected
-      ↓
-User offline
-
-The chat header may show:
-
-● Online
-
-or:
-
-Offline
-34. Read Receipts
-
-The application can support read receipts through Socket.IO.
+The notification should update in real time through Socket.IO.
 
 For example:
 
-✓
+```text
+John sends friend request to Sarah
+              ↓
+Sarah's Socket.IO connection
+              ↓
+friend-request-received
+              ↓
+Requests badge changes from:
+Requests
+to:
+Requests ●
+```
 
-means sent.
+Do not require Sarah to refresh the page.
 
-✓✓
+---
 
-means delivered.
+# 6. Notification Behavior
 
-A different visual state can indicate:
+If there is one pending incoming request:
 
-✓✓
+```text
+Requests ●
+```
 
-read/seen.
+If there are three:
 
-The exact visual treatment depends on the UI implementation.
+```text
+Requests 3
+```
 
-The flow is:
+If the user opens the Requests page and all requests are considered viewed:
 
-Message received
-       ↓
-User opens chat
-       ↓
-Read event
-       ↓
-Socket.IO
-       ↓
-Sender UI updated
-35. Emoji Reactions
+```text
+Requests
+```
 
-A user can react to a message.
+However, do not automatically delete or reject requests simply because the user opened the page.
+
+The notification state and request state are different concepts.
+
+The actual request remains:
+
+```text
+pending
+```
+
+until:
+
+* accepted
+* rejected
+* cancelled
+
+---
+
+# 7. Database Design
+
+Inspect the existing database first.
+
+If no suitable friendship system exists, create a normalized friendship/request structure.
+
+Do NOT store friends as:
+
+```text
+user.friends = "2,5,8,12"
+```
+
+Do not store friend IDs as comma-separated strings.
+
+Use relational tables.
+
+---
+
+# 8. Friend Requests Table
+
+Create something similar to:
+
+```text
+friend_requests
+----------------
+id
+sender_id
+receiver_id
+status
+created_at
+updated_at
+```
+
+Status values:
+
+```text
+pending
+accepted
+rejected
+cancelled
+```
+
+Alternatively, once accepted, move the relationship into a separate friendships table.
+
+Recommended approach:
+
+* `friend_requests` = tracks request lifecycle
+* `friendships` = tracks actual friendship
+
+---
+
+# 9. Friendships Table
+
+Create:
+
+```text
+friendships
+-----------
+id
+user_id
+friend_id
+created_at
+```
+
+However, prevent duplicate relationships.
+
+For example:
+
+```text
+User A → User B
+```
+
+must represent the same friendship as:
+
+```text
+User B → User A
+```
+
+Do not accidentally create two separate friendships.
+
+A better normalized structure can use:
+
+```text
+user_one_id
+user_two_id
+```
+
+with the smaller user ID always stored first.
 
 Example:
 
-              That's great!
-                    ❤️
+```text
+User IDs: 5 and 12
 
-The reaction can be sent through Socket.IO for immediate UI updates and persisted through the backend.
+user_one_id = 5
+user_two_id = 12
+```
 
-Flow:
+This prevents:
 
-User selects emoji
-       ↓
-Message reaction event
-       ↓
-Socket server
-       ↓
-Receiver UI
-       ↓
-Persist reaction
-36. Conversation List
+```text
+5 → 12
+12 → 5
+```
 
-The left sidebar contains conversations.
+from becoming two separate friendship records.
 
-For example:
+---
 
-Chats
+# 10. Friend Request Rules
 
+The backend must enforce the following.
 
-🔎 Search
+### User cannot send request to themselves
 
+```text
+User A → User A
+```
 
-Rahul Kumar
-How are you?
-10:42 AM
+must return an error.
 
+---
 
-Anjali
-See you tomorrow
-Yesterday
+### Cannot send duplicate pending request
 
+If:
 
-Vishnu
-Okay
-Monday
+```text
+A → B = pending
+```
 
-Each conversation item can display:
+A cannot send another request.
 
-Avatar
-Name
-Last message
-Last message time
-Unread count
-Online status
-37. Sidebar Behavior After Sending
+---
 
-Suppose the current conversation is:
+### Reverse pending request
 
-Rahul
+If:
 
-and you send:
+```text
+A → B = pending
+```
 
-I'll call you later.
+and B tries to send:
 
-The sidebar should immediately update:
+```text
+B → A
+```
 
-Rahul
-I'll call you later.       10:50 AM
+do NOT create another request.
 
-No page refresh should be necessary.
+Instead, handle it intelligently.
 
-38. Receiving a Message While Viewing Another Chat
+Recommended behavior:
 
-Suppose User A is chatting with Rahul.
+```text
+B tries Add Friend
+        ↓
+System detects A already sent request
+        ↓
+Show:
+"John has already sent you a friend request."
+        ↓
+Offer:
+Accept Request
+```
 
-Another user, Anjali, sends a message.
+---
 
-The application receives it through Socket.IO.
+### Cannot send request to existing friend
 
-Because Anjali's chat isn't currently selected:
+If A and B are already friends:
 
-Anjali
-Are you free?
+```text
+Add Friend
+```
 
-The sidebar can update:
+must not be available.
 
-Anjali
-Are you free?              10:52 AM
-                         [1]
+Show:
 
-where [1] represents an unread count.
-
-39. Opening an Unread Conversation
-
-When the user clicks Anjali:
-
-Unread count
-     ↓
-Open chat
-     ↓
-Load messages
-     ↓
-Mark messages as read
-     ↓
-Unread indicator disappears
-
-A read event can be emitted through Socket.IO.
-
-40. Message Ordering
-
-Messages should appear chronologically.
-
-For example:
-
-10:00  Hi
-10:01  How are you?
-10:02  I'm good
-10:03  Great!
-
-The backend should return messages in a consistent order, and the frontend should maintain that order when appending real-time messages.
-
-41. Duplicate Message Prevention
-
-Because the application uses both REST and Socket.IO, care must be taken to avoid displaying the same message twice.
-
-For example:
-
-REST response
-+
-Socket response
-
-should not result in:
-
-Hello
-Hello
-
-The frontend should identify messages by a unique message ID.
-
-Conceptually:
-
-if message.id already exists:
-      don't append
-else:
-      append
-
-This is an important part of a reliable real-time messaging application.
-
-42. Page Refresh
-
-Suppose the user refreshes the browser.
-
-The application should:
-
-Refresh
- ↓
-Read JWT
- ↓
-Restore authentication
- ↓
-Reconnect Socket.IO
- ↓
-Load conversations
- ↓
-Load selected chat
- ↓
-Fetch message history
-
-The user should not have to log in again as long as the authentication token remains valid.
-
-43. Browser Tab Closing
-
-When the browser/tab closes:
-
-Browser closes
-     ↓
-Socket disconnects
-     ↓
-Server recognizes disconnection
-     ↓
-User becomes offline
-
-The messages already stored in SQLite remain available.
-
-44. API Authorization
-
-Protected backend APIs require authentication.
-
-The frontend sends:
-
-Authorization: Bearer <JWT>
-
-The backend's authentication middleware:
-
-Request
- ↓
-Read JWT
- ↓
-Verify JWT
- ↓
-Valid?
- /   \
-No    Yes
-↓      ↓
-401   Continue
-
-This prevents unauthorized access.
-
-45. Direct URL Access
-
-Suppose someone manually enters:
-
-/chat
-
-without being logged in.
-
-The protected route checks authentication.
-
-If there is no valid token:
-
-/chat
- ↓
-Not authenticated
- ↓
-Redirect
- ↓
-/login
-46. Logout Flow
-
-Logout should be available from the profile/menu area.
-
-For example:
-
-Profile
-────────────
-My Profile
-Settings
-Logout
-
-The user clicks:
-
-Logout
-47. Logout Process
-
-The logout sequence is:
-
-Click Logout
-       ↓
-Clear authentication state
-       ↓
-Remove JWT/token
-       ↓
-Disconnect Socket.IO
-       ↓
-Clear user/session state
-       ↓
-Redirect to Login
-
-Conceptually:
-
-localStorage
-     ↓
-remove token
+```text
+Friends
+```
 
 and:
 
-Socket.IO
-     ↓
-disconnect()
-48. After Logout
+```text
+Message
+```
 
-The user is redirected to:
+instead.
 
-/login
+---
 
-The protected pages are no longer accessible.
+### Cannot send request to blocked user
 
-If the user tries:
+If blocking is implemented later, blocked users must not be able to send requests.
 
-/chat
+Design the system so blocking can be added later.
 
-they are redirected back to:
+---
 
-/login
-49. Complete End-to-End Example
+# 11. User Search Behavior
 
-Let's follow an actual conversation.
+The existing user search should be changed.
 
-Step 1 — Amrith opens the application
-Browser
- ↓
-React loads
- ↓
-Check localStorage
+When searching for:
 
-No token exists.
+```text
+John Doe
+```
 
-→ Login page
-Step 2 — Amrith logs in
-Email
-Password
-   ↓
-POST /api/auth/login
-
-Backend:
-
-Find user
- ↓
-bcrypt password verification
- ↓
-Generate JWT
- ↓
-Return JWT
-
-Frontend:
-
-Store JWT
- ↓
-Update AuthContext
- ↓
-Connect Socket.IO
- ↓
-Open Chat UI
-Step 3 — Search Rahul
-
-Amrith types:
-
-Rahul
-
-The frontend queries the user API.
-
-Results:
-
-Rahul Kumar
-rahul@example.com
-Step 4 — Click Rahul
-
-The application checks whether a chat exists.
-
-If it exists:
-
-Open chat
-
-If not:
-
-Create chat
- ↓
-Open chat
-Step 5 — Load conversation
-
-Frontend:
-
-GET /api/chats/...
-GET /api/messages/...
-
-Backend:
-
-SQLite
- ↓
-Historical messages
-
-The messages appear.
-
-Step 6 — Send message
-
-Amrith types:
-
-Hi Rahul!
-
-and presses Enter.
-
-Frontend immediately updates:
-
-Hi Rahul!      ✓
-
-Socket.IO sends the real-time event.
-
-The API/database persists the message.
-
-Step 7 — Rahul receives it
-
-Rahul's browser receives the Socket.IO event:
-
-new_message
-
-His UI updates immediately:
-
-Hi Rahul!
-
-No refresh.
-
-Step 8 — Rahul types
-
-Rahul starts typing.
-
-Socket event:
-
-typing
-
-Amrith sees:
-
-Rahul is typing...
-Step 9 — Rahul replies
-
-Rahul sends:
-
-Hi Amrith!
-
-Amrith's UI immediately shows:
-
-Hi Rahul!              ✓✓
-                       Hi Amrith!
-Step 10 — Amrith leaves the chat
-
-The message remains in SQLite.
-
-If Amrith returns tomorrow:
-
-Open Rahul chat
-       ↓
-Fetch historical messages
-       ↓
-Previous conversation restored
-Step 11 — Logout
-
-Amrith clicks:
-
-Profile → Logout
-
-The application:
-
-Clear JWT
- ↓
-Clear auth state
- ↓
-Disconnect Socket.IO
- ↓
-Redirect /login
-
-The session is finished.
-
-50. Complete Architecture Flow
-
-The entire system can be represented as:
-
-                         ┌──────────────────────┐
-                         │       Browser        │
-                         │      React/Vite      │
-                         └──────────┬───────────┘
-                                    │
-                  ┌─────────────────┴────────────────┐
-                  │                                  │
-                  ▼                                  ▼
-           REST API / Axios                     Socket.IO
-                  │                                  │
-                  ▼                                  ▼
-          Express Controllers                  Socket Handler
-                  │                                  │
-                  ▼                                  ▼
-          Services / Logic                     Real-time events
-                  │                                  │
-                  ▼                                  │
-             Repository                             │
-                  │                                  │
-                  ▼                                  │
-                SQLite                              │
-                  │                                  │
-                  └──────────────┬───────────────────┘
-                                 │
-                                 ▼
-                          Persistent data
-51. REST API vs Socket.IO
-
-This distinction is particularly important when explaining the project in an interview.
-
-Feature	REST API	Socket.IO
-Login	✅	❌
-Registration	✅	❌
-Search users	✅	❌
-Load chats	✅	❌
-Load old messages	✅	❌
-Save messages	✅	Can trigger event
-Instant messages	❌	✅
-Typing indicator	❌	✅
-Read receipts	❌	✅
-Reactions	Can persist	✅ Real-time
-Online status	❌	✅
-Logout	Frontend/API	Disconnect
-
-The important architectural idea is:
-
-REST handles reliable data retrieval and persistence, while Socket.IO handles real-time communication.
-
-52. Database-Level Flow
-
-The important entities are conceptually:
-
-Users
- │
- ├──────────────┐
- │              │
- ▼              ▼
-Chats         Messages
- │              │
- │              ├── sender
- │              ├── receiver/chat
- │              ├── content
- │              └── timestamp
- │
- └── participants
-
-A user can participate in multiple chats.
-
-A chat contains multiple messages.
-
-Each message belongs to a particular conversation and sender.
-
-53. Error Handling
-
-The application should handle failures gracefully.
-
-Invalid login
-Invalid email/password
-
-→ Show error message.
-
-User doesn't exist
-User not found
-
-→ Show appropriate feedback.
-
-Network failure
-Unable to connect to server
-
-→ Don't crash the application.
-
-Socket disconnect
-
-The UI can indicate:
-
-Reconnecting...
-
-and attempt to reconnect.
-
-Message failure
-
-The message can be marked as:
-
-Failed to send
-↻ Retry
-
-if such behavior is implemented.
-
-54. Loading States
-
-Professional UI should show loading states during asynchronous operations.
-
-Login
-[ Logging in... ]
-Search
-Searching...
-Loading chats
-Loading conversations...
-Loading messages
-Loading messages...
-
-This prevents the user from thinking the application is frozen.
-
-55. Empty States
-
-The application should also have useful empty states.
-
-No conversations
-No conversations yet.
-
-
-Search for a user to start chatting.
-No search results
-No users found.
-Empty chat
-No messages yet.
-
-
-Say hello 👋
-56. Responsive Behavior
-
-On desktop:
-
-┌──────────────┬─────────────────────┐
-│ Chat List    │ Conversation        │
-│              │                     │
-│              │                     │
-└──────────────┴─────────────────────┘
-
-On smaller screens:
-
-Chat List
-    ↓
-Conversation
-
-The UI can switch between the conversation list and selected chat to maximize available screen space.
-
-57. Security Flow
-
-Authentication security:
-
-Password
-   ↓
-bcrypt
-   ↓
-Password hash
-   ↓
-SQLite
-
-Login:
-
-Credentials
-   ↓
-bcrypt verification
-   ↓
-JWT
-
-API:
-
-JWT
- ↓
-Authorization middleware
- ↓
-Protected resource
-
-The backend should never trust the frontend alone for authorization.
-
-58. What Happens When an Unauthorized Request Is Made?
+the result should show relationship state.
 
 Example:
 
-GET /api/messages
+```text
+┌─────────────────────────────────┐
+│ [Avatar] John Doe               │
+│         john@example.com        │
+│                                 │
+│              Add Friend         │
+└─────────────────────────────────┘
+```
 
-without a valid JWT.
+If already friends:
+
+```text
+┌─────────────────────────────────┐
+│ [Avatar] John Doe               │
+│         john@example.com        │
+│                                 │
+│       ✓ Friends    Message      │
+└─────────────────────────────────┘
+```
+
+If request already sent:
+
+```text
+┌─────────────────────────────────┐
+│ [Avatar] John Doe               │
+│         john@example.com        │
+│                                 │
+│          Request Sent           │
+└─────────────────────────────────┘
+```
+
+If they sent you a request:
+
+```text
+┌─────────────────────────────────┐
+│ [Avatar] John Doe               │
+│         john@example.com        │
+│                                 │
+│        Accept Request           │
+└─────────────────────────────────┘
+```
+
+If request was rejected:
+
+Allow the appropriate behavior according to the product rules.
+
+Recommended:
+
+```text
+Add Friend
+```
+
+can become available again after rejection.
+
+---
+
+# 12. Relationship State
+
+Do not make the frontend guess the relationship.
+
+The backend should return a clear relationship status.
+
+For example:
+
+```json
+{
+  "user": {
+    "id": 12,
+    "name": "John Doe",
+    "avatar": "..."
+  },
+  "relationship": "friend"
+}
+```
+
+Possible values:
+
+```text
+none
+friend
+request_sent
+request_received
+request_rejected
+```
+
+This makes the UI predictable.
+
+---
+
+# 13. Add Friend Flow
+
+When the user clicks:
+
+```text
+Add Friend
+```
+
+show a loading state:
+
+```text
+Sending...
+```
+
+Then:
+
+```text
+Request Sent
+```
+
+Do not allow the user to click it repeatedly.
 
 Backend:
 
-JWT missing/invalid
-       ↓
-401 Unauthorized
+```text
+POST /api/friend-requests
+```
 
-Frontend can respond by:
+Request:
 
-Clear authentication
+```json
+{
+  "receiverId": 12
+}
+```
+
+The sender ID must come from the authenticated JWT.
+
+Never accept:
+
+```json
+{
+  "senderId": 5,
+  "receiverId": 12
+}
+```
+
+and blindly trust `senderId`.
+
+---
+
+# 14. Friend Request API
+
+Implement clean endpoints based on the existing API conventions.
+
+Recommended:
+
+```http
+POST   /api/friend-requests
+GET    /api/friend-requests
+GET    /api/friend-requests/incoming
+GET    /api/friend-requests/outgoing
+POST   /api/friend-requests/:id/accept
+POST   /api/friend-requests/:id/reject
+DELETE /api/friend-requests/:id
+```
+
+Adjust naming to match the existing application.
+
+---
+
+# 15. Incoming Requests
+
+Requests tab should display incoming requests first.
+
+Example:
+
+```text
+Friend Requests
+
+┌─────────────────────────────────────┐
+│ [Avatar] John Doe                   │
+│          john@example.com           │
+│                                     │
+│          [Accept] [Decline]         │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ [Avatar] Sarah Smith                │
+│          sarah@example.com          │
+│                                     │
+│          [Accept] [Decline]         │
+└─────────────────────────────────────┘
+```
+
+Each request should display:
+
+* profile picture
+* full name
+* username/email if appropriate
+* request time
+* Accept button
+* Decline button
+
+---
+
+# 16. Accept Request
+
+When the user clicks:
+
+```text
+Accept
+```
+
+the backend must perform an atomic operation.
+
+Conceptually:
+
+```text
+BEGIN TRANSACTION
+
+Update friend request
+        ↓
+status = accepted
+
+Create friendship
+        ↓
+COMMIT
+```
+
+Do not create the friendship if the request update fails.
+
+Do not update the request without creating the friendship.
+
+---
+
+# 17. After Accepting
+
+Immediately update:
+
+### Requests
+
+Remove the request.
+
+### Friends
+
+Add the new friend.
+
+### Search result
+
+Change:
+
+```text
+Accept Request
+```
+
+to:
+
+```text
+Friends
+Message
+```
+
+### Chat
+
+The user can now start a private chat.
+
+### Other user
+
+The sender should receive a real-time notification:
+
+```text
+John accepted your friend request.
+```
+
+---
+
+# 18. Friend Request Socket Events
+
+Use the existing Socket.IO connection.
+
+Do NOT create another socket connection.
+
+Add events such as:
+
+```text
+friend-request-sent
+friend-request-received
+friend-request-accepted
+friend-request-rejected
+friend-request-cancelled
+friendship-created
+friendship-removed
+```
+
+---
+
+# 19. New Request Real-Time Flow
+
+Example:
+
+```text
+John
+  ↓
+POST /api/friend-requests
+  ↓
+Backend
+  ↓
+Save request
+  ↓
+Find Sarah's active socket
+  ↓
+emit:
+friend-request-received
+  ↓
+Sarah's UI
+  ↓
+Requests badge updates
+  ↓
+Requests list updates
+```
+
+Sarah must see the request without refreshing.
+
+---
+
+# 20. Friend Acceptance Real-Time Flow
+
+```text
+Sarah clicks Accept
+        ↓
+POST /api/friend-requests/15/accept
+        ↓
+Backend transaction
+        ↓
+Create friendship
+        ↓
+Emit friendship-created
+        ↓
+John receives event
+        ↓
+John's Friends list updates
+        ↓
+John's search result updates
+        ↓
+"Message" becomes available
+```
+
+---
+
+# 21. Friends Tab
+
+Create a dedicated Friends screen.
+
+Example:
+
+```text
+┌────────────────────────────────────────┐
+│ Friends                                │
+│                                        │
+│ 🔍 Search friends...                   │
+│                                        │
+│ 24 Friends                             │
+│                                        │
+│ [Avatar] John Doe              Message │
+│          Online                        │
+│                                        │
+│ [Avatar] Sarah Smith           Message │
+│          Offline                       │
+│                                        │
+│ [Avatar] Alex Thomas           Message │
+└────────────────────────────────────────┘
+```
+
+---
+
+# 22. Friends Search
+
+The Friends tab must have its own search.
+
+Example:
+
+```text
+Search friends...
+```
+
+Typing:
+
+```text
+sar
+```
+
+shows only friends whose:
+
+* name
+* username
+* email
+
+matches the search.
+
+Do not search every registered user from this field.
+
+This is specifically:
+
+```text
+My Friends
+```
+
+search.
+
+---
+
+# 23. Friends Sorting
+
+Recommended sorting:
+
+1. Recently active friends
+2. Online friends
+3. Alphabetical
+
+Or simply use:
+
+```text
+Most recently interacted
+```
+
+if the existing chat application already uses this pattern.
+
+Keep the behavior predictable.
+
+---
+
+# 24. Friend Item
+
+Each friend should show:
+
+```text
+[Avatar]
+John Doe
+Online
+```
+
+with actions:
+
+```text
+Message
+⋮
+```
+
+The menu can contain:
+
+```text
+View Profile
+Message
+Remove Friend
+```
+
+If you implement unfriend functionality.
+
+---
+
+# 25. Remove Friend
+
+Implement:
+
+```text
+Remove Friend
+```
+
+with confirmation.
+
+Example:
+
+```text
+Remove Friend?
+
+Are you sure you want to remove John from your friends?
+
+You will no longer be able to message each other.
+
+[Cancel] [Remove Friend]
+```
+
+After removal:
+
+* delete friendship
+* remove from Friends tab
+* disable private messaging
+* optionally archive the existing conversation
+* remove access to private chat room
+* notify the other user
+
+---
+
+# 26. What Happens to Existing Chat After Unfriending?
+
+Use this product rule:
+
+## Recommended behavior
+
+When two users unfriend each other:
+
+```text
+Friendship removed
+        ↓
+New messages blocked
+        ↓
+Existing messages remain stored
+        ↓
+Conversation becomes inaccessible for sending
+```
+
+You may show:
+
+```text
+You are no longer friends with John.
+
+Add John as a friend again to continue chatting.
+```
+
+Do not automatically delete historical messages unless the product explicitly requires that.
+
+---
+
+# 27. Private Chat Access
+
+This is critical.
+
+Before opening a private chat:
+
+```text
+GET /api/chats/:userId
+```
+
+backend checks:
+
+```text
+Are currentUser and userId friends?
+```
+
+If yes:
+
+```text
+allow
+```
+
+If no:
+
+```text
+403
+```
+
+Frontend should show:
+
+```text
+You can only chat with friends.
+
+[View Profile]
+[Add Friend]
+```
+
+---
+
+# 28. Private Chat Creation
+
+If your application currently automatically creates a conversation when the user clicks another user, change this.
+
+Old behavior:
+
+```text
+Search user
+      ↓
+Click user
+      ↓
+Conversation created
+```
+
+New behavior:
+
+```text
+Search user
+      ↓
+Click user
+      ↓
+Profile/relationship view
+      ↓
+Add Friend
+      ↓
+Wait for acceptance
+      ↓
+Friendship established
+      ↓
+Message button becomes available
+      ↓
+Conversation can be created/opened
+```
+
+---
+
+# 29. Message API Security
+
+Every private message endpoint must validate friendship.
+
+For example:
+
+```text
+POST /api/messages
+```
+
+Backend:
+
+```text
+authenticated user
+        ↓
+recipient exists?
+        ↓
+are users friends?
+        ↓
+YES → save message
+NO  → 403 Forbidden
+```
+
+Never rely on:
+
+```text
+if (buttonIsVisible)
+```
+
+as security.
+
+---
+
+# 30. Socket.IO Private Chat Security
+
+The same rule applies to Socket.IO.
+
+Suppose User A tries:
+
+```text
+join-private-room-user-B
+```
+
+The server must verify:
+
+```text
+A and B are friends
+```
+
+before joining.
+
+If not:
+
+```text
+private-chat-access-denied
+```
+
+Do not allow arbitrary private chat room access.
+
+---
+
+# 31. Typing Indicator Security
+
+Typing indicators must also require friendship.
+
+Before:
+
+```text
+private-typing
+```
+
+is broadcast:
+
+```text
+Are sender and recipient friends?
+```
+
+If not, reject it.
+
+---
+
+# 32. Read Receipts
+
+Read receipts should only work between friends.
+
+If two users become unfriends:
+
+```text
+private read receipt events
+```
+
+should no longer be accepted.
+
+---
+
+# 33. Message Reactions
+
+Private message reactions should also respect the friendship/access rules.
+
+If the user cannot access the conversation, they cannot react to its messages through the API.
+
+---
+
+# 34. Chats Tab Behavior
+
+The Chats tab should show:
+
+### Private chats
+
+Only conversations with friends.
+
+### Group chats
+
+Groups the user belongs to.
+
+Do NOT show random users simply because the user searched for them.
+
+---
+
+# 35. New Chat Button
+
+Change the existing "New Chat" behavior.
+
+Instead of:
+
+```text
+New Chat
+→ Search all users
+→ Start chatting
+```
+
+use:
+
+```text
+New Chat
+→ Friends
+→ Search friends
+→ Select friend
+→ Open conversation
+```
+
+Also provide:
+
+```text
+Add Friend
+```
+
+as a separate action.
+
+---
+
+# 36. Suggested New Chat Menu
+
+When clicking:
+
+```text
++
+```
+
+show:
+
+```text
+New Chat
+
+💬 Message a Friend
+👥 Create Group
+➕ Add Friend
+```
+
+Behavior:
+
+### Message a Friend
+
+Opens Friends selector.
+
+### Create Group
+
+Opens group creation flow.
+
+### Add Friend
+
+Opens global user search.
+
+---
+
+# 37. Global User Search vs Friend Search
+
+These must be different.
+
+## Global User Search
+
+Purpose:
+
+```text
+Find people to add as friends.
+```
+
+Can search all registered users.
+
+Actions:
+
+```text
+Add Friend
+Request Sent
+Accept Request
+Friends
+```
+
+---
+
+## Friends Search
+
+Purpose:
+
+```text
+Find someone you are already friends with.
+```
+
+Only searches the user's friend list.
+
+Actions:
+
+```text
+Message
+View Profile
+Remove Friend
+```
+
+---
+
+# 38. User Profile / Relationship View
+
+When clicking a user from global search, show a compact profile.
+
+Example:
+
+```text
+┌─────────────────────────────┐
+│                             │
+│          [Avatar]           │
+│                             │
+│        John Doe             │
+│        john@example.com     │
+│                             │
+│       Add Friend            │
+│                             │
+└─────────────────────────────┘
+```
+
+After request:
+
+```text
+Request Sent
+```
+
+After acceptance:
+
+```text
+✓ Friends
+
+[Message]
+```
+
+---
+
+# 39. Friend Request Status UX
+
+Use clear states.
+
+### No relationship
+
+```text
++ Add Friend
+```
+
+### Request sent
+
+```text
+Request Sent
+```
+
+with optional:
+
+```text
+Cancel Request
+```
+
+### Request received
+
+```text
+Accept
+Decline
+```
+
+### Friends
+
+```text
+✓ Friends
+Message
+```
+
+### Blocked
+
+```text
+Blocked
+```
+
+if blocking is implemented.
+
+---
+
+# 40. Cancel Friend Request
+
+The sender should optionally be able to cancel a pending request.
+
+Example:
+
+```text
+Request Sent
+```
+
+click:
+
+```text
+Cancel Request
+```
+
+Confirmation:
+
+```text
+Cancel friend request?
+
+[Cancel] [Yes, Cancel Request]
+```
+
+Then:
+
+```text
+friend-request-cancelled
+```
+
+should be emitted.
+
+---
+
+# 41. Rejecting a Request
+
+When recipient clicks:
+
+```text
+Decline
+```
+
+the request becomes:
+
+```text
+rejected
+```
+
+or is removed according to the database strategy.
+
+Recommended:
+
+Keep request history in the database but don't display it in the active Requests list.
+
+The sender can later send another request if appropriate.
+
+---
+
+# 42. Request Counts
+
+The backend should expose a simple count endpoint or include counts in the requests API.
+
+For example:
+
+```http
+GET /api/friend-requests/count
+```
+
+Response:
+
+```json
+{
+  "incoming": 3,
+  "outgoing": 1
+}
+```
+
+Use this to render the sidebar badge.
+
+If the existing application already has a notification-count endpoint, integrate the count into that system instead.
+
+---
+
+# 43. Initial Page Load
+
+When the user logs in:
+
+```text
+Authentication
+      ↓
+Load profile
+      ↓
+Load friends
+      ↓
+Load friend request count
+      ↓
+Load incoming requests
+      ↓
+Load chats
+      ↓
+Connect Socket.IO
+```
+
+Do not block the entire application unnecessarily while requests load.
+
+Show skeleton/loading states.
+
+---
+
+# 44. Socket Reconnection
+
+When Socket.IO reconnects:
+
+```text
+reconnect
+   ↓
+authenticate
+   ↓
+restore notification listeners
+   ↓
+refresh friend request count
+   ↓
+refresh friendship state if necessary
+```
+
+This prevents stale notification badges.
+
+---
+
+# 45. Friend List Real-Time Updates
+
+If John accepts Sarah's request:
+
+Sarah's UI should update automatically:
+
+```text
+Friends
+  24
+```
+
+becomes:
+
+```text
+Friends
+  25
+```
+
+and John appears in the list.
+
+John should receive the corresponding event and see Sarah in his Friends list without refreshing.
+
+---
+
+# 46. Notification Architecture
+
+If the application does not currently have a generalized notification system, do not build an unnecessarily complex notification platform.
+
+For now implement:
+
+```text
+friend request notification
+friend request accepted notification
+```
+
+using Socket.IO plus persisted request data.
+
+Later this architecture can be extended to:
+
+* message notifications
+* group notifications
+* mentions
+* system notifications
+
+---
+
+# 47. Recommended Notification Events
+
+Implement:
+
+```text
+friend-request-received
+friend-request-accepted
+friend-request-rejected
+friend-request-cancelled
+friendship-created
+friendship-removed
+```
+
+Example:
+
+```js
+socket.emit("friend-request-received", {
+    requestId,
+    sender
+});
+```
+
+Use the application's existing event naming conventions if they differ.
+
+---
+
+# 48. Request Notification Persistence
+
+Do not rely exclusively on Socket.IO.
+
+Suppose:
+
+```text
+John sends request
+```
+
+while Sarah is offline.
+
+Sarah must still see the request when she logs in.
+
+Therefore:
+
+```text
+Friend request → SQLite
+```
+
+is the source of truth.
+
+Socket.IO is only for immediate synchronization.
+
+---
+
+# 49. Friends as Source of Truth
+
+The friendship table is the source of truth.
+
+Do not rely on:
+
+```text
+frontend.friendList
+```
+
+for authorization.
+
+The backend must query the database.
+
+---
+
+# 50. API Authorization Helper
+
+Create a reusable helper such as:
+
+```text
+areUsersFriends(userA, userB)
+```
+
+This should be used by:
+
+* message controllers
+* chat controllers
+* socket handlers
+* typing handlers
+* read receipt handlers
+* reaction handlers
+
+This avoids duplicated friendship logic.
+
+---
+
+# 51. Conversation Authorization Helper
+
+Create something like:
+
+```text
+requireFriendship(currentUserId, targetUserId)
+```
+
+or follow the application's existing middleware architecture.
+
+Conceptually:
+
+```text
+JWT
  ↓
-Redirect to login
-59. Full UI State Lifecycle
+authenticated user
+ ↓
+friendship check
+ ↓
+authorized
+```
 
-The frontend essentially moves through these states:
+---
 
-UNAUTHENTICATED
-       ↓
-AUTHENTICATING
-       ↓
-AUTHENTICATED
-       ↓
-SOCKET_CONNECTED
-       ↓
-CHAT_SELECTED
-       ↓
-MESSAGING
-       ↓
-SOCKET_DISCONNECTED / RECONNECTING
-       ↓
-LOGOUT
-       ↓
-UNAUTHENTICATED
-60. Complete User Flow — One-Line Version
+# 52. Group Chats Are Different
 
-For documentation/interview purposes, you can describe the entire application like this:
+Do NOT apply the friendship requirement to group chats in the same way.
 
-When the application starts, React checks for a persisted JWT token. If the user is authenticated, the application restores the session, connects to the Socket.IO server, and loads the chat interface. Users can search for registered users through the REST API and open or create private conversations. When a conversation is opened, previous messages are retrieved from the Express API and SQLite database. New messages are sent through the real-time Socket.IO connection for instant delivery while also being persisted through the backend. Typing indicators, read receipts, reactions, and online status are handled through Socket.IO events. The React state is updated immediately so the interface behaves without page refreshes. When the user logs out, the JWT is removed, authentication state is cleared, the Socket.IO connection is disconnected, and the user is redirected to the login screen.
+Group membership controls group access.
 
-61. Interview-Level Architecture Explanation
+For groups:
 
-If an interviewer asks:
+```text
+Is user a group member?
+```
 
-"Explain how your chat application works."
+For private chats:
 
-A strong answer would be:
+```text
+Are users friends?
+```
 
-"My application is a full-stack real-time messaging system built with React and Vite on the frontend and Node.js, Express and SQLite on the backend. I use JWT-based authentication and bcrypt for password hashing. After login, the JWT is persisted on the client and used to authorize protected API requests. The application uses a dual communication architecture. REST APIs handle operations that require persistence, such as authentication, user search, chat retrieval and historical message retrieval. Socket.IO maintains a persistent bidirectional connection for real-time operations such as sending messages, typing indicators, read receipts, reactions and online status. When a user sends a message, the UI updates immediately and the message is sent through the real-time socket while being persisted through the backend. The receiver gets the message through their Socket.IO connection without refreshing the page. React Context/state management keeps the authentication and chat UI synchronized, while React Router handles protected navigation. On logout, the token and authentication state are cleared and the socket connection is disconnected."
+These are separate authorization models.
 
-That is the core technical story of your application.
+---
 
-62. Final End-to-End Flow Diagram
-                         USER OPENS APP
-                               │
-                               ▼
-                     Check JWT in storage
-                               │
-                    ┌──────────┴──────────┐
-                    │                     │
-                JWT valid              No JWT
-                    │                     │
-                    ▼                     ▼
-              Restore session           LOGIN
-                    │                     │
-                    ▼                     ▼
-             Connect Socket.IO       POST /login
-                    │                     │
-                    │                  Verify
-                    │                  password
-                    │                     │
-                    │                     ▼
-                    │                  Generate JWT
-                    │                     │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                         CHAT DASHBOARD
-                               │
-                 ┌─────────────┴─────────────┐
-                 │                           │
-                 ▼                           ▼
-            Search users                Conversations
-                 │                           │
-                 └─────────────┬─────────────┘
-                               ▼
-                         Select user
-                               │
-                               ▼
-                      Open/create chat
-                               │
-                               ▼
-                    Fetch message history
-                               │
-                               ▼
-                         DISPLAY CHAT
-                               │
-                  ┌────────────┼────────────┐
-                  │            │            │
-                  ▼            ▼            ▼
-               Message      Typing       Reaction
-                  │            │            │
-                  ▼            ▼            ▼
-              Socket.IO     Socket.IO    Socket.IO
-                  │            │            │
-                  ▼            ▼            ▼
-              Receiver       Receiver     Receiver
-                  │
-                  ▼
-             Persist message
-                  │
-                  ▼
-                SQLite
-                  │
-                  ▼
-             Future history
-                  │
-                  ▼
-               LOGOUT
-                  │
-          ┌───────┼────────┐
-          ▼       ▼        ▼
-       Clear JWT  Clear   Disconnect
-                  state    Socket
-          │
-          └─────────┬─────────┘
-                    ▼
-                 LOGIN
+# 53. Existing Group Chat Integration
 
-This gives you the complete functional, UI, backend, database, authentication, and real-time flow of the application from beginning to end.
+The sidebar should now conceptually be:
+
+```text
+Chats
+│
+├── Private Conversations
+│
+└── Group Conversations
+
+Friends
+│
+└── Friend List
+
+Requests
+│
+└── Incoming / Outgoing Requests
+```
+
+A user can:
+
+```text
+Friend → Private Chat
+```
+
+and:
+
+```text
+Group Member → Group Chat
+```
+
+---
+
+# 54. Recommended Sidebar Interaction
+
+When user clicks:
+
+## Chats
+
+Show conversation list.
+
+## Friends
+
+Replace main content with Friends page.
+
+## Requests
+
+Replace main content with Requests page.
+
+Do not necessarily navigate to completely separate browser routes unless the existing application architecture benefits from it.
+
+If route-based navigation is already used, routes can be:
+
+```text
+/friends
+/requests
+/chats
+```
+
+or equivalent.
+
+---
+
+# 55. Friends Page Empty State
+
+If the user has no friends:
+
+```text
+No friends yet
+
+Find people you know and start connecting with them.
+
+[Find Friends]
+```
+
+Clicking:
+
+```text
+Find Friends
+```
+
+opens global user search.
+
+---
+
+# 56. Requests Empty State
+
+If there are no requests:
+
+```text
+No friend requests
+
+When someone sends you a friend request,
+it will appear here.
+```
+
+Use a polished Shadcn-based empty state.
+
+---
+
+# 57. Global Search Empty State
+
+If no users match:
+
+```text
+No users found
+```
+
+Do not show:
+
+```text
+Start Chat
+```
+
+because users cannot chat without friendship.
+
+---
+
+# 58. Search Result Rules
+
+Global search must never show:
+
+```text
+Message
+```
+
+for non-friends.
+
+Instead:
+
+```text
+Add Friend
+```
+
+or:
+
+```text
+Request Sent
+```
+
+or:
+
+```text
+Accept Request
+```
+
+---
+
+# 59. Existing Conversation Migration
+
+Inspect existing database records.
+
+If private conversations already exist between users who are not friends:
+
+DO NOT blindly delete them.
+
+Instead decide on a safe migration behavior.
+
+Recommended:
+
+* Preserve existing conversations/messages.
+* Prevent new messages unless friendship exists.
+* Optionally display a notice:
+
+```text
+You are not currently friends.
+
+Add this user as a friend to continue chatting.
+```
+
+This protects existing data.
+
+---
+
+# 60. Database Migration Safety
+
+Never:
+
+```sql
+DROP TABLE users;
+DROP TABLE messages;
+DROP TABLE chats;
+```
+
+Do not destroy existing user/chat/message data.
+
+Create new tables or safely alter existing structures.
+
+The migration must be backwards-compatible.
+
+---
+
+# 61. Security Requirements
+
+The backend must prevent:
+
+### Unauthorized messaging
+
+Non-friend → friend
+
+```text
+403
+```
+
+### Unauthorized chat-room joining
+
+Non-friend → private room
+
+```text
+denied
+```
+
+### Fake sender IDs
+
+Never trust:
+
+```json
+{
+  "senderId": 123
+}
+```
+
+Sender comes from JWT.
+
+### Fake friendship
+
+Never trust:
+
+```json
+{
+  "isFriend": true
+}
+```
+
+Frontend state is not authoritative.
+
+### Fake request sender
+
+Never accept arbitrary sender IDs.
+
+---
+
+# 62. Race Conditions
+
+Handle situations such as:
+
+### Both users send requests simultaneously
+
+A → B
+
+and:
+
+B → A
+
+at nearly the same time.
+
+The backend should resolve this cleanly.
+
+Recommended behavior:
+
+* detect the reverse pending request
+* avoid duplicate requests
+* allow one request to become the active request
+* present the appropriate accept state
+
+---
+
+# 63. Concurrent Accept
+
+If two requests are somehow accepted simultaneously:
+
+Use database constraints/transactions to prevent duplicate friendships.
+
+There must never be:
+
+```text
+friendship 1: A-B
+friendship 2: A-B
+```
+
+---
+
+# 64. Friend Request Database Constraints
+
+Add appropriate indexes.
+
+Especially:
+
+```text
+sender_id
+receiver_id
+status
+```
+
+and friendship lookup:
+
+```text
+user_one_id
+user_two_id
+```
+
+Friendship checks happen frequently, so they must be efficient.
+
+---
+
+# 65. UI Confirmation Rules
+
+Use Shadcn AlertDialog for destructive operations:
+
+* Remove friend
+* Cancel request
+* Decline request if appropriate
+* Leave group
+* Delete group
+
+Do not use browser:
+
+```text
+window.confirm()
+```
+
+if the application already uses Shadcn dialogs.
+
+---
+
+# 66. Toast Notifications
+
+Use the application's existing toast system.
+
+Examples:
+
+```text
+Friend request sent
+```
+
+```text
+Friend request accepted
+```
+
+```text
+Friend request declined
+```
+
+```text
+Friend removed
+```
+
+```text
+Unable to send friend request
+```
+
+Do not display raw server errors.
+
+---
+
+# 67. Loading States
+
+Buttons must have loading states.
+
+Example:
+
+```text
+Add Friend
+```
+
+becomes:
+
+```text
+Sending...
+```
+
+Accept:
+
+```text
+Accepting...
+```
+
+Remove:
+
+```text
+Removing...
+```
+
+Do not allow duplicate clicks.
+
+---
+
+# 68. Responsive Mobile Design
+
+On mobile:
+
+```text
+☰
+```
+
+opens sidebar.
+
+Sidebar:
+
+```text
+Chats
+Friends
+Requests
+```
+
+Selecting Friends or Requests should transition naturally into the main content.
+
+The request badge should remain visible.
+
+---
+
+# 69. Dark Mode
+
+All new screens must support the existing dark/light theme.
+
+Check:
+
+* Friends page
+* Requests page
+* Search results
+* User profile
+* Friend request cards
+* dialogs
+* badges
+* menus
+* empty states
+
+Do not introduce hard-coded colors that conflict with the application's theme.
+
+---
+
+# 70. Final User Experience
+
+The final application should feel like:
+
+```text
+                    ChatApp Pro
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+      Chats            Friends         Requests
+        │                │                │
+        │                │                │
+ Private + Groups    My Friends      Incoming
+ conversations       Search          Outgoing
+        │                │                │
+        │                │                │
+        │             Message
+        │                │
+        └───────────────►│
+                         │
+                    Private Chat
+```
+
+---
+
+# 71. Complete Example User Journey
+
+## User A searches for User B
+
+```text
+Search
+ ↓
+User B
+ ↓
+Add Friend
+```
+
+Database:
+
+```text
+friend_requests
+A → B
+pending
+```
+
+User B receives:
+
+```text
+Requests ●
+```
+
+---
+
+## User B opens Requests
+
+```text
+Friend Requests
+
+User A
+
+[Accept] [Decline]
+```
+
+B clicks:
+
+```text
+Accept
+```
+
+Database:
+
+```text
+friend_requests
+A → B
+accepted
+
+friendships
+A ↔ B
+```
+
+Both users receive:
+
+```text
+friendship-created
+```
+
+---
+
+## User A
+
+Friends tab:
+
+```text
+User B
+```
+
+Search result:
+
+```text
+✓ Friends
+Message
+```
+
+---
+
+## User A clicks Message
+
+Now:
+
+```text
+Private Chat
+```
+
+is opened.
+
+---
+
+## User A sends:
+
+```text
+Hey!
+```
+
+Backend checks:
+
+```text
+A and B friends?
+YES
+```
+
+Message saved.
+
+Socket.IO:
+
+```text
+private-message
+```
+
+B receives it.
+
+---
+
+# 72. If User B Rejects
+
+```text
+A → B
+pending
+```
+
+B:
+
+```text
+Decline
+```
+
+Then:
+
+```text
+A → B
+rejected
+```
+
+No friendship.
+
+A cannot message B.
+
+Search result:
+
+```text
+Add Friend
+```
+
+can become available again.
+
+---
+
+# 73. If User A Cancels
+
+```text
+A → B
+pending
+```
+
+A clicks:
+
+```text
+Cancel Request
+```
+
+Request is cancelled.
+
+B's pending request notification disappears.
+
+---
+
+# 74. If They Unfriend
+
+```text
+A ↔ B
+friends
+```
+
+A removes B.
+
+Then:
+
+```text
+friendship deleted
+```
+
+Both users can no longer send new private messages.
+
+Existing messages remain in the database.
+
+UI:
+
+```text
+You are no longer friends.
+
+[Add Friend]
+```
+
+---
+
+# 75. Recommended Component Structure
+
+Follow the existing project architecture.
+
+Potential components:
+
+```text
+components/
+├── friends/
+│   ├── FriendsPage
+│   ├── FriendList
+│   ├── FriendListItem
+│   ├── FriendSearch
+│   ├── UserSearch
+│   └── UserProfileCard
+│
+├── requests/
+│   ├── RequestsPage
+│   ├── IncomingRequestList
+│   ├── OutgoingRequestList
+│   ├── FriendRequestCard
+│   └── RequestBadge
+│
+└── chat/
+    └── existing components
+```
+
+Reuse existing components wherever possible.
+
+---
+
+# 76. Recommended Backend Structure
+
+Adapt to the current project structure.
+
+Potentially:
+
+```text
+controllers/
+    friendController.js
+    friendRequestController.js
+
+routes/
+    friendRoutes.js
+    friendRequestRoutes.js
+
+middleware/
+    friendshipMiddleware.js
+
+services/
+    friendshipService.js
+```
+
+Do not blindly create all of these files.
+
+Follow the existing architecture.
+
+---
+
+# 77. Testing Matrix
+
+Test with at least three accounts:
+
+```text
+Alice
+Bob
+Charlie
+```
+
+### Scenario 1
+
+Alice searches Bob.
+
+Expected:
+
+```text
+Add Friend
+```
+
+### Scenario 2
+
+Alice sends request.
+
+Expected:
+
+```text
+Request Sent
+```
+
+Bob:
+
+```text
+Requests ●
+```
+
+### Scenario 3
+
+Bob accepts.
+
+Expected:
+
+Alice:
+
+```text
+Friends → Bob
+Message
+```
+
+Bob:
+
+```text
+Friends → Alice
+Message
+```
+
+### Scenario 4
+
+Alice sends message.
+
+Expected:
+
+```text
+Success
+```
+
+### Scenario 5
+
+Alice searches Charlie.
+
+Expected:
+
+```text
+Add Friend
+```
+
+No Message button.
+
+### Scenario 6
+
+Alice manually calls message API for Charlie.
+
+Expected:
+
+```text
+403 Forbidden
+```
+
+### Scenario 7
+
+Alice attempts Socket.IO private room with Charlie.
+
+Expected:
+
+```text
+Denied
+```
+
+### Scenario 8
+
+Bob rejects Alice.
+
+Expected:
+
+```text
+No friendship
+No chat
+```
+
+### Scenario 9
+
+Bob removes Alice.
+
+Expected:
+
+```text
+Friendship removed
+New messages blocked
+```
+
+### Scenario 10
+
+Alice creates a group containing Bob and Charlie.
+
+Expected:
+
+```text
+Group chat continues working
+```
+
+even though private friendship logic is separate.
+
+---
+
+# 78. Important Existing Feature Compatibility
+
+After implementing the friend system, verify that all existing features still work:
+
+* Login
+* Registration
+* Logout
+* JWT authentication
+* User search
+* Private chat
+* Message sending
+* Message receiving
+* Typing indicator
+* Read receipts
+* Reactions
+* Group chat
+* Group member management
+* Group messages
+* Profile pictures
+* Profile information
+* Sidebar
+* Notifications
+* Dark mode
+* Responsive layout
+
+Do not regress existing functionality.
+
+---
+
+# 79. Final Acceptance Criteria
+
+The implementation is complete only when:
+
+## Friend Requests
+
+* [ ] User can search all users
+* [ ] User can send friend request
+* [ ] Duplicate request prevented
+* [ ] Self-request prevented
+* [ ] Reverse request handled
+* [ ] User can cancel request
+* [ ] User can accept request
+* [ ] User can reject request
+* [ ] Requests persist in SQLite
+* [ ] Requests update in real time
+
+## Requests Tab
+
+* [ ] Requests tab exists
+* [ ] Incoming requests displayed
+* [ ] Outgoing requests displayed
+* [ ] Notification dot appears
+* [ ] Notification count works
+* [ ] Notification updates in real time
+* [ ] Empty state exists
+
+## Friends
+
+* [ ] Friends tab exists
+* [ ] Friends displayed
+* [ ] Friends searchable
+* [ ] Friend count displayed
+* [ ] Message button works
+* [ ] Profile can be viewed
+* [ ] Friend can be removed
+* [ ] Friend removal updates in real time
+
+## Private Chat Security
+
+* [ ] Only friends can message
+* [ ] Backend checks friendship
+* [ ] Socket.IO checks friendship
+* [ ] Private room access checks friendship
+* [ ] Typing checks friendship
+* [ ] Read receipts check friendship
+* [ ] Reactions check conversation access
+
+## Chat UI
+
+* [ ] Chats only show valid private conversations
+* [ ] Non-friends cannot appear as active chats
+* [ ] New Chat opens friend selector
+* [ ] Search users does not automatically create conversations
+* [ ] Existing conversations are preserved safely
+
+## Groups
+
+* [ ] Group chat continues working
+* [ ] Group membership is independent from friendship
+* [ ] Group messages continue working
+* [ ] Group permissions continue working
+
+## Security
+
+* [ ] JWT required
+* [ ] Sender derived from authenticated user
+* [ ] Friendship verified server-side
+* [ ] SQL queries parameterized
+* [ ] Socket rooms protected
+* [ ] Unauthorized API access blocked
+
+---
+
+# 80. Final Implementation Instruction
+
+Before writing code:
+
+1. Inspect the existing database.
+2. Inspect existing user schema.
+3. Inspect existing chat/conversation schema.
+4. Inspect existing message schema.
+5. Inspect existing authentication middleware.
+6. Inspect existing Socket.IO implementation.
+7. Inspect existing sidebar.
+8. Inspect existing user-search implementation.
+9. Inspect existing chat creation logic.
+10. Inspect existing frontend state management.
+
+Then produce a short implementation plan based on the actual codebase.
+
+After approval or immediately if operating autonomously, implement the feature incrementally.
+
+Do not rewrite unrelated parts of the application.
+
+Do not create duplicate systems.
+
+Reuse the existing authentication, socket connection, UI components, state management, API conventions, and database utilities wherever possible.
+
+The final application should behave according to this fundamental rule:
+
+```text
+                     SEARCH USERS
+                          │
+                          ▼
+                    ADD FRIEND
+                          │
+                          ▼
+                 FRIEND REQUEST
+                          │
+               ┌──────────┴──────────┐
+               │                     │
+            ACCEPT                 REJECT
+               │                     │
+               ▼                     ▼
+           FRIENDS                NO CHAT
+               │
+               ▼
+         PRIVATE CHAT
+               │
+               ▼
+       REAL-TIME MESSAGING
+```
+
+And the sidebar should provide:
+
+```text
+┌──────────────────────────────┐
+│ ChatApp Pro                  │
+│                              │
+│ 💬 Chats                     │
+│ 👥 Friends                   │
+│ 🔔 Requests             ● 2  │
+│                              │
+│ ──────────────────────────── │
+│                              │
+│ Conversations                │
+│                              │
+│ John Doe                     │
+│ Sarah Smith                  │
+│ 👥 Project Team              │
+│ 👥 College Group             │
+└──────────────────────────────┘
+```
+
+The end result should make ChatApp Pro behave as a **friend-based messaging platform**, where discovery, friendship, requests, private messaging, and group communication are clearly separated but seamlessly integrated.
