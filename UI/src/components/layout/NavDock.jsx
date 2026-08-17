@@ -12,10 +12,11 @@ import {
   FaUser
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
   const { user, logout } = useAuth();
-  const [darkMode, setDarkMode] = useState(true);
+  const { isDark, toggleTheme } = useTheme();
 
   const navItems = [
     { id: 'chats', label: 'Chats', icon: FaCommentAlt, badge: unreadCount > 0 ? unreadCount : null },
@@ -74,11 +75,11 @@ const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
         {/* Bottom Actions & User Profile */}
         <div className="flex flex-col items-center space-y-4">
           <button
-            onClick={() => setDarkMode(!darkMode)}
-            title="Toggle Theme"
+            onClick={toggleTheme}
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             className="w-10 h-10 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-slate-800/60 flex items-center justify-center transition"
           >
-            {darkMode ? <FaSun className="text-lg" /> : <FaMoon className="text-lg" />}
+            {isDark ? <FaSun className="text-lg text-amber-400" /> : <FaMoon className="text-lg text-indigo-400" />}
           </button>
 
           <NavLink

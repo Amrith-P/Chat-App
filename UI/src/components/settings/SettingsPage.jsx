@@ -20,12 +20,13 @@ import {
   FaInfoCircle
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const SettingsPage = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme, setTheme, isDark } = useTheme();
 
   // Settings UI states (mock / UI presentation only per request)
-  const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [readReceipts, setReadReceipts] = useState(true);
   const [twoFactor, setTwoFactor] = useState(false);
@@ -107,10 +108,10 @@ const SettingsPage = () => {
         { 
           id: 'app-theme', 
           label: 'Dark Mode', 
-          desc: 'Sleek dark mode tailored for low light',
+          desc: isDark ? 'Sleek dark mode active' : 'Clean light mode active',
           type: 'toggle', 
-          state: darkMode, 
-          onToggle: () => setDarkMode(!darkMode) 
+          state: isDark, 
+          onToggle: toggleTheme 
         },
         { id: 'app-accent', label: 'Accent Color', value: 'Emerald Green', type: 'arrow' }
       ]
