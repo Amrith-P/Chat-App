@@ -15,7 +15,8 @@ export const searchUsers = (req, res) => {
         WHEN fr_inc.id IS NOT NULL THEN 'request_received'
         ELSE 'none'
       END as relationship,
-      fr_inc.id as incomingRequestId
+      fr_inc.id as incomingRequestId,
+      fr_out.id as outgoingRequestId
     FROM users u
     LEFT JOIN friendships f ON (
       (f.user_one_id = LEAST(?, u.id) AND f.user_two_id = GREATEST(?, u.id)) OR
@@ -41,7 +42,8 @@ export const searchUsers = (req, res) => {
               WHEN fr_inc.id IS NOT NULL THEN 'request_received'
               ELSE 'none'
             END as relationship,
-            fr_inc.id as incomingRequestId
+            fr_inc.id as incomingRequestId,
+            fr_out.id as outgoingRequestId
           FROM users u
           LEFT JOIN friendships f ON (
             (f.user_one_id = ? AND f.user_two_id = u.id) OR (f.user_one_id = u.id AND f.user_two_id = ?)
@@ -76,7 +78,8 @@ export const searchUsers = (req, res) => {
             WHEN fr_inc.id IS NOT NULL THEN 'request_received'
             ELSE 'none'
           END as relationship,
-          fr_inc.id as incomingRequestId
+          fr_inc.id as incomingRequestId,
+          fr_out.id as outgoingRequestId
         FROM users u
         LEFT JOIN friendships f ON (
           (f.user_one_id = ? AND f.user_two_id = u.id) OR (f.user_one_id = u.id AND f.user_two_id = ?)

@@ -66,10 +66,18 @@ export const useFriends = () => {
 
   // Send Friend Request
   const sendFriendRequest = useCallback(async (receiverId) => {
-    const res = await apiRequest('/friend-requests/requests', 'POST', { receiverId });
-    await refreshRequests();
-    return res;
-  }, [refreshRequests]);
+    try {
+      const res = await apiRequest('/friend-requests/requests', 'POST', { receiverId });
+      await refreshRequests();
+      return res;
+    } catch (err) {
+      if (err.message && (err.message.includes('already pending') || err.message.includes('already friends'))) {
+        await Promise.all([refreshRequests(), refreshFriends()]);
+        return { status: 'pending', message: err.message };
+      }
+      throw err;
+    }
+  }, [refreshRequests, refreshFriends]);
 
   // Accept Friend Request
   const acceptFriendRequest = useCallback(async (requestId) => {

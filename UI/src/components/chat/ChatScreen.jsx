@@ -623,6 +623,8 @@ const ChatScreen = () => {
               onLeaveGroup={handleLeaveGroup}
               onDeleteGroup={handleDeleteGroup}
               onSendFriendRequest={sendFriendRequest}
+              onAcceptRequest={acceptFriendRequest}
+              onCancelRequest={cancelFriendRequest}
               onRemoveFriend={removeFriend}
               onStartChat={(c) => {
                 handleStartChatWithContact(c);
@@ -657,6 +659,7 @@ const ChatScreen = () => {
         onSelectUser={handleViewProfile}
         onSendFriendRequest={sendFriendRequest}
         onAcceptRequest={acceptFriendRequest}
+        onCancelRequest={cancelFriendRequest}
         onStartChat={(u) => {
           handleStartChatWithContact(u);
           setIsSearchOpen(false);

@@ -56,6 +56,8 @@ if (isPostgres) {
       if (key === 'lastmessagetime' || key === 'lastmsgtime') normalized.lastMessageTime = row[key];
       if (key === 'emailverified') normalized.emailVerified = row[key];
       if (key === 'isfavorite') normalized.isFavorite = row[key];
+      if (key === 'incomingrequestid') normalized.incomingRequestId = row[key];
+      if (key === 'outgoingrequestid') normalized.outgoingRequestId = row[key];
     }
     return normalized;
   };

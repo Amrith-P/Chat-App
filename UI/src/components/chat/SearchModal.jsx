@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaSearch, FaUserPlus, FaTimes, FaCheck, FaClock, FaCommentDots } from 'react-icons/fa';
 import { apiRequest } from '../../api/client';
 
-const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcceptRequest }) => {
+const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcceptRequest, onCancelRequest, onStartChat }) => {
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,9 +34,10 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
     setActionLoadingId(userId);
     try {
       if (onSendFriendRequest) {
-        await onSendFriendRequest(userId);
+        const res = await onSendFriendRequest(userId);
+        const newReqId = res ? res.requestId : null;
         setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, relationship: 'request_sent' } : u))
+          prev.map((u) => (u.id === userId ? { ...u, relationship: 'request_sent', outgoingRequestId: newReqId || u.outgoingRequestId } : u))
         );
       }
     } catch (err) {
@@ -58,6 +59,25 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
       }
     } catch (err) {
       alert(err.message || 'Failed to accept request');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleCancel = async (e, reqId, userId) => {
+    e.stopPropagation();
+    setActionLoadingId(userId);
+    try {
+      if (onCancelRequest) {
+        if (reqId) {
+          await onCancelRequest(reqId);
+        }
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, relationship: 'none', outgoingRequestId: null } : u))
+        );
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to cancel request');
     } finally {
       setActionLoadingId(null);
     }
@@ -146,10 +166,21 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
                         <span>Message</span>
                       </button>
                     ) : rel === 'request_sent' ? (
-                      <span className="px-3 py-1.5 bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-semibold rounded-xl shrink-0 flex items-center space-x-1">
-                        <FaClock />
-                        <span>Request Sent</span>
-                      </span>
+                      <div className="flex items-center space-x-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span className="px-2.5 py-1 bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-semibold rounded-xl cursor-default select-none flex items-center space-x-1">
+                          <FaClock />
+                          <span>Pending</span>
+                        </span>
+                        {onCancelRequest && (
+                          <button
+                            disabled={isLoading}
+                            onClick={(e) => handleCancel(e, u.outgoingRequestId, u.id)}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-xs font-medium rounded-xl border border-slate-700 transition"
+                          >
+                            {isLoading ? 'Canceling...' : 'Cancel'}
+                          </button>
+                        )}
+                      </div>
                     ) : rel === 'request_received' ? (
                       <button
                         disabled={isLoading}

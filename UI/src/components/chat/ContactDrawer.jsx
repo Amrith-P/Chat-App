@@ -175,10 +175,27 @@ const ContactDrawer = ({
 
             if (outgoingReq) {
               return (
-                <div className="pt-1 flex flex-col items-center justify-center space-y-1">
-                  <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold rounded-xl">
-                    ⏳ Pending (Request Sent)
-                  </span>
+                <div className="pt-2 flex flex-col items-center justify-center space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold rounded-xl cursor-default select-none">
+                      ⏳ Pending
+                    </span>
+                    {(onCancelRequest || cancelFriendRequest) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const fn = onCancelRequest || cancelFriendRequest;
+                            await fn(outgoingReq.id);
+                          } catch (err) {
+                            alert(err.message || 'Failed to cancel request');
+                          }
+                        }}
+                        className="px-3 py-1 bg-slate-800 hover:bg-red-500/20 text-slate-300 hover:text-red-400 text-xs font-semibold rounded-xl border border-slate-700 transition"
+                      >
+                        Cancel Request
+                      </button>
+                    )}
+                  </div>
                   <p className="text-[10px] text-slate-500 text-center">
                     Waiting for user to accept your friend request to enable chat.
                   </p>

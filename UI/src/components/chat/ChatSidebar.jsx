@@ -440,9 +440,25 @@ const ChatSidebar = ({
                             Message
                           </button>
                         ) : isOutgoing ? (
-                          <span className="px-2 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-semibold rounded-lg">
-                            Request Sent
-                          </span>
+                          <div className="flex items-center space-x-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <span className="px-2 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-semibold rounded-lg cursor-default select-none">
+                              ⏳ Pending
+                            </span>
+                            {onCancelRequest && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (u.outgoingRequestId) {
+                                    await onCancelRequest(u.outgoingRequestId);
+                                    setSearchTerm('');
+                                  }
+                                }}
+                                className="px-2 py-1 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 text-[10px] font-medium rounded-lg border border-slate-700 transition"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
                         ) : isIncoming ? (
                           <button
                             onClick={async (e) => {
