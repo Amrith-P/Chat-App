@@ -294,8 +294,11 @@ export const initSocket = (server) => {
     socket.on('call_user', (data = {}) => {
       const { targetUserId, signalData, isVideo } = data;
       if (!targetUserId) return;
+      const targetId = Number(targetUserId);
 
-      io.to(`user_${targetUserId}`).emit('incoming_call', {
+      console.log(`📞 [Socket] call_user from ${userId} (${socket.user.fullName}) to targetUserId ${targetId}`);
+
+      io.to(`user_${targetId}`).emit('incoming_call', {
         callerId: userId,
         callerName: socket.user.fullName || socket.user.name,
         callerAvatar: socket.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(socket.user.fullName || 'User')}`,
@@ -307,8 +310,11 @@ export const initSocket = (server) => {
     socket.on('accept_call', (data = {}) => {
       const { targetUserId, signalData } = data;
       if (!targetUserId) return;
+      const targetId = Number(targetUserId);
 
-      io.to(`user_${targetUserId}`).emit('call_accepted', {
+      console.log(`✅ [Socket] accept_call from ${userId} to targetUserId ${targetId}`);
+
+      io.to(`user_${targetId}`).emit('call_accepted', {
         signalData,
         acceptedByUserId: userId
       });
@@ -317,8 +323,9 @@ export const initSocket = (server) => {
     socket.on('ice_candidate', (data = {}) => {
       const { targetUserId, candidate } = data;
       if (!targetUserId || !candidate) return;
+      const targetId = Number(targetUserId);
 
-      io.to(`user_${targetUserId}`).emit('ice_candidate_received', {
+      io.to(`user_${targetId}`).emit('ice_candidate_received', {
         candidate,
         fromUserId: userId
       });
@@ -327,8 +334,9 @@ export const initSocket = (server) => {
     socket.on('reject_call', (data = {}) => {
       const { targetUserId } = data;
       if (!targetUserId) return;
+      const targetId = Number(targetUserId);
 
-      io.to(`user_${targetUserId}`).emit('call_rejected', {
+      io.to(`user_${targetId}`).emit('call_rejected', {
         rejectedByUserId: userId
       });
     });
@@ -336,8 +344,9 @@ export const initSocket = (server) => {
     socket.on('end_call', (data = {}) => {
       const { targetUserId } = data;
       if (!targetUserId) return;
+      const targetId = Number(targetUserId);
 
-      io.to(`user_${targetUserId}`).emit('call_ended', {
+      io.to(`user_${targetId}`).emit('call_ended', {
         endedByUserId: userId
       });
     });

@@ -77,12 +77,43 @@ export const CallProvider = ({ children }) => {
     return pc;
   }, [socket]);
 
+  const callStateRef = useRef(callState);
+  useEffect(() => {
+    callStateRef.current = callState;
+  }, [callState]);
+
+  const getTargetUserId = (contact) => {
+    if (!contact) return null;
+    if (contact.isGroup) return null;
+    return Number(
+      contact.contactId ?? 
+      contact.contactid ?? 
+      contact.userId ?? 
+      contact.userid ?? 
+      contact.recipientId ?? 
+      contact.id
+    );
+  };
+
   // Start Outgoing Call
   const startCall = useCallback(async (targetContact, type = 'video') => {
     if (!targetContact || !socket) return;
+
+    if (targetContact.isGroup) {
+      alert('Group calls are not supported. Please select a direct contact to start a video call.');
+      return;
+    }
+
     cleanupCall();
 
-    const targetUserId = Number(targetContact.contactId || targetContact.id);
+    const targetUserId = getTargetUserId(targetContact);
+    if (!targetUserId) {
+      alert('Invalid contact details for video call.');
+      return;
+    }
+
+    console.log(`🚀 Starting outgoing ${type} call to targetUserId: ${targetUserId}`);
+
     setCallType(type);
     setPeerContact(targetContact);
     setCallState('calling');
@@ -126,7 +157,7 @@ export const CallProvider = ({ children }) => {
   const acceptCall = useCallback(async () => {
     if (!peerContact || !incomingSignal || !socket) return;
 
-    const targetUserId = Number(peerContact.id || peerContact.callerId);
+    const targetUserId = getTargetUserId(peerContact) || Number(peerContact.id || peerContact.callerId);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -177,7 +208,7 @@ export const CallProvider = ({ children }) => {
   // Reject Incoming Call
   const rejectCall = useCallback(() => {
     if (peerContact && socket) {
-      const targetUserId = Number(peerContact.id || peerContact.callerId);
+      const targetUserId = getTargetUserId(peerContact) || Number(peerContact.id || peerContact.callerId);
       socket.emit('reject_call', { targetUserId });
     }
     cleanupCall();
@@ -186,7 +217,7 @@ export const CallProvider = ({ children }) => {
   // End Active Call
   const endCall = useCallback(() => {
     if (peerContact && socket) {
-      const targetUserId = Number(peerContact.id || peerContact.callerId || peerContact.contactId);
+      const targetUserId = getTargetUserId(peerContact) || Number(peerContact.id || peerContact.callerId);
       socket.emit('end_call', { targetUserId });
     }
     cleanupCall();
@@ -220,7 +251,7 @@ export const CallProvider = ({ children }) => {
 
     const handleIncomingCall = (data) => {
       console.log('📞 Incoming call signal received:', data);
-      if (callState !== 'idle') {
+      if (callStateRef.current !== 'idle') {
         // Auto reject if already in a call
         socket.emit('reject_call', { targetUserId: data.callerId });
         return;
@@ -228,6 +259,7 @@ export const CallProvider = ({ children }) => {
 
       setPeerContact({
         id: data.callerId,
+        contactId: data.callerId,
         name: data.callerName,
         avatar: data.callerAvatar
       });
@@ -291,7 +323,7 @@ export const CallProvider = ({ children }) => {
       socket.off('call_rejected', handleCallRejected);
       socket.off('call_ended', handleCallEnded);
     };
-  }, [socket, callState, cleanupCall]);
+  }, [socket, cleanupCall]);
 
   return (
     <CallContext.Provider
