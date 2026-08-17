@@ -5,6 +5,9 @@ import { areUsersFriends } from '../middleware/friendshipMiddleware.js';
 
 // Map of userId -> Set of active socket IDs
 const onlineUsers = new Map();
+let ioInstance = null;
+
+export const getIO = () => ioInstance;
 
 export const initSocket = (server) => {
   const io = new Server(server, {
@@ -19,6 +22,8 @@ export const initSocket = (server) => {
       credentials: true
     }
   });
+
+  ioInstance = io;
 
   // Socket Middleware: Validate JWT Token
   io.use((socket, next) => {
