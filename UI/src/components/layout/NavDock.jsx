@@ -8,7 +8,8 @@ import {
   FaCog, 
   FaMoon, 
   FaSun, 
-  FaSignOutAlt 
+  FaSignOutAlt,
+  FaUser
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 
