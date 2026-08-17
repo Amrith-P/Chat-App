@@ -110,7 +110,11 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
               return (
                 <div
                   key={u.id}
-                  className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2 group"
+                  onClick={() => {
+                    if (onSelectUser) onSelectUser(u);
+                    onClose();
+                  }}
+                  className="p-3 rounded-2xl bg-slate-950/60 hover:bg-slate-800/90 border border-slate-800/80 hover:border-emerald-500/40 cursor-pointer transition space-y-2 group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3 min-w-0 pr-2">
@@ -123,7 +127,7 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
                         <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-950" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-semibold text-sm text-white truncate">{u.fullName}</h4>
+                        <h4 className="font-semibold text-sm text-white group-hover:text-emerald-300 transition truncate">{u.fullName}</h4>
                         <p className="text-xs text-slate-400 truncate font-mono">{u.email}</p>
                       </div>
                     </div>
@@ -131,8 +135,9 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
                     {/* DYNAMIC RELATIONSHIP ACTIONS */}
                     {rel === 'friend' ? (
                       <button
-                        onClick={() => {
-                          onSelectUser(u);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onStartChat) onStartChat(u);
                           onClose();
                         }}
                         className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1 shrink-0 shadow-sm shadow-emerald-500/20"

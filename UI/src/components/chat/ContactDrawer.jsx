@@ -148,44 +148,72 @@ const ContactDrawer = ({
           {!isGroup && (() => {
             const targetId = Number(contact.contactId || contact.id);
             const isFriend = friends.some((f) => Number(f.id) === targetId);
-            const isOutgoing = outgoingRequests.some((r) => Number(r.receiverId) === targetId);
-            const isIncoming = incomingRequests.some((r) => Number(r.senderId) === targetId);
+            const outgoingReq = outgoingRequests.find((r) => Number(r.receiverId) === targetId);
+            const incomingReq = incomingRequests.find((r) => Number(r.senderId) === targetId);
             const isSelf = targetId === Number(currentUserId);
 
             if (isSelf) return null;
 
             if (isFriend) {
               return (
-                <div className="pt-1 flex items-center space-x-2 justify-center">
+                <div className="pt-2 flex flex-col items-center space-y-2 justify-center">
                   <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl flex items-center space-x-1">
-                    <span>✓ Confirmed Friends</span>
+                    <span>✓ Friends</span>
                   </span>
+                  {onStartChat && (
+                    <button
+                      onClick={() => onStartChat(contact)}
+                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-emerald-500/20"
+                    >
+                      <FaCommentDots />
+                      <span>Start Chat</span>
+                    </button>
+                  )}
                 </div>
               );
             }
 
-            if (isOutgoing) {
+            if (outgoingReq) {
               return (
-                <div className="pt-1 flex items-center justify-center">
+                <div className="pt-1 flex flex-col items-center justify-center space-y-1">
                   <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold rounded-xl">
-                    ⏳ Friend Request Pending
+                    ⏳ Pending (Request Sent)
                   </span>
+                  <p className="text-[10px] text-slate-500 text-center">
+                    Waiting for user to accept your friend request to enable chat.
+                  </p>
                 </div>
               );
             }
 
-            if (isIncoming) {
+            if (incomingReq) {
               return (
-                <div className="pt-1 flex items-center justify-center">
-                  <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-xl">
-                    🔔 Sent You a Friend Request
+                <div className="pt-1 flex flex-col items-center justify-center space-y-2">
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Sent you a friend request
                   </span>
+                  <button
+                    disabled={addingFriendId === targetId}
+                    onClick={async () => {
+                      setAddingFriendId(targetId);
+                      try {
+                        await acceptFriendRequest(incomingReq.id);
+                      } catch (err) {
+                        alert(err.message || 'Failed to accept request');
+                      } finally {
+                        setAddingFriendId(null);
+                      }
+                    }}
+                    className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                  >
+                    <span>{addingFriendId === targetId ? 'Accepting...' : 'Accept Friend Request'}</span>
+                  </button>
                 </div>
               );
             }
 
             return (
-              <div className="pt-1">
+              <div className="pt-2 flex flex-col items-center space-y-1">
                 <button
                   disabled={addingFriendId === targetId}
                   onClick={async () => {
@@ -199,11 +227,14 @@ const ContactDrawer = ({
                       setAddingFriendId(null);
                     }
                   }}
-                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
                 >
                   <FaUserPlus />
-                  <span>{addingFriendId === targetId ? 'Sending...' : '+ Add Friend'}</span>
+                  <span>{addingFriendId === targetId ? 'Sending Request...' : '+ Add Friend'}</span>
                 </button>
+                <p className="text-[10px] text-slate-500 text-center pt-0.5">
+                  Send a friend request to unlock private chat.
+                </p>
               </div>
             );
           })()}

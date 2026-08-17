@@ -29,6 +29,7 @@ const ChatSidebar = ({
   onClearChat, 
   onToggleFavorite, 
   onStartChatWithContact,
+  onViewProfile,
   activeTab = 'chats',
   onTabChange,
   friends = [],
@@ -39,6 +40,7 @@ const ChatSidebar = ({
   onRejectRequest,
   onCancelRequest,
   onRemoveFriend,
+  onSendFriendRequest,
   loadingSocial = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -399,7 +401,15 @@ const ChatSidebar = ({
                   return (
                     <div
                       key={u.id}
-                      className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 transition space-y-2 group shadow-sm"
+                      onClick={() => {
+                        if (onViewProfile) {
+                          onViewProfile(u);
+                        } else if (onStartChatWithContact) {
+                          onStartChatWithContact(u);
+                        }
+                        setSearchTerm('');
+                      }}
+                      className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800/90 hover:border-emerald-500/40 cursor-pointer transition space-y-2 group shadow-sm"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2.5">
@@ -420,7 +430,8 @@ const ChatSidebar = ({
                         {/* DYNAMIC RELATIONSHIP ACTION BUTTON */}
                         {isFriend ? (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (onStartChatWithContact) onStartChatWithContact(u);
                               setSearchTerm('');
                             }}
@@ -434,7 +445,8 @@ const ChatSidebar = ({
                           </span>
                         ) : isIncoming ? (
                           <button
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               if (onAcceptRequest && u.incomingRequestId) {
                                 await onAcceptRequest(u.incomingRequestId);
                                 setSearchTerm('');
@@ -446,12 +458,13 @@ const ChatSidebar = ({
                           </button>
                         ) : (
                           <button
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               if (onSendFriendRequest || onOpenNewChat) {
                                 try {
                                   await (onSendFriendRequest ? onSendFriendRequest(u.id) : onOpenNewChat());
                                   setSearchTerm('');
-                                } catch (e) {}
+                                } catch (err) {}
                               }
                             }}
                             className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 text-[10px] font-bold rounded-lg transition border border-emerald-500/30"

@@ -68,6 +68,24 @@ const ChatScreen = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerContact, setDrawerContact] = useState(null);
+
+  const handleViewProfile = (targetContact) => {
+    if (!targetContact) return;
+    setDrawerContact({
+      id: targetContact.id || targetContact.contactId,
+      contactId: targetContact.id || targetContact.contactId,
+      name: targetContact.fullName || targetContact.name || 'User',
+      email: targetContact.email || '',
+      avatar: targetContact.avatar || '',
+      status: targetContact.status || '',
+      description: targetContact.description || '',
+      isGroup: Boolean(targetContact.isGroup),
+      isOnline: Boolean(targetContact.isOnline)
+    });
+    setIsDrawerOpen(true);
+    setIsSearchOpen(false);
+  };
 
   const handleCreateGroup = async (groupData) => {
     const newGroup = await createGroup(groupData);
@@ -555,6 +573,7 @@ const ChatScreen = () => {
               onClearChat={clearChat}
               onToggleFavorite={toggleFavoriteChat}
               onStartChatWithContact={handleStartChatWithContact}
+              onViewProfile={handleViewProfile}
               activeTab={activeTab}
               onTabChange={setActiveTab}
               friends={friends}
@@ -595,13 +614,20 @@ const ChatScreen = () => {
             isDrawerOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
           }`}>
             <ContactDrawer
-              contact={activeChat}
+              contact={drawerContact || activeChat}
               isOpen={isDrawerOpen}
-              onClose={() => setIsDrawerOpen(false)}
+              onClose={() => {
+                setIsDrawerOpen(false);
+                setDrawerContact(null);
+              }}
               onLeaveGroup={handleLeaveGroup}
               onDeleteGroup={handleDeleteGroup}
               onSendFriendRequest={sendFriendRequest}
               onRemoveFriend={removeFriend}
+              onStartChat={(c) => {
+                handleStartChatWithContact(c);
+                setDrawerContact(null);
+              }}
             />
             </div>
           </>
@@ -628,9 +654,13 @@ const ChatScreen = () => {
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onSelectUser={handleStartChatWithContact}
+        onSelectUser={handleViewProfile}
         onSendFriendRequest={sendFriendRequest}
         onAcceptRequest={acceptFriendRequest}
+        onStartChat={(u) => {
+          handleStartChatWithContact(u);
+          setIsSearchOpen(false);
+        }}
       />
 
       <CreateGroupModal
