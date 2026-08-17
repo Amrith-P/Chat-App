@@ -199,7 +199,9 @@ const ChatWindow = ({
                 )}
               </h3>
               <p className="text-[11px] md:text-xs text-emerald-400 font-medium truncate">
-                {activeChat.isOnline ? 'Online • Available' : 'Last seen recently'}
+                {activeChat.isGroup 
+                  ? `${activeChat.memberCount || 1} members` 
+                  : (activeChat.isOnline ? 'Online • Available' : 'Last seen recently')}
               </p>
             </div>
           </div>
@@ -367,6 +369,13 @@ const ChatWindow = ({
                       ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white shadow-lg self-end mr-2 sm:mr-4'
                       : 'bg-slate-800 border border-slate-700 text-slate-100 shadow-md self-start ml-2 sm:ml-4'
                   }`}>
+                    
+                    {/* Sender Name for Received Group Messages */}
+                    {!isMe && activeChat.isGroup && (
+                      <div className="text-[11px] font-bold text-emerald-400 mb-1 truncate px-1">
+                        {msg.senderName || 'Member'}
+                      </div>
+                    )}
                     
                     {/* Forwarded Badge */}
                     {msg.isForwarded && (

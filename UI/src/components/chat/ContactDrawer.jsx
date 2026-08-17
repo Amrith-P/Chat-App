@@ -1,18 +1,105 @@
-import React, { useState } from 'react';
-import { FaTimes, FaPhone, FaVideo, FaBell, FaBan, FaTrash, FaShieldAlt, FaEnvelope } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { 
+  FaTimes, 
+  FaPhone, 
+  FaVideo, 
+  FaBell, 
+  FaBan, 
+  FaTrash, 
+  FaShieldAlt, 
+  FaEnvelope, 
+  FaUsers, 
+  FaUserPlus, 
+  FaUserMinus, 
+  FaSignOutAlt, 
+  FaShieldVirus 
+} from 'react-icons/fa';
 import ConfirmModal from '../common/ConfirmModal';
+import { useGroupChat } from '../../hooks/chat/useGroupChat';
+import { useAuth } from '../../hooks/auth/useAuth';
 
-const ContactDrawer = ({ contact, isOpen, onClose }) => {
+const ContactDrawer = ({ contact, isOpen, onClose, onLeaveGroup, onDeleteGroup }) => {
+  const { user } = useAuth();
+  const { getGroupMembers, removeGroupMember, updateMemberRole } = useGroupChat();
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  const isGroup = Boolean(contact?.isGroup);
+  const currentUserId = user?.id;
+
+  // Fetch group members if opening a group chat
+  useEffect(() => {
+    if (!isOpen || !contact || !isGroup) return;
+
+    let isMounted = true;
+    setLoadingMembers(true);
+
+    getGroupMembers(contact.id)
+      .then((mList) => {
+        if (isMounted) {
+          setMembers(mList || []);
+          setLoadingMembers(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load group members in drawer:', err);
+        if (isMounted) setLoadingMembers(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, contact, isGroup, getGroupMembers]);
 
   if (!isOpen || !contact) return null;
+
+  const currentUserRole = members.find((m) => String(m.id) === String(currentUserId))?.role || (String(contact.adminId) === String(currentUserId) ? 'admin' : 'member');
+  const isCurrentAdmin = currentUserRole === 'admin' || String(contact.adminId) === String(currentUserId);
+
+  const handleRemoveMember = (mId, mName) => {
+    setConfirmConfig({
+      title: 'Remove Group Member',
+      message: `Are you sure you want to remove ${mName} from ${contact.name}?`,
+      confirmText: 'Remove Member',
+      onConfirm: async () => {
+        try {
+          await removeGroupMember(contact.id, mId);
+          setMembers((prev) => prev.filter((m) => String(m.id) !== String(mId)));
+        } catch (err) {
+          alert(`Failed to remove member: ${err.message}`);
+        }
+      }
+    });
+  };
+
+  const handleToggleRole = (mId, mName, currentRole) => {
+    const nextRole = currentRole === 'admin' ? 'member' : 'admin';
+    const actionLabel = nextRole === 'admin' ? 'Promote to Admin' : 'Demote to Member';
+
+    setConfirmConfig({
+      title: `${actionLabel}?`,
+      message: `Are you sure you want to change ${mName}'s role to ${nextRole}?`,
+      confirmText: actionLabel,
+      onConfirm: async () => {
+        try {
+          await updateMemberRole(contact.id, mId, nextRole);
+          setMembers((prev) => prev.map((m) => String(m.id) === String(mId) ? { ...m, role: nextRole } : m));
+        } catch (err) {
+          alert(`Failed to update role: ${err.message}`);
+        }
+      }
+    });
+  };
 
   return (
     <div className="w-72 lg:w-80 bg-slate-900 border-l border-slate-800 flex flex-col h-full select-none shrink-0 z-10 transition-all duration-300">
       
       {/* Header */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-        <h3 className="font-bold text-white text-sm">Contact Info</h3>
+        <h3 className="font-bold text-white text-sm">
+          {isGroup ? 'Group Info' : 'Contact Info'}
+        </h3>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
           <FaTimes />
         </button>
@@ -21,49 +108,62 @@ const ContactDrawer = ({ contact, isOpen, onClose }) => {
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
         
-        {/* Contact Photo & Name */}
+        {/* Photo & Name */}
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="relative">
             <img
               src={contact.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact.name)}`}
               alt={contact.name}
-              className="w-24 h-24 rounded-full border-2 border-emerald-500/50 p-1 object-cover shadow-xl"
+              className="w-24 h-24 rounded-full border-2 border-emerald-500/50 p-1 object-cover shadow-xl bg-slate-800"
             />
-            {contact.isOnline && (
+            {!isGroup && contact.isOnline && (
               <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full" />
+            )}
+            {isGroup && (
+              <span className="absolute bottom-1 right-1 bg-blue-500 text-white p-1 rounded-full border-2 border-slate-900 text-xs">
+                <FaUsers />
+              </span>
             )}
           </div>
           <div>
             <h2 className="text-lg font-bold text-white mb-0.5">{contact.name}</h2>
-            <p className="text-xs text-slate-400 font-mono">{contact.email}</p>
+            <p className="text-xs text-slate-400 font-mono">
+              {isGroup ? `${members.length || contact.memberCount || 1} members` : contact.email}
+            </p>
           </div>
         </div>
 
-        {/* Quick Action Buttons */}
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
-          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">
-            <FaPhone className="text-emerald-400 text-base mb-1.5" />
-            <span>Audio Call</span>
-          </button>
-          <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">
-            <FaVideo className="text-blue-400 text-base mb-1.5" />
-            <span>Video Call</span>
-          </button>
-        </div>
+        {/* Quick Action Buttons for 1-on-1 */}
+        {!isGroup && (
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+            <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">
+              <FaPhone className="text-emerald-400 text-base mb-1.5" />
+              <span>Audio Call</span>
+            </button>
+            <button className="flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition">
+              <FaVideo className="text-blue-400 text-base mb-1.5" />
+              <span>Video Call</span>
+            </button>
+          </div>
+        )}
 
-        {/* User Details */}
+        {/* Description / Status */}
         <div className="space-y-4 pt-2 border-t border-slate-800 text-xs">
           <div>
-            <span className="text-slate-500 font-semibold block mb-1 uppercase text-[10px] tracking-wider">About / Status</span>
+            <span className="text-slate-500 font-semibold block mb-1 uppercase text-[10px] tracking-wider">
+              {isGroup ? 'Group Description' : 'About / Status'}
+            </span>
             <p className="text-slate-300 font-medium leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800/60">
-              {contact.status || 'Available on ChatApp Pro'}
+              {contact.description || contact.status || (isGroup ? 'Group Chat on ChatApp Pro' : 'Available on ChatApp Pro')}
             </p>
           </div>
 
-          <div className="flex items-center space-x-3 text-slate-300">
-            <FaEnvelope className="text-slate-400 text-sm shrink-0" />
-            <span className="truncate">{contact.email}</span>
-          </div>
+          {!isGroup && (
+            <div className="flex items-center space-x-3 text-slate-300">
+              <FaEnvelope className="text-slate-400 text-sm shrink-0" />
+              <span className="truncate">{contact.email}</span>
+            </div>
+          )}
 
           <div className="flex items-center space-x-3 text-slate-300">
             <FaShieldAlt className="text-emerald-400 text-sm shrink-0" />
@@ -71,7 +171,77 @@ const ContactDrawer = ({ contact, isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Settings List */}
+        {/* GROUP MEMBERS SECTION */}
+        {isGroup && (
+          <div className="space-y-3 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 font-bold text-xs uppercase tracking-wider">
+                Group Members ({members.length})
+              </span>
+            </div>
+
+            {loadingMembers ? (
+              <p className="text-xs text-slate-500 text-center py-4">Loading members...</p>
+            ) : (
+              <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                {members.map((m) => {
+                  const isMe = String(m.id) === String(currentUserId);
+                  const isAdmin = m.role === 'admin' || String(contact.adminId) === String(m.id);
+
+                  return (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-950/50 border border-slate-800/60"
+                    >
+                      <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                        <img
+                          src={m.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.fullName || m.name)}`}
+                          alt={m.fullName || m.name}
+                          className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-700"
+                        />
+                        <div className="truncate">
+                          <div className="flex items-center space-x-1">
+                            <span className="text-xs font-semibold text-slate-200 truncate">
+                              {isMe ? 'You' : (m.fullName || m.name)}
+                            </span>
+                            {isAdmin && (
+                              <span className="px-1.5 py-0.2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[9px] font-bold rounded-md">
+                                Admin
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 truncate">{m.email}</p>
+                        </div>
+                      </div>
+
+                      {/* Admin Controls for other members */}
+                      {isCurrentAdmin && !isMe && (
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <button
+                            onClick={() => handleToggleRole(m.id, m.fullName || m.name, m.role)}
+                            title={isAdmin ? 'Demote to Member' : 'Promote to Admin'}
+                            className="p-1.5 text-amber-400 hover:bg-slate-800 rounded-lg transition text-xs"
+                          >
+                            <FaShieldVirus />
+                          </button>
+                          <button
+                            onClick={() => handleRemoveMember(m.id, m.fullName || m.name)}
+                            title="Remove Member"
+                            className="p-1.5 text-red-400 hover:bg-red-500/20 rounded-lg transition text-xs"
+                          >
+                            <FaUserMinus />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SETTINGS / ACTIONS LIST */}
         <div className="space-y-2 pt-2 border-t border-slate-800">
           <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/60 text-xs text-slate-300 font-medium transition">
             <div className="flex items-center space-x-3">
@@ -81,31 +251,69 @@ const ContactDrawer = ({ contact, isOpen, onClose }) => {
             <input type="checkbox" className="accent-emerald-500 rounded cursor-pointer" />
           </button>
 
-          <button 
-            onClick={() => setConfirmConfig({
-              title: 'Block Contact',
-              message: `Are you sure you want to block ${contact.name}? They will no longer be able to message or call you.`,
-              confirmText: 'Block User',
-              onConfirm: () => alert(`${contact.name} has been blocked.`)
-            })} 
-            className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
-          >
-            <FaBan className="text-sm" />
-            <span>Block User</span>
-          </button>
+          {isGroup ? (
+            <>
+              <button
+                onClick={() => setConfirmConfig({
+                  title: 'Leave Group',
+                  message: `Are you sure you want to leave ${contact.name}? You will no longer receive messages from this group.`,
+                  confirmText: 'Leave Group',
+                  onConfirm: () => {
+                    if (onLeaveGroup) onLeaveGroup(contact.id);
+                  }
+                })}
+                className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
+              >
+                <FaSignOutAlt className="text-sm" />
+                <span>Leave Group</span>
+              </button>
 
-          <button 
-            onClick={() => setConfirmConfig({
-              title: 'Clear Chat History',
-              message: `Are you sure you want to clear chat history with ${contact.name}? This will clear your local view.`,
-              confirmText: 'Clear Chat',
-              onConfirm: () => alert('Chat history cleared.')
-            })} 
-            className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
-          >
-            <FaTrash className="text-sm" />
-            <span>Clear Chat History</span>
-          </button>
+              {isCurrentAdmin && (
+                <button
+                  onClick={() => setConfirmConfig({
+                    title: 'Delete Group',
+                    message: `Are you sure you want to delete ${contact.name}? This action is permanent and deletes all messages for all members.`,
+                    confirmText: 'Delete Group',
+                    onConfirm: () => {
+                      if (onDeleteGroup) onDeleteGroup(contact.id);
+                    }
+                  })}
+                  className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
+                >
+                  <FaTrash className="text-sm" />
+                  <span>Delete Group</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => setConfirmConfig({
+                  title: 'Block Contact',
+                  message: `Are you sure you want to block ${contact.name}? They will no longer be able to message or call you.`,
+                  confirmText: 'Block User',
+                  onConfirm: () => alert(`${contact.name} has been blocked.`)
+                })} 
+                className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
+              >
+                <FaBan className="text-sm" />
+                <span>Block User</span>
+              </button>
+
+              <button 
+                onClick={() => setConfirmConfig({
+                  title: 'Clear Chat History',
+                  message: `Are you sure you want to clear chat history with ${contact.name}? This will clear your local view.`,
+                  confirmText: 'Clear Chat',
+                  onConfirm: () => alert('Chat history cleared.')
+                })} 
+                className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-red-500/10 text-xs text-red-400 font-semibold transition"
+              >
+                <FaTrash className="text-sm" />
+                <span>Clear Chat History</span>
+              </button>
+            </>
+          )}
         </div>
 
       </div>

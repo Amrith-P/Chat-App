@@ -13,6 +13,8 @@ import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
 import ContactDrawer from './ContactDrawer';
 import SearchModal from './SearchModal';
+import CreateGroupModal from './CreateGroupModal';
+import { useGroupChat } from '../../hooks/chat/useGroupChat';
 
 const parseDate = (dateStr) => {
   if (!dateStr) return new Date();
@@ -43,9 +45,43 @@ const ChatScreen = () => {
     setMobileView
   );
 
+  // Group Chat Hook
+  const { createGroup, leaveGroup: leaveGroupApi, deleteGroup: deleteGroupApi } = useGroupChat();
+
   // Modals & Drawers
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleCreateGroup = async (groupData) => {
+    const newGroup = await createGroup(groupData);
+    if (newGroup && newGroup.id) {
+      await refreshConversations();
+      selectChat(newGroup.id);
+    }
+  };
+
+  const handleLeaveGroup = async (groupId) => {
+    try {
+      await leaveGroupApi(groupId);
+      setIsDrawerOpen(false);
+      selectChat('');
+      await refreshConversations();
+    } catch (err) {
+      alert(`Failed to leave group: ${err.message}`);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId) => {
+    try {
+      await deleteGroupApi(groupId);
+      setIsDrawerOpen(false);
+      selectChat('');
+      await refreshConversations();
+    } catch (err) {
+      alert(`Failed to delete group: ${err.message}`);
+    }
+  };
 
   // Fetch Message History for Active Database Chat
   useEffect(() => {
@@ -498,6 +534,7 @@ const ChatScreen = () => {
               activeChatId={activeChatId}
               onSelectChat={selectChat}
               onOpenNewChat={() => setIsSearchOpen(true)}
+              onOpenCreateGroup={() => setIsCreateGroupOpen(true)}
               onDeleteChat={deleteChat}
               onClearChat={clearChat}
               onToggleFavorite={toggleFavoriteChat}
@@ -533,6 +570,8 @@ const ChatScreen = () => {
               contact={activeChat}
               isOpen={isDrawerOpen}
               onClose={() => setIsDrawerOpen(false)}
+              onLeaveGroup={handleLeaveGroup}
+              onDeleteGroup={handleDeleteGroup}
             />
             </div>
           </>
@@ -540,6 +579,7 @@ const ChatScreen = () => {
           <Outlet context={{
             onStartChat: handleStartChatWithContact,
             onOpenNewChat: () => setIsSearchOpen(true),
+            onOpenCreateGroup: () => setIsCreateGroupOpen(true),
             conversations,
             onJumpToChat: (contactName) => {
               const found = conversations.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase()));
@@ -559,6 +599,13 @@ const ChatScreen = () => {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectUser={handleStartChatWithContact}
+      />
+
+      <CreateGroupModal
+        isOpen={isCreateGroupOpen}
+        onClose={() => setIsCreateGroupOpen(false)}
+        onCreateGroup={handleCreateGroup}
+        conversations={conversations}
       />
 
     </div>

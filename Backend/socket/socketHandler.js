@@ -49,18 +49,74 @@ export const initSocket = (server) => {
     // Join personal user room for direct messaging
     socket.join(`user_${userId}`);
 
+    // Auto-join all conversation & group rooms for this user
+    db.all('SELECT conversationId FROM conversation_members WHERE userId = ?', [userId], (err, rows) => {
+      if (!err && rows) {
+        rows.forEach((r) => {
+          socket.join(`chat_${r.conversationId}`);
+          socket.join(`group:${r.conversationId}`);
+        });
+      }
+    });
+
     // Send full list of currently online users to the newly connected socket
     socket.emit('online_users_list', { userIds: Array.from(onlineUsers.keys()) });
 
     // Broadcast online status to all other sockets
     io.emit('user_online', { userId });
 
-    // Handle joining a specific chat room
+    // Secure join_group / join_chat handler verifying DB membership
+    socket.on('join_group', ({ groupId, chatId }) => {
+      const targetGroup = groupId || chatId;
+      if (!targetGroup) return;
+
+      db.get('SELECT * FROM conversation_members WHERE conversationId = ? AND userId = ?', [targetGroup, userId], (err, member) => {
+        if (err || !member) {
+          socket.emit('group-access-denied', { groupId: targetGroup, message: 'Not a member of this group' });
+          return;
+        }
+        socket.join(`chat_${targetGroup}`);
+        socket.join(`group:${targetGroup}`);
+        socket.emit('group_joined', { groupId: targetGroup });
+      });
+    });
+
     socket.on('join_chat', ({ chatId, conversationId }) => {
       const targetRoom = chatId || conversationId;
       if (targetRoom) {
         socket.join(`chat_${targetRoom}`);
+        socket.join(`group:${targetRoom}`);
       }
+    });
+
+    // Handle real-time group events broadcast
+    socket.on('group_event', (payload = {}) => {
+      const { groupId, eventType, data } = payload;
+      if (!groupId) return;
+
+      db.get('SELECT * FROM conversation_members WHERE conversationId = ? AND userId = ?', [groupId, userId], (err, member) => {
+        if (err || !member) return;
+
+        io.to(`chat_${groupId}`).emit(eventType || 'group_updated', { groupId, ...data, senderId: userId });
+        io.to(`group:${groupId}`).emit(eventType || 'group_updated', { groupId, ...data, senderId: userId });
+      });
+    });
+
+    // Group typing indicators
+    socket.on('group_typing', ({ groupId, isTyping }) => {
+      if (!groupId) return;
+      socket.to(`chat_${groupId}`).emit('group_user_typing', {
+        groupId,
+        userId,
+        userName: socket.user.fullName,
+        isTyping: Boolean(isTyping)
+      });
+      socket.to(`group:${groupId}`).emit('group_user_typing', {
+        groupId,
+        userId,
+        userName: socket.user.fullName,
+        isTyping: Boolean(isTyping)
+      });
     });
 
     // Handle real-time sending of messages

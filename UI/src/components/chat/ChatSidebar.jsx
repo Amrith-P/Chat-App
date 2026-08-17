@@ -23,6 +23,7 @@ const ChatSidebar = ({
   activeChatId, 
   onSelectChat, 
   onOpenNewChat, 
+  onOpenCreateGroup,
   onDeleteChat, 
   onClearChat, 
   onToggleFavorite, 
@@ -142,13 +143,22 @@ const ChatSidebar = ({
             </span>
           </div>
 
-          <button
-            onClick={onOpenNewChat}
-            title="Start New Chat"
-            className="w-9 h-9 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl flex items-center justify-center font-bold transition shadow-lg shadow-emerald-500/20"
-          >
-            <FaPlus className="text-sm" />
-          </button>
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={onOpenCreateGroup}
+              title="Create New Group"
+              className="w-9 h-9 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl flex items-center justify-center font-bold transition border border-slate-700/60"
+            >
+              <FaUserFriends className="text-sm" />
+            </button>
+            <button
+              onClick={onOpenNewChat}
+              title="Start New Chat"
+              className="w-9 h-9 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl flex items-center justify-center font-bold transition shadow-lg shadow-emerald-500/20"
+            >
+              <FaPlus className="text-sm" />
+            </button>
+          </div>
         </div>
 
         {/* SEARCH BAR */}
@@ -383,10 +393,16 @@ const ChatSidebar = ({
                     <img
                       src={chat.avatar}
                       alt={chat.name}
-                      className="w-11 h-11 rounded-full object-cover border border-slate-700"
+                      className="w-11 h-11 rounded-full object-cover border border-slate-700 bg-slate-800"
                     />
-                    {chat.isOnline && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                    {chat.isGroup ? (
+                      <span className="absolute -bottom-0.5 -right-0.5 bg-blue-500 text-white p-0.5 rounded-full ring-2 ring-slate-900 text-[9px]" title="Group Chat">
+                        <FaUserFriends />
+                      </span>
+                    ) : (
+                      chat.isOnline && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
+                      )
                     )}
                   </div>
 

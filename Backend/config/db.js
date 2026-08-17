@@ -225,6 +225,26 @@ export const initDb = () => {
         userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(messageId, userId)
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS groups (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        avatar TEXT,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+      `CREATE TABLE IF NOT EXISTS group_members (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) DEFAULT 'member',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_read_at TIMESTAMP,
+        UNIQUE(group_id, user_id)
       );`
     ];
 
@@ -243,7 +263,12 @@ export const initDb = () => {
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isForwarded BOOLEAN DEFAULT FALSE;`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isEdited BOOLEAN DEFAULT FALSE;`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS isDeleted BOOLEAN DEFAULT FALSE;`,
-      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS readAt TIMESTAMP;`
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS readAt TIMESTAMP;`,
+      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS name VARCHAR(255);`,
+      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS description TEXT;`,
+      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS avatar TEXT;`,
+      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS adminId INTEGER;`,
+      `ALTER TABLE conversation_members ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'member';`
     ];
 
     alterQueries.forEach((q) => {
@@ -271,6 +296,10 @@ export const initDb = () => {
         CREATE TABLE IF NOT EXISTS conversations (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           type TEXT DEFAULT 'direct',
+          name TEXT,
+          description TEXT,
+          avatar TEXT,
+          adminId INTEGER,
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -280,9 +309,37 @@ export const initDb = () => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           conversationId INTEGER NOT NULL,
           userId INTEGER NOT NULL,
+          role TEXT DEFAULT 'member',
           joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY(conversationId) REFERENCES conversations(id) ON DELETE CASCADE,
           FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS groups (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT,
+          avatar TEXT,
+          created_by INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+        )
+      `);
+
+      dbWrapper.run(`
+        CREATE TABLE IF NOT EXISTS group_members (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          group_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          role TEXT DEFAULT 'member',
+          joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          last_read_at DATETIME,
+          UNIQUE(group_id, user_id),
+          FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -373,6 +430,11 @@ export const initDb = () => {
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN isEdited INTEGER DEFAULT 0`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN isDeleted INTEGER DEFAULT 0`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN readAt DATETIME`, [], () => {});
+      dbWrapper.run(`ALTER TABLE conversations ADD COLUMN name TEXT`, [], () => {});
+      dbWrapper.run(`ALTER TABLE conversations ADD COLUMN description TEXT`, [], () => {});
+      dbWrapper.run(`ALTER TABLE conversations ADD COLUMN avatar TEXT`, [], () => {});
+      dbWrapper.run(`ALTER TABLE conversations ADD COLUMN adminId INTEGER`, [], () => {});
+      dbWrapper.run(`ALTER TABLE conversation_members ADD COLUMN role TEXT DEFAULT 'member'`, [], () => {});
 
       // Performance Indexing
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
@@ -383,6 +445,8 @@ export const initDb = () => {
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(createdAt)`);
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_reactions_msg ON message_reactions(messageId)`);
       dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_del_msg_user ON deleted_messages_for_user(messageId, userId)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id)`);
+      dbWrapper.run(`CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id)`);
     });
   }
 };

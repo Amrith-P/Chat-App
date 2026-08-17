@@ -1,7 +1,7 @@
 import db from '../config/db.js';
 import { isUserOnline } from '../socket/socketHandler.js';
 
-// @desc    Get all conversations for the logged in user
+// @desc    Get all conversations (direct + group) for the logged in user
 // @route   GET /api/chats
 export const getUserChats = (req, res) => {
   const currentUserId = req.user.id;
@@ -10,28 +10,36 @@ export const getUserChats = (req, res) => {
     SELECT 
       c.id,
       c.type,
-      c.createdat,
+      c.name AS groupName,
+      c.description AS groupDesc,
+      c.avatar AS groupAvatar,
+      c.adminId,
+      c.createdAt,
+      (SELECT COUNT(*) FROM conversation_members WHERE conversationId = c.id) AS memberCount,
       u.id AS contactid,
-      u.fullname AS name,
-      u.email,
-      u.avatar,
-      u.status,
+      u.fullName AS contactName,
+      u.email AS contactEmail,
+      u.avatar AS contactAvatar,
+      u.status AS contactStatus,
       m.content AS lastmessage,
-      m.isdeleted AS isdeleted,
-      m.createdat AS lastmsgtime,
+      m.senderId AS lastSenderId,
+      su.fullName AS lastSenderName,
+      m.isDeleted AS isdeleted,
+      m.createdAt AS lastmsgtime,
       fc.id AS isfavorite
     FROM conversations c
-    JOIN conversation_members cm1 ON c.id = cm1.conversationid AND cm1.userid = ?
-    JOIN conversation_members cm2 ON c.id = cm2.conversationid AND cm2.userid != ?
-    JOIN users u ON cm2.userid = u.id
-    LEFT JOIN favorite_chats fc ON c.id = fc.conversationid AND fc.userid = ?
+    JOIN conversation_members cm1 ON c.id = cm1.conversationId AND cm1.userId = ?
+    LEFT JOIN conversation_members cm2 ON c.id = cm2.conversationId AND cm2.userId != ? AND c.type = 'direct'
+    LEFT JOIN users u ON cm2.userId = u.id AND c.type = 'direct'
+    LEFT JOIN favorite_chats fc ON c.id = fc.conversationId AND fc.userId = ?
     LEFT JOIN messages m ON m.id = (
       SELECT id FROM messages 
-      WHERE conversationid = c.id 
+      WHERE conversationId = c.id 
         AND id NOT IN (SELECT messageId FROM deleted_messages_for_user WHERE userId = ?)
       ORDER BY id DESC LIMIT 1
     )
-    ORDER BY COALESCE(m.createdat, c.createdat) DESC
+    LEFT JOIN users su ON m.senderId = su.id
+    ORDER BY COALESCE(m.createdAt, c.createdAt) DESC
   `;
 
   db.all(query, [currentUserId, currentUserId, currentUserId, currentUserId], (err, chats) => {
@@ -41,28 +49,49 @@ export const getUserChats = (req, res) => {
     }
 
     const formattedChats = (chats || []).map((chat) => {
-      const cId = chat.contactId ?? chat.contactid;
+      const isGroup = chat.type === 'group';
+      const cId = isGroup ? null : (chat.contactId ?? chat.contactid);
       const rawLastMsg = chat.lastMessage ?? chat.lastmessage;
       const isDeletedGlobally = Boolean(chat.isDeleted || chat.isdeleted);
-      let displayLastMsg = 'No messages yet. Say hi!';
+      const senderName = chat.lastSenderName ? chat.lastSenderName.split(' ')[0] : '';
+      
+      let displayLastMsg = isGroup ? 'No messages yet. Say hi to everyone!' : 'No messages yet. Say hi!';
       if (rawLastMsg !== undefined && rawLastMsg !== null && rawLastMsg !== '') {
-        displayLastMsg = isDeletedGlobally ? '🚫 This message was deleted' : rawLastMsg;
+        if (isDeletedGlobally) {
+          displayLastMsg = '🚫 This message was deleted';
+        } else {
+          displayLastMsg = (isGroup && senderName) ? `${senderName}: ${rawLastMsg}` : rawLastMsg;
+        }
       } else if (isDeletedGlobally) {
         displayLastMsg = '🚫 This message was deleted';
       }
 
+      const chatName = isGroup 
+        ? (chat.groupName || 'Group Chat') 
+        : (chat.contactName || 'User');
+
+      const chatAvatar = isGroup
+        ? (chat.groupAvatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${chat.id}`)
+        : (chat.contactAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(chatName)}`);
+
       return {
         id: chat.id,
+        chatId: chat.id,
         contactId: cId,
-        name: chat.name,
-        email: chat.email,
-        avatar: chat.avatar,
-        status: chat.status,
+        name: chatName,
+        email: isGroup ? '' : (chat.contactEmail || ''),
+        avatar: chatAvatar,
+        status: isGroup ? (chat.groupDesc || `${chat.memberCount || 1} members`) : (chat.contactStatus || ''),
+        description: chat.groupDesc || '',
+        type: chat.type || (isGroup ? 'group' : 'direct'),
+        isGroup,
+        adminId: chat.adminId,
+        memberCount: chat.memberCount || 1,
         lastMessage: displayLastMsg,
-        lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? null,
-        time: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.lastmessagetime ?? 'New',
+        lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.createdAt ?? null,
+        time: chat.lastMessageTime ?? chat.lastmsgtime ? new Date(chat.lastMessageTime ?? chat.lastmsgtime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New',
         unreadCount: 0,
-        isOnline: isUserOnline(cId),
+        isOnline: isGroup ? false : isUserOnline(cId),
         isFavorite: Boolean(chat.isFavorite || chat.isfavorite)
       };
     });
