@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/auth.js';
 import {
   sendFriendRequest,
   getFriendRequests,
@@ -14,7 +14,7 @@ import {
 const router = express.Router();
 
 // Require authentication for all friend routes
-router.use(authenticateToken);
+router.use(protect);
 
 // Friend Request Routes
 router.post('/requests', sendFriendRequest);
