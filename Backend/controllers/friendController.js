@@ -45,7 +45,7 @@ export const sendFriendRequest = async (req, res) => {
                 if (upErr) return res.status(500).json({ message: 'Failed to accept friend request' });
 
                 db.run(
-                  `INSERT OR IGNORE INTO friendships (user_one_id, user_two_id) VALUES (?, ?)`,
+                  `INSERT INTO friendships (user_one_id, user_two_id) VALUES (?, ?) ON CONFLICT DO NOTHING`,
                   [u1, u2],
                   (fErr) => {
                     if (fErr) return res.status(500).json({ message: 'Failed to record friendship' });
@@ -214,7 +214,7 @@ export const acceptFriendRequest = (req, res) => {
     db.run(`UPDATE friend_requests SET status = 'accepted', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [requestId], (upErr) => {
       if (upErr) return res.status(500).json({ message: 'Failed to update request status' });
 
-      db.run(`INSERT OR IGNORE INTO friendships (user_one_id, user_two_id) VALUES (?, ?)`, [u1, u2], (fErr) => {
+      db.run(`INSERT INTO friendships (user_one_id, user_two_id) VALUES (?, ?) ON CONFLICT DO NOTHING`, [u1, u2], (fErr) => {
         if (fErr) return res.status(500).json({ message: 'Failed to create friendship record' });
 
         // Emit real-time events to both users
