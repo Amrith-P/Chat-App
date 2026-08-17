@@ -1,77 +1,132 @@
 import React, { useState } from 'react';
-import { useSettings } from '../../hooks/settings/useSettings';
-import { useSettingsForm } from '../../hooks/settings/useSettingsForm';
 import { 
-  FaUser, 
-  FaBell, 
+  FaCog, 
   FaShieldAlt, 
+  FaLock, 
+  FaUser, 
+  FaCommentAlt, 
+  FaBell, 
   FaPalette, 
+  FaDatabase, 
+  FaQuestionCircle, 
+  FaChevronRight, 
   FaSignOutAlt, 
-  FaCheck, 
   FaMoon, 
-  FaSun,
-  FaCamera,
-  FaLock,
-  FaVolumeUp,
-  FaDesktop
+  FaVolumeUp, 
+  FaKey, 
+  FaEye, 
+  FaFileExport, 
+  FaTrashAlt, 
+  FaInfoCircle
 } from 'react-icons/fa';
+import { useAuth } from '../../context/AuthContext';
 
 const SettingsPage = () => {
-  const { user, updateProfile, changePassword, revokeAllSessions, logout } = useSettings();
+  const { user, logout } = useAuth();
 
-  const [fullName, setFullName] = useState(user?.fullName || '');
-  const [statusBio, setStatusBio] = useState(user?.status || '');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [soundEffects, setSoundEffects] = useState(true);
+  // Settings UI states (mock / UI presentation only per request)
+  const [darkMode, setDarkMode] = useState(true);
+  const [notifications, setNotifications] = useState(true);
   const [readReceipts, setReadReceipts] = useState(true);
-  const [themeMode, setThemeMode] = useState('dark');
+  const [twoFactor, setTwoFactor] = useState(false);
 
-  const [savedSuccess, setSavedSuccess] = useState(false);
-  const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [profileError, setProfileError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    setProfileError('');
-    setSavedSuccess(false);
-    setIsUpdatingProfile(true);
-
-    try {
-      await updateProfile(fullName, statusBio);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
-    } catch (err) {
-      setProfileError(err.message || 'Failed to update profile');
-    } finally {
-      setIsUpdatingProfile(false);
+  const settingsCategories = [
+    {
+      title: 'Account Settings',
+      icon: FaUser,
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+      items: [
+        { id: 'acc-email', label: 'Email Address', value: user?.email || 'user@chatapp.com', type: 'value' },
+        { id: 'acc-status', label: 'Account Status', value: 'Verified', badge: 'Active', type: 'badge' },
+        { id: 'acc-password', label: 'Change Password', value: 'Last changed 30 days ago', type: 'arrow' }
+      ]
+    },
+    {
+      title: 'Privacy & Security',
+      icon: FaShieldAlt,
+      color: 'text-cyan-400',
+      bgColor: 'bg-cyan-500/10',
+      items: [
+        { 
+          id: 'priv-2fa', 
+          label: 'Two-Factor Authentication (2FA)', 
+          desc: 'Add an extra layer of security to your account',
+          type: 'toggle', 
+          state: twoFactor, 
+          onToggle: () => setTwoFactor(!twoFactor) 
+        },
+        { 
+          id: 'priv-receipts', 
+          label: 'Read Receipts', 
+          desc: 'Show double checkmarks when messages are read',
+          type: 'toggle', 
+          state: readReceipts, 
+          onToggle: () => setReadReceipts(!readReceipts) 
+        },
+        { id: 'priv-lastseen', label: 'Last Seen & Online Status', value: 'Everyone', type: 'arrow' },
+        { id: 'priv-blocked', label: 'Blocked Contacts', value: '0 users', type: 'arrow' }
+      ]
+    },
+    {
+      title: 'Chats & Media',
+      icon: FaCommentAlt,
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      items: [
+        { id: 'chat-wallpaper', label: 'Chat Wallpaper & Theme', value: 'Default Slate Dark', type: 'arrow' },
+        { id: 'chat-font', label: 'Font Size', value: 'Medium', type: 'arrow' },
+        { id: 'chat-export', label: 'Export Chat History', value: 'Download ZIP archive', type: 'arrow' },
+        { id: 'chat-clear', label: 'Clear All Chat Messages', value: 'Permanently remove history', type: 'arrow', danger: true }
+      ]
+    },
+    {
+      title: 'Notifications & Sound',
+      icon: FaBell,
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      items: [
+        { 
+          id: 'notif-push', 
+          label: 'Message Notifications', 
+          desc: 'Receive instant push alerts for incoming messages',
+          type: 'toggle', 
+          state: notifications, 
+          onToggle: () => setNotifications(!notifications) 
+        },
+        { id: 'notif-sound', label: 'Notification Sounds', value: 'Chime (Default)', type: 'arrow' },
+        { id: 'notif-preview', label: 'Message Previews', value: 'Show Name & Content', type: 'arrow' }
+      ]
+    },
+    {
+      title: 'Appearance',
+      icon: FaPalette,
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      items: [
+        { 
+          id: 'app-theme', 
+          label: 'Dark Mode', 
+          desc: 'Sleek dark mode tailored for low light',
+          type: 'toggle', 
+          state: darkMode, 
+          onToggle: () => setDarkMode(!darkMode) 
+        },
+        { id: 'app-accent', label: 'Accent Color', value: 'Emerald Green', type: 'arrow' }
+      ]
+    },
+    {
+      title: 'Help & About',
+      icon: FaQuestionCircle,
+      color: 'text-teal-400',
+      bgColor: 'bg-teal-500/10',
+      items: [
+        { id: 'help-center', label: 'Help Center & FAQ', type: 'arrow' },
+        { id: 'help-terms', label: 'Terms of Service & Privacy Policy', type: 'arrow' },
+        { id: 'help-version', label: 'App Version', value: 'v1.0.5 Pro Build', type: 'value' }
+      ]
     }
-  };
-
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    setPasswordError('');
-    setPasswordSuccess(false);
-    setIsChangingPassword(true);
-
-    try {
-      await changePassword(currentPassword, newPassword);
-      setPasswordSuccess(true);
-      setCurrentPassword('');
-      setNewPassword('');
-      setTimeout(() => setPasswordSuccess(false), 3000);
-    } catch (err) {
-      setPasswordError(err.message || 'Failed to change password');
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
+  ];
 
   return (
     <div className="flex-1 h-full bg-slate-950 flex flex-col overflow-hidden select-none">
@@ -80,9 +135,12 @@ const SettingsPage = () => {
       <header className="h-16 bg-slate-900 border-b border-slate-800 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
-            <FaUser className="text-lg" />
+            <FaCog className="text-lg" />
           </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Account & App Settings</h2>
+          <div>
+            <h2 className="text-xl font-bold text-white tracking-tight">Settings</h2>
+            <p className="text-[11px] text-slate-400">Manage privacy, notifications, appearance, and account preferences</p>
+          </div>
         </div>
 
         <button
@@ -94,258 +152,83 @@ const SettingsPage = () => {
         </button>
       </header>
 
-      {/* BODY CONTENT */}
-      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar max-w-4xl space-y-8">
+      {/* BODY CONTENT - SETTINGS LIST CATEGORIES */}
+      <div className="p-6 flex-1 overflow-y-auto custom-scrollbar max-w-4xl space-y-6">
         
-        {savedSuccess && (
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-fade-in">
-            <FaCheck className="text-sm" />
-            <span>Your profile preferences have been successfully updated!</span>
-          </div>
-        )}
+        {settingsCategories.map((category) => {
+          const CategoryIcon = category.icon;
 
-        {profileError && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl flex items-center space-x-3 text-xs font-bold">
-            <span>{profileError}</span>
-          </div>
-        )}
-
-        {/* SECTION 1: PROFILE MANAGEMENT */}
-        <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center space-x-2">
-            <FaUser className="text-emerald-400" />
-            <span>Profile Information</span>
-          </h3>
-
-          <form onSubmit={handleSaveProfile} className="space-y-6">
-            <div className="flex items-center space-x-5">
-              <div className="relative">
-                <img
-                  src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fullName || 'User')}`}
-                  alt={fullName}
-                  className="w-20 h-20 rounded-full object-cover border-2 border-emerald-500/80 shadow-lg"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <h4 className="font-bold text-white text-base">{user?.fullName}</h4>
-                <p className="text-xs text-slate-400">{user?.email || 'user@chatapp.com'}</p>
-                <span className="inline-block px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20">
-                  Verified Member
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Display Name</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Status Bio</label>
-                <input
-                  type="text"
-                  value={statusBio}
-                  onChange={(e) => setStatusBio(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isUpdatingProfile}
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
+          return (
+            <section 
+              key={category.title}
+              className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-xl"
             >
-              {isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}
-            </button>
-          </form>
-        </section>
-
-        {/* SECTION 2: CHANGE PASSWORD */}
-        <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center space-x-2">
-            <FaLock className="text-emerald-400" />
-            <span>Security & Password</span>
-          </h3>
-
-          {passwordSuccess && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs font-bold">
-              Your password has been successfully updated!
-            </div>
-          )}
-
-          {passwordError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-xs font-bold">
-              {passwordError}
-            </div>
-          )}
-
-          <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Current Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isChangingPassword}
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
-            >
-              {isChangingPassword ? 'Updating Password...' : 'Update Password'}
-            </button>
-
-            <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-white">Active Sessions</h4>
-                <p className="text-[11px] text-slate-400">Logout from all other browsers and active devices</p>
+              {/* Category Header */}
+              <div className="flex items-center space-x-3 pb-2 border-b border-slate-800/80">
+                <div className={`p-2 rounded-xl ${category.bgColor} ${category.color}`}>
+                  <CategoryIcon className="text-base" />
+                </div>
+                <h3 className="text-sm font-bold text-white tracking-tight">{category.title}</h3>
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (window.confirm('Are you sure you want to log out from all devices?')) {
-                    try {
-                      await revokeAllSessions();
-                    } catch (err) {
-                      alert('Failed to revoke sessions');
-                    }
-                  }
-                }}
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-xs font-bold rounded-xl border border-red-500/20 transition"
-              >
-                Logout All Devices
-              </button>
-            </div>
-          </form>
-        </section>
 
-        {/* SECTION 2: NOTIFICATIONS & SOUND */}
-        <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center space-x-2">
-            <FaBell className="text-emerald-400" />
-            <span>Notifications & Sound Preferences</span>
-          </h3>
+              {/* Items List */}
+              <div className="divide-y divide-slate-800/60">
+                {category.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="py-3 flex items-center justify-between group hover:bg-slate-800/40 px-2 rounded-xl transition cursor-pointer"
+                  >
+                    <div className="pr-4 min-w-0">
+                      <h4 className={`text-xs font-semibold ${item.danger ? 'text-red-400' : 'text-slate-200 group-hover:text-white'} transition`}>
+                        {item.label}
+                      </h4>
+                      {item.desc && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">{item.desc}</p>
+                      )}
+                    </div>
 
-          <div className="space-y-4 divide-y divide-slate-800/80">
-            
-            <div className="flex items-center justify-between pt-3">
-              <div>
-                <h4 className="text-xs font-bold text-white">Email Notifications</h4>
-                <p className="text-[11px] text-slate-400">Receive summary emails when offline</p>
+                    {/* Right Action / Control */}
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {item.type === 'toggle' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (item.onToggle) item.onToggle();
+                          }}
+                          className={`w-11 h-6 rounded-full p-1 transition duration-200 ${
+                            item.state ? 'bg-emerald-500' : 'bg-slate-800'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-full bg-slate-950 transform transition ${
+                            item.state ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
+                        </button>
+                      )}
+
+                      {item.type === 'badge' && (
+                        <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/30">
+                          {item.badge}
+                        </span>
+                      )}
+
+                      {item.type === 'value' && (
+                        <span className="text-xs font-mono text-slate-400">{item.value}</span>
+                      )}
+
+                      {item.type === 'arrow' && (
+                        <div className="flex items-center space-x-2 text-xs text-slate-400 group-hover:text-slate-200 transition">
+                          {item.value && <span className="text-[11px] font-medium text-slate-400">{item.value}</span>}
+                          <FaChevronRight className="text-[10px] text-slate-500 group-hover:text-emerald-400 transition" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <button
-                onClick={() => setEmailNotifications(!emailNotifications)}
-                className={`w-12 h-6 rounded-full p-1 transition duration-200 ${
-                  emailNotifications ? 'bg-emerald-500' : 'bg-slate-800'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-slate-950 transform transition ${
-                  emailNotifications ? 'translate-x-6' : 'translate-x-0'
-                }`} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pt-3">
-              <div>
-                <h4 className="text-xs font-bold text-white">Message Sound Effects</h4>
-                <p className="text-[11px] text-slate-400">Play audio chime on new incoming message</p>
-              </div>
-              <button
-                onClick={() => setSoundEffects(!soundEffects)}
-                className={`w-12 h-6 rounded-full p-1 transition duration-200 ${
-                  soundEffects ? 'bg-emerald-500' : 'bg-slate-800'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-slate-950 transform transition ${
-                  soundEffects ? 'translate-x-6' : 'translate-x-0'
-                }`} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pt-3">
-              <div>
-                <h4 className="text-xs font-bold text-white">Read Receipts</h4>
-                <p className="text-[11px] text-slate-400">Show double checkmarks when messages are read</p>
-              </div>
-              <button
-                onClick={() => setReadReceipts(!readReceipts)}
-                className={`w-12 h-6 rounded-full p-1 transition duration-200 ${
-                  readReceipts ? 'bg-emerald-500' : 'bg-slate-800'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-slate-950 transform transition ${
-                  readReceipts ? 'translate-x-6' : 'translate-x-0'
-                }`} />
-              </button>
-            </div>
-
-          </div>
-        </section>
-
-        {/* SECTION 3: APPEARANCE & THEME */}
-        <section className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center space-x-2">
-            <FaPalette className="text-emerald-400" />
-            <span>Theme & Appearance</span>
-          </h3>
-
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setThemeMode('dark')}
-              className={`p-4 rounded-2xl border flex items-center space-x-3 transition ${
-                themeMode === 'dark'
-                  ? 'border-emerald-500 bg-emerald-500/10 text-white'
-                  : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
-              }`}
-            >
-              <FaMoon className="text-lg text-emerald-400" />
-              <div className="text-left">
-                <h4 className="text-xs font-bold">Dark Glow Theme</h4>
-                <p className="text-[10px] text-slate-400">Sleek dark mode interface</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setThemeMode('light')}
-              className={`p-4 rounded-2xl border flex items-center space-x-3 transition ${
-                themeMode === 'light'
-                  ? 'border-emerald-500 bg-emerald-500/10 text-white'
-                  : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
-              }`}
-            >
-              <FaSun className="text-lg text-amber-400" />
-              <div className="text-left">
-                <h4 className="text-xs font-bold">Light Mode</h4>
-                <p className="text-[10px] text-slate-400">Clean bright interface</p>
-              </div>
-            </button>
-          </div>
-        </section>
+            </section>
+          );
+        })}
 
       </div>
     </div>

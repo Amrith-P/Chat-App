@@ -80,18 +80,25 @@ const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
             {darkMode ? <FaSun className="text-lg" /> : <FaMoon className="text-lg" />}
           </button>
 
-          <div className="relative group cursor-pointer">
+          <NavLink
+            to="/app/profile"
+            title="My Profile"
+            className={({ isActive }) => `relative group cursor-pointer w-10 h-10 rounded-xl flex items-center justify-center transition ${
+              isActive ? 'ring-2 ring-emerald-400 bg-emerald-500/10' : ''
+            }`}
+          >
             <img
               src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.fullName || 'User')}`}
               alt={user?.fullName}
-              className="w-10 h-10 rounded-xl border-2 border-emerald-500/60 object-cover shadow-md"
+              className="w-10 h-10 rounded-xl border-2 border-emerald-500/60 object-cover shadow-md bg-slate-800"
             />
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-slate-900" />
             <div className="absolute left-16 bottom-0 bg-slate-800 text-white text-xs p-2 rounded-xl opacity-0 group-hover:opacity-100 transition pointer-events-none min-w-[140px] z-50 shadow-xl border border-slate-700">
               <p className="font-bold">{user?.fullName}</p>
               <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
+              <p className="text-[10px] text-emerald-400 font-semibold mt-1">View Profile →</p>
             </div>
-          </div>
+          </NavLink>
 
           <button
             onClick={logout}
@@ -134,7 +141,17 @@ const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
           );
         })}
 
-        {/* Mobile Profile & Logout Trigger */}
+        <NavLink
+          to="/app/profile"
+          className={({ isActive }) => `flex flex-col items-center justify-center py-1 px-3 rounded-xl transition ${
+            isActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <FaUser className="text-lg" />
+          <span className="text-[10px] mt-0.5 font-medium">Profile</span>
+        </NavLink>
+
+        {/* Mobile Logout Trigger */}
         <button
           onClick={logout}
           title="Log Out"

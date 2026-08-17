@@ -8,6 +8,7 @@ import ChatScreen from './components/chat/ChatScreen';
 import ContactsPage from './components/contacts/ContactsPage';
 import StarredPage from './components/starred/StarredPage';
 import SettingsPage from './components/settings/SettingsPage';
+import ProfilePage from './components/profile/ProfilePage';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -51,6 +52,7 @@ const App = () => {
               <Route path="contacts" element={<ContactsPage />} />
               <Route path="starred" element={<StarredPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
             </Route>
             
             <Route path="*" element={<Navigate to="/" replace />} />
