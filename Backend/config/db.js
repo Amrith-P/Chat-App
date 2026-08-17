@@ -42,9 +42,20 @@ if (isPostgres) {
       if (key === 'isdeleted') normalized.isDeleted = row[key];
       if (key === 'readat') normalized.readAt = row[key];
       if (key === 'contactid') normalized.contactId = row[key];
+      if (key === 'contactname') normalized.contactName = row[key];
+      if (key === 'contactemail') normalized.contactEmail = row[key];
+      if (key === 'contactavatar') normalized.contactAvatar = row[key];
+      if (key === 'contactstatus') normalized.contactStatus = row[key];
+      if (key === 'groupname') normalized.groupName = row[key];
+      if (key === 'groupdesc') normalized.groupDesc = row[key];
+      if (key === 'groupavatar') normalized.groupAvatar = row[key];
+      if (key === 'lastsendername') normalized.lastSenderName = row[key];
+      if (key === 'membercount') normalized.memberCount = row[key];
+      if (key === 'adminid') normalized.adminId = row[key];
       if (key === 'lastmessage') normalized.lastMessage = row[key];
       if (key === 'lastmessagetime' || key === 'lastmsgtime') normalized.lastMessageTime = row[key];
       if (key === 'emailverified') normalized.emailVerified = row[key];
+      if (key === 'isfavorite') normalized.isFavorite = row[key];
     }
     return normalized;
   };

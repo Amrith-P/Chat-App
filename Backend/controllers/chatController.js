@@ -67,27 +67,35 @@ export const getUserChats = (req, res) => {
         displayLastMsg = '🚫 This message was deleted';
       }
 
+      const resolvedContactName = chat.contactName || chat.contactname;
+      const resolvedGroupName = chat.groupName || chat.groupname;
+      const resolvedContactEmail = chat.contactEmail || chat.contactemail || '';
+      const resolvedContactAvatar = chat.contactAvatar || chat.contactavatar;
+      const resolvedGroupAvatar = chat.groupAvatar || chat.groupavatar;
+      const resolvedContactStatus = chat.contactStatus || chat.contactstatus || '';
+      const resolvedGroupDesc = chat.groupDesc || chat.groupdesc || '';
+
       const chatName = isGroup 
-        ? (chat.groupName || 'Group Chat') 
-        : (chat.contactName || 'User');
+        ? (resolvedGroupName || 'Group Chat') 
+        : (resolvedContactName || 'User');
 
       const chatAvatar = isGroup
-        ? (chat.groupAvatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${chat.id}`)
-        : (chat.contactAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(chatName)}`);
+        ? (resolvedGroupAvatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${chat.id}`)
+        : (resolvedContactAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(chatName)}`);
 
       return {
         id: chat.id,
         chatId: chat.id,
         contactId: cId,
         name: chatName,
-        email: isGroup ? '' : (chat.contactEmail || ''),
+        email: isGroup ? '' : resolvedContactEmail,
         avatar: chatAvatar,
-        status: isGroup ? (chat.groupDesc || `${chat.memberCount || 1} members`) : (chat.contactStatus || ''),
-        description: chat.groupDesc || '',
+        status: isGroup ? (resolvedGroupDesc || `${chat.memberCount || 1} members`) : resolvedContactStatus,
+        description: resolvedGroupDesc,
         type: chat.type || (isGroup ? 'group' : 'direct'),
         isGroup,
-        adminId: chat.adminId,
-        memberCount: chat.memberCount || 1,
+        adminId: chat.adminId || chat.adminid,
+        memberCount: chat.memberCount || chat.membercount || 1,
         lastMessage: displayLastMsg,
         lastMessageTime: chat.lastMessageTime ?? chat.lastmsgtime ?? chat.createdAt ?? null,
         time: chat.lastMessageTime ?? chat.lastmsgtime ? new Date(chat.lastMessageTime ?? chat.lastmsgtime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New',
