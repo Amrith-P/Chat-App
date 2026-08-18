@@ -9,7 +9,8 @@ import {
   FaMoon, 
   FaSun, 
   FaSignOutAlt,
-  FaUser
+  FaUser,
+  FaPhoneAlt
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -20,7 +21,7 @@ const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
 
   const navItems = [
     { id: 'chats', label: 'Chats', icon: FaCommentAlt, badge: unreadCount > 0 ? unreadCount : null },
-    //{ id: 'contacts', label: 'Contacts', icon: FaUserFriends, badge: null },
+    { id: 'calls', label: 'Calls', icon: FaPhoneAlt, badge: null },
     { id: 'starred', label: 'Starred', icon: FaStar, badge: null },
     { id: 'settings', label: 'Settings', icon: FaCog, badge: null },
   ];

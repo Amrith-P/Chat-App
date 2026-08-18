@@ -330,6 +330,33 @@ export const CallProvider = ({ children }) => {
     };
   }, [socket, cleanupCall]);
 
+  // Call History State
+  const [callHistory, setCallHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chatapp_call_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const addCallLog = useCallback((log) => {
+    setCallHistory((prev) => {
+      const updated = [log, ...prev];
+      try {
+        localStorage.setItem('chatapp_call_history', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  }, []);
+
+  const clearCallHistory = useCallback(() => {
+    setCallHistory([]);
+    try {
+      localStorage.removeItem('chatapp_call_history');
+    } catch (e) {}
+  }, []);
+
   return (
     <CallContext.Provider
       value={{
@@ -340,12 +367,58 @@ export const CallProvider = ({ children }) => {
         remoteStream,
         isMuted,
         isVideoOff,
-        startCall,
-        acceptCall,
-        rejectCall,
+        callHistory,
+        startCall: (targetContact, type) => {
+          const targetUserId = getTargetUserId(targetContact);
+          if (targetContact && targetUserId) {
+            addCallLog({
+              id: Date.now(),
+              contactId: targetUserId,
+              contactName: targetContact.name || 'Contact',
+              contactAvatar: targetContact.avatar || '',
+              callType: type || 'video',
+              direction: 'outgoing',
+              timestamp: new Date().toISOString(),
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              date: new Date().toLocaleDateString()
+            });
+          }
+          startCall(targetContact, type);
+        },
+        acceptCall: () => {
+          if (peerContact) {
+            addCallLog({
+              id: Date.now(),
+              contactId: peerContact.id || peerContact.contactId,
+              contactName: peerContact.name || 'Contact',
+              contactAvatar: peerContact.avatar || '',
+              callType: callType || 'video',
+              direction: 'incoming',
+              timestamp: new Date().toISOString(),
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+          acceptCall();
+        },
+        rejectCall: () => {
+          if (peerContact) {
+            addCallLog({
+              id: Date.now(),
+              contactId: peerContact.id || peerContact.contactId,
+              contactName: peerContact.name || 'Contact',
+              contactAvatar: peerContact.avatar || '',
+              callType: callType || 'video',
+              direction: 'missed',
+              timestamp: new Date().toISOString(),
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+          }
+          rejectCall();
+        },
         endCall,
         toggleMute,
-        toggleVideo
+        toggleVideo,
+        clearCallHistory
       }}
     >
       {children}

@@ -22,6 +22,7 @@ import {
 } from 'react-icons/fa';
 import ConfirmModal from '../common/ConfirmModal';
 import { useCall } from '../../context/CallContext';
+import { useStarred } from '../../context/StarredContext';
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -57,8 +58,9 @@ const ChatWindow = ({
   const [isClearChatConfirmOpen, setIsClearChatConfirmOpen] = useState(false);
   const [isDeleteChatConfirmOpen, setIsDeleteChatConfirmOpen] = useState(false);
 
-  // Call State Hook
+  // Call State Hook & Starred Context
   const { startCall } = useCall();
+  const { isStarred, toggleStarMessage } = useStarred();
 
   const handleStartCall = (type = 'video') => {
     if (!activeChat) return;
@@ -537,6 +539,21 @@ const ChatWindow = ({
                         >
                           <FaCopy className="text-xs text-emerald-400" />
                           <span>Copy</span>
+                        </button>
+
+                        {/* Star / Unstar Message */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStarMessage(msg, activeChat);
+                            showToast(isStarred(msg.id) ? 'Unstarred message' : 'Starred message! ⭐');
+                            setActiveMessageMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-semibold text-amber-400 hover:bg-amber-500/10 flex items-center space-x-2.5 transition"
+                        >
+                          <FaStar className="text-xs" />
+                          <span>{isStarred(msg.id) ? 'Unstar Message' : 'Star Message'}</span>
                         </button>
 
                         {/* Edit (Sent messages only) */}

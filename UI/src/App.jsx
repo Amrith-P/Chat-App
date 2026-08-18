@@ -4,10 +4,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { CallProvider } from './context/CallContext';
+import { StarredProvider } from './context/StarredContext';
 import AuthPage from './components/auth/AuthPage';
 import ChatScreen from './components/chat/ChatScreen';
 
 import ContactsPage from './components/contacts/ContactsPage';
+import CallsPage from './components/calls/CallsPage';
 import StarredPage from './components/starred/StarredPage';
 import SettingsPage from './components/settings/SettingsPage';
 import ProfilePage from './components/profile/ProfilePage';
@@ -42,31 +44,34 @@ const App = () => {
         <AuthProvider>
           <SocketProvider>
             <CallProvider>
-              <Routes>
-                {/* Base redirect */}
-                <Route path="/" element={<Navigate to="/app/chats" replace />} />
-                
-                {/* Auth Routes */}
-                <Route path="/login" element={<AuthRoute><AuthPage /></AuthRoute>} />
-                <Route path="/register" element={<AuthRoute><AuthPage /></AuthRoute>} />
+              <StarredProvider>
+                <Routes>
+                  {/* Base redirect */}
+                  <Route path="/" element={<Navigate to="/app/chats" replace />} />
+                  
+                  {/* Auth Routes */}
+                  <Route path="/login" element={<AuthRoute><AuthPage /></AuthRoute>} />
+                  <Route path="/register" element={<AuthRoute><AuthPage /></AuthRoute>} />
 
-                {/* Protected App Routes */}
-                <Route path="/app" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>}>
-                  <Route index element={<Navigate to="/app/chats" replace />} />
-                  <Route path="chats" element={<div id="chat-tab-placeholder"></div>} />
-                  <Route path="chats/:chatId" element={<div id="chat-tab-placeholder"></div>} />
-                  <Route path="contacts" element={<ContactsPage />} />
-                  <Route path="starred" element={<StarredPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="profile" element={<ProfilePage />} />
-                </Route>
-                
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+                  {/* Protected App Routes */}
+                  <Route path="/app" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>}>
+                    <Route index element={<Navigate to="/app/chats" replace />} />
+                    <Route path="chats" element={<div id="chat-tab-placeholder"></div>} />
+                    <Route path="chats/:chatId" element={<div id="chat-tab-placeholder"></div>} />
+                    <Route path="contacts" element={<ContactsPage />} />
+                    <Route path="calls" element={<CallsPage />} />
+                    <Route path="starred" element={<StarredPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
+                  </Route>
+                  
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
 
-              {/* Global Real-Time Call Modals */}
-              <IncomingCallModal />
-              <CallModal />
+                {/* Global Real-Time Call Modals */}
+                <IncomingCallModal />
+                <CallModal />
+              </StarredProvider>
             </CallProvider>
           </SocketProvider>
         </AuthProvider>
