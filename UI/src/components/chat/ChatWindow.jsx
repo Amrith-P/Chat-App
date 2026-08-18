@@ -60,7 +60,7 @@ const ChatWindow = ({
 
   // Call State Hook & Starred Context
   const { startCall } = useCall();
-  const { isStarred, toggleStarMessage } = useStarred();
+  const { isStarred = () => false, toggleStarMessage = () => {} } = useStarred() || {};
 
   const handleStartCall = (type = 'video') => {
     if (!activeChat) return;
@@ -396,7 +396,7 @@ const ChatWindow = ({
                     )}
 
                     {/* Starred Badge */}
-                    {isStarred && (
+                    {Boolean(isStarred?.(msg.id)) && (
                       <span className="absolute -top-2 -right-2 p-1 bg-amber-500 text-slate-950 rounded-full text-[10px] shadow z-10">
                         <FaStar />
                       </span>

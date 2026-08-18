@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
-const StarredContext = createContext();
+const StarredContext = createContext({
+  starredMessages: [],
+  isStarred: () => false,
+  toggleStarMessage: () => {},
+  unstarMessage: () => {}
+});
 
 export const StarredProvider = ({ children }) => {
   const { user: currentUser } = useAuth();
