@@ -93,14 +93,27 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/friend-requests', friendRoutes);
 
-// Health Check
+// Health Check Endpoint (Verifies API, Uptime & Active DB Connection)
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    version: '1.0.6-clear-chat-fix',
-    timestamp: new Date().toISOString(),
-    message: 'Chat App Backend API is operational',
-    env: process.env.NODE_ENV || 'development'
+  db.get('SELECT 1', [], (err) => {
+    if (err) {
+      console.error('🚨 Health Check DB Error:', err);
+      return res.status(500).json({
+        status: 'error',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        database: 'disconnected',
+        error: err.message
+      });
+    }
+
+    res.json({
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      environment: process.env.NODE_ENV || 'development'
+    });
   });
 });
 

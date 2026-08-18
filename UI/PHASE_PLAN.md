@@ -27,7 +27,7 @@ Based on the [checklist.md](file:///Users/amrith/My%20projects/Chat-App/UI/check
   3. Add startup validator function in `Backend/server.js` that checks `process.env` keys on boot and exits with a clear error if missing.
 - **Verification**: Run backend without `.env` to verify clean error startup exit.
 
-#### **Step 1.2: Server Health Check Endpoint (`GET /api/health`)**
+#### **Step 1.2: Server Health Check Endpoint (`GET /api/health`)** [COMPLETED ✅]
 - **Goal**: Allow Render, Vercel, and uptime monitors to verify server and database health.
 - **Tasks**:
   1. Create `GET /api/health` endpoint in `Backend/server.js`.
