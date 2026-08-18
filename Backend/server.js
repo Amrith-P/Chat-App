@@ -19,8 +19,10 @@ import { clearMessagesByChatId } from './controllers/messageController.js';
 import { protect } from './middleware/auth.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { validateEnv } from './config/validateEnv.js';
 
 dotenv.config();
+validateEnv();
 
 // Initialize Database
 initDb();
