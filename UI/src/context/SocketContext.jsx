@@ -30,16 +30,18 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Determine Backend Host URL for WebSocket
-    const socketHost = import.meta.env.MODE === 'development'
-      ? 'http://localhost:5050'
-      : 'https://chat-app-0yh9.onrender.com';
+    const socketHost = import.meta.env.VITE_SOCKET_URL || (
+      import.meta.env.MODE === 'development'
+        ? 'http://localhost:10000'
+        : 'https://chat-app-0yh9.onrender.com'
+    );
 
     const newSocket = io(socketHost, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       autoConnect: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1500
     });
 
     newSocket.on('connect', () => {
