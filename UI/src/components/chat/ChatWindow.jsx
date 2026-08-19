@@ -59,11 +59,14 @@ const ChatWindow = ({
   const [isDeleteChatConfirmOpen, setIsDeleteChatConfirmOpen] = useState(false);
 
   // Call State Hook & Starred Context
-  const { startCall } = useCall();
-  const { isStarred = () => false, toggleStarMessage = () => {} } = useStarred() || {};
+  const { startCall } = useCall() || {};
+  const starredCtx = useStarred() || {};
+
+  const isStarred = (id) => (typeof starredCtx.isStarred === 'function' ? starredCtx.isStarred(id) : false);
+  const toggleStarMessage = (msg, chat) => (typeof starredCtx.toggleStarMessage === 'function' ? starredCtx.toggleStarMessage(msg, chat) : null);
 
   const handleStartCall = (type = 'video') => {
-    if (!activeChat) return;
+    if (!activeChat || typeof startCall !== 'function') return;
     startCall(activeChat, type);
   };
 
@@ -546,8 +549,9 @@ const ChatWindow = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
+                            const currentlyStarred = isStarred(msg.id);
                             toggleStarMessage(msg, activeChat);
-                            showToast(isStarred(msg.id) ? 'Unstarred message' : 'Starred message! ⭐');
+                            showToast(currentlyStarred ? 'Unstarred message' : 'Starred message! ⭐');
                             setActiveMessageMenuId(null);
                           }}
                           className="w-full px-4 py-2 text-left text-xs font-semibold text-amber-400 hover:bg-amber-500/10 flex items-center space-x-2.5 transition"
