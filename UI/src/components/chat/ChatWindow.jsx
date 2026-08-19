@@ -74,7 +74,6 @@ const ChatWindow = ({
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMsg, setEditingMsg] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
-  const [starredMsgIds, setStarredMsgIds] = useState(new Set());
   const [activeMessageMenuId, setActiveMessageMenuId] = useState(null);
 
   // Delete Confirm Modal States
@@ -346,7 +345,6 @@ const ChatWindow = ({
             {msgs.map((msg) => {
               const isMe = msg.senderId === 'me' || msg.isMe;
               const msgText = msg.text || '';
-              const isStarred = starredMsgIds.has(msg.id);
               
               // Find replied message text if it exists
               let repliedMsg = null;
