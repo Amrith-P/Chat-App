@@ -116,6 +116,11 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/friend-requests', friendRoutes);
 
+// Root Server Ping Endpoint
+app.get('/', (req, res) => {
+  res.status(200).send('Pulse-X Messenger API Server Live ⚡');
+});
+
 // Health Check Endpoint (Verifies API, Uptime & Active DB Connection)
 app.get('/api/health', (req, res) => {
   db.get('SELECT 1', [], (err) => {
