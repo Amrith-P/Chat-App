@@ -5,7 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { initDb } from './config/db.js';
+import db, { initDb } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
