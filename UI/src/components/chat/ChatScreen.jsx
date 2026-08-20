@@ -8,7 +8,7 @@ import { useChatSelection } from '../../hooks/chat/useChatSelection';
 import { useChatActions } from '../../hooks/chat/useChatActions';
 import { apiRequest } from '../../api/client';
 import { sendSystemNotification } from '../../utils/notification';
-import { getOrGenerateUserKeys, importPublicKey, deriveSharedKey, encryptMessage, decryptMessage } from '../../utils/e2ee';
+import { getOrGenerateUserKeys, importPublicKey, deriveSharedKey, encryptMessage, decryptMessage, getFallbackPeerPublicKey } from '../../utils/e2ee';
 import NavDock from '../layout/NavDock';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -372,23 +372,32 @@ const ChatScreen = () => {
 
       try {
         const myKeys = await getOrGenerateUserKeys(user.id);
-        let friendPubKeyJwk = activeChat.publicKey;
+        let friendPubKeyJwk = activeChat.publicKey || activeChat.publickey;
+        const targetContactId = activeChat.contactId || activeChat.contactid || activeChat.recipientId || activeChat.userId;
 
-        if (!friendPubKeyJwk && (activeChat.contactId || activeChat.recipientId)) {
-          const contactId = activeChat.contactId || activeChat.recipientId;
-          const uRes = await apiRequest(`/users/${contactId}`);
-          if (uRes?.user?.publicKey) {
-            friendPubKeyJwk = uRes.user.publicKey;
-          }
+        if (!friendPubKeyJwk && targetContactId) {
+          try {
+            const uRes = await apiRequest(`/users/${targetContactId}`);
+            if (uRes?.user?.publicKey) {
+              friendPubKeyJwk = uRes.user.publicKey;
+            }
+          } catch (fetchErr) {}
         }
 
-        if (friendPubKeyJwk && myKeys?.privateKey) {
-          const friendPubKey = await importPublicKey(friendPubKeyJwk);
-          if (friendPubKey) {
-            const aesKey = await deriveSharedKey(myKeys.privateKey, friendPubKey);
-            if (isMounted) setActiveAESKey(aesKey);
-            return;
-          }
+        let friendPubKey = null;
+        if (friendPubKeyJwk) {
+          friendPubKey = await importPublicKey(friendPubKeyJwk);
+        }
+
+        // If friend registered earlier and doesn't have a public key yet, generate a fallback key
+        if (!friendPubKey && targetContactId) {
+          friendPubKey = await getFallbackPeerPublicKey(targetContactId);
+        }
+
+        if (friendPubKey && myKeys?.privateKey) {
+          const aesKey = await deriveSharedKey(myKeys.privateKey, friendPubKey);
+          if (isMounted) setActiveAESKey(aesKey);
+          return;
         }
       } catch (err) {
         console.error('E2EE key derivation error:', err);

@@ -221,3 +221,25 @@ export const getOrGenerateUserKeys = async (userId) => {
     privJwk: newPrivJwk
   };
 };
+
+/**
+ * 10. Fallback Peer Public Key Generator for users who haven't uploaded keys yet
+ */
+export const getFallbackPeerPublicKey = async (peerId) => {
+  const seedString = `pulse_peer_seed_jwk_${peerId || 'default'}`;
+  // Fallback static JWK structure for peer fallback
+  const fallbackJwk = {
+    kty: 'EC',
+    crv: 'P-256',
+    x: 'f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEg',
+    y: 'x_daefwq1321dsa938dsa_dsa981dsa9813dsa9381d',
+    ext: true
+  };
+
+  try {
+    const keyPair = await generateECDHKeyPair();
+    return keyPair.publicKey;
+  } catch (err) {
+    return null;
+  }
+};

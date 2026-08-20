@@ -22,6 +22,7 @@ export const getUserChats = (req, res) => {
       u.email AS contactEmail,
       u.avatar AS contactAvatar,
       u.status AS contactStatus,
+      u.publicKey AS publickey,
       m.content AS lastmessage,
       m.senderId AS lastSenderId,
       su.fullName AS lastSenderName,
@@ -101,7 +102,8 @@ export const getUserChats = (req, res) => {
         time: chat.lastMessageTime ?? chat.lastmsgtime ? new Date(chat.lastMessageTime ?? chat.lastmsgtime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New',
         unreadCount: 0,
         isOnline: isGroup ? false : isUserOnline(cId),
-        isFavorite: Boolean(chat.isFavorite || chat.isfavorite)
+        isFavorite: Boolean(chat.isFavorite || chat.isfavorite),
+        publicKey: isGroup ? null : (chat.publicKey || chat.publickey)
       };
     });
 
