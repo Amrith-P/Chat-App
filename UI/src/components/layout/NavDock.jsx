@@ -15,6 +15,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
+import PulseLogo from '../common/PulseLogo';
+
 const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
@@ -32,8 +34,8 @@ const NavDock = ({ unreadCount = 0, hideMobileNav = false }) => {
       <aside className="hidden md:flex w-16 lg:w-20 bg-slate-900 border-r border-slate-800/80 flex-col justify-between items-center py-5 shrink-0 z-20 select-none">
         {/* Top Brand Logo */}
         <div className="flex flex-col items-center space-y-6">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 transition duration-300 transform hover:scale-105 cursor-pointer">
-            <FaComments className="text-2xl text-slate-950" />
+          <div title="Pulse-X Messenger" className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition duration-300 transform hover:scale-105 cursor-pointer">
+            <PulseLogo size="w-7 h-7" />
           </div>
 
           <div className="w-8 h-[1px] bg-slate-800" />

@@ -492,7 +492,7 @@ const ChatSidebar = ({
 
                       {/* Detailed Status & Join Info */}
                       <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/60">
-                        <span className="italic truncate max-w-[160px]">"{u.status || 'Available on ChatApp Pro'}"</span>
+                        <span className="italic truncate max-w-[160px]">"{u.status || 'Available on Pulse-X Messenger'}"</span>
                         <span className="text-slate-500 shrink-0 font-medium">
                           {isFriend ? '✓ Friend' : isOutgoing ? 'Pending' : 'User'}
                         </span>

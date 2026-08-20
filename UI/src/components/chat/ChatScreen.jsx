@@ -208,7 +208,7 @@ const ChatScreen = () => {
 
       // Play short audio chime & trigger desktop notification for incoming messages
       playChimeSound('receive');
-      sendSystemNotification(`New message from ${msg.senderName || 'ChatApp User'}`, {
+      sendSystemNotification(`New message from ${msg.senderName || 'Pulse-X User'}`, {
         body: msgContent || 'Sent a new message'
       });
 

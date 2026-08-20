@@ -19,6 +19,8 @@ import {
   FaSyncAlt
 } from 'react-icons/fa';
 
+import PulseLogo from '../common/PulseLogo';
+
 const AuthPage = () => {
   const { forgotPassword, resetPassword, error, setError } = useAuth();
   const { performLogin, loading: isLoginLoading } = useLogin();
@@ -129,11 +131,11 @@ const AuthPage = () => {
 
         {/* Brand Header */}
         <div className="relative z-10 flex items-center space-x-3 mb-6 md:mb-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <FaComments className="text-xl sm:text-2xl text-slate-950" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <PulseLogo size="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
           <span className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-            ChatApp Pro
+            Pulse-X Messenger
           </span>
         </div>
 
@@ -176,7 +178,7 @@ const AuthPage = () => {
 
         {/* Footer */}
         <div className="relative z-10 text-xs text-slate-500 pt-4 sm:pt-6 border-t border-slate-800/60 hidden sm:block">
-          © 2026 ChatApp Pro. All rights reserved.
+          © 2026 Pulse-X Messenger. All rights reserved.
         </div>
       </div>
 
@@ -186,11 +188,11 @@ const AuthPage = () => {
 
           {/* Mobile Only Brand Header */}
           <div className="flex md:hidden items-center justify-center space-x-3 mb-2 pt-4">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <FaComments className="text-xl text-slate-950" />
+            <div className="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <PulseLogo size="w-7 h-7" />
             </div>
             <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-              ChatApp Pro
+              Pulse-X Messenger
             </span>
           </div>
 
@@ -204,7 +206,7 @@ const AuthPage = () => {
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm">
               {mode === 'login' && 'Sign in to access your chats and messages'}
-              {mode === 'register' && 'Join ChatApp today and start messaging'}
+              {mode === 'register' && 'Join Pulse-X Messenger today and start messaging'}
               {mode === 'forgot' && "Enter your email address to reset your password"}
               {mode === 'reset' && 'Provide your reset code and new password'}
             </p>

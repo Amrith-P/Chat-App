@@ -98,6 +98,11 @@ const ChatWindow = ({
     setTimeout(() => setToastMessage(''), 2500);
   };
 
+  const handleCopyMessage = (text) => {
+    navigator.clipboard.writeText(text);
+    showToast('Message copied to clipboard! 📋');
+  };
+
   const handleSendText = (text) => {
     if (!text || !text.trim()) return;
 
@@ -112,32 +117,13 @@ const ChatWindow = ({
     setInputText('');
   };
 
-  const handleCopyMessage = (text) => {
-    navigator.clipboard.writeText(text);
-    showToast('Message copied to clipboard! 📋');
-  };
-
-  const handleToggleStar = (msgId) => {
-    setStarredMsgIds((prev) => {
-      const updated = new Set(prev);
-      if (updated.has(msgId)) {
-        updated.delete(msgId);
-        showToast('Unstarred message');
-      } else {
-        updated.add(msgId);
-        showToast('Starred message! ⭐');
-      }
-      return updated;
-    });
-  };
-
   if (!activeChat) {
     return (
       <div className="flex-1 h-full bg-slate-950 flex flex-col items-center justify-center text-center p-6 select-none">
-        <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 text-3xl mb-4 shadow-xl">
-          💬
+        <div className="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 text-3xl mb-4 shadow-xl shadow-emerald-500/10">
+          <PulseLogo size="w-10 h-10" />
         </div>
-        <h3 className="text-lg font-bold text-white mb-1">ChatApp Pro</h3>
+        <h3 className="text-lg font-bold text-white mb-1">Pulse-X Messenger</h3>
         <p className="text-xs text-slate-400 max-w-sm">
           Select a conversation from the sidebar or search registered users to start messaging in real-time.
         </p>

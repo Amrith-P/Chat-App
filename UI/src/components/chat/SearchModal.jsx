@@ -203,7 +203,7 @@ const SearchModal = ({ isOpen, onClose, onSelectUser, onSendFriendRequest, onAcc
 
                   {/* Status Quote */}
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-800/60">
-                    <span className="italic truncate max-w-[220px]">"{u.status || 'Available on ChatApp Pro'}"</span>
+                    <span className="italic truncate max-w-[220px]">"{u.status || 'Available on Pulse-X Messenger'}"</span>
                     <span className="text-slate-500 shrink-0 font-medium">
                       {rel === 'friend' ? '✓ Friend' : rel === 'request_sent' ? 'Pending' : 'User'}
                     </span>

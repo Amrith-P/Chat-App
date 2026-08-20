@@ -117,7 +117,7 @@ const ProfilePage = () => {
 
               <div className="space-y-1">
                 <h4 className="font-bold text-white text-base">{user?.fullName}</h4>
-                <p className="text-xs text-slate-400 font-mono">{user?.email || 'user@chatapp.com'}</p>
+                <p className="text-xs text-slate-400 font-mono">{user?.email || 'user@pulsex.com'}</p>
                 <span className="inline-block px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/20">
                   Verified Account
                 </span>

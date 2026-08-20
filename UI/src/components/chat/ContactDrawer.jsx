@@ -278,7 +278,7 @@ const ContactDrawer = ({
               {isGroup ? 'Group Description' : 'About / Status'}
             </span>
             <p className="text-slate-300 font-medium leading-relaxed bg-slate-950 p-3 rounded-xl border border-slate-800/60">
-              {contact.description || contact.status || (isGroup ? 'Group Chat on ChatApp Pro' : 'Available on ChatApp Pro')}
+              {contact.description || contact.status || (isGroup ? 'Group Chat on Pulse-X Messenger' : 'Available on Pulse-X Messenger')}
             </p>
           </div>
 

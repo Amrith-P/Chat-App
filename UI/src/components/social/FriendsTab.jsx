@@ -83,7 +83,7 @@ const FriendsTab = ({ friends = [], loading, onStartChat, onRemoveFriend, onOpen
             <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
               {searchTerm 
                 ? 'Try searching with a different name or email address.' 
-                : 'Connect with people you know on ChatApp Pro to start private messaging.'}
+                : 'Connect with people you know on Pulse-X Messenger to start private messaging.'}
             </p>
             {!searchTerm && (
               <button

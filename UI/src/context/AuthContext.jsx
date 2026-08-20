@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     if (!userData) return;
     const granted = await requestNotificationPermission();
     if (granted) {
-      sendSystemNotification('ChatApp Pro 💬', {
+      sendSystemNotification('Pulse-X Messenger ⚡', {
         body: `Welcome back, ${userData.fullName || 'User'}! Desktop & push notifications enabled.`
       });
     }

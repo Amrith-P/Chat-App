@@ -38,7 +38,7 @@ const SettingsPage = () => {
       color: 'text-emerald-400',
       bgColor: 'bg-emerald-500/10',
       items: [
-        { id: 'acc-email', label: 'Email Address', value: user?.email || 'user@chatapp.com', type: 'value' },
+        { id: 'acc-email', label: 'Email Address', value: user?.email || 'user@pulsex.com', type: 'value' },
         { id: 'acc-status', label: 'Account Status', value: 'Verified', badge: 'Active', type: 'badge' },
         { id: 'acc-password', label: 'Change Password', value: 'Last changed 30 days ago', type: 'arrow' }
       ]
