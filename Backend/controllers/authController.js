@@ -138,7 +138,8 @@ export const login = (req, res) => {
         fullName: user.fullName,
         email: user.email,
         avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.fullName)}`,
-        status: user.status
+        status: user.status,
+        publicKey: user.publicKey
       };
 
       createSessionAndSendTokens(req, res, userProfile, 200, 'Login successful');
@@ -181,7 +182,8 @@ export const refreshTokenHandler = (req, res) => {
           fullName: user.fullName,
           email: user.email,
           avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.fullName)}`,
-          status: user.status
+          status: user.status,
+          publicKey: user.publicKey
         };
 
         const newAccessToken = generateAccessToken(userProfile);

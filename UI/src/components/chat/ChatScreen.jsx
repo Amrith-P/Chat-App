@@ -8,6 +8,7 @@ import { useChatSelection } from '../../hooks/chat/useChatSelection';
 import { useChatActions } from '../../hooks/chat/useChatActions';
 import { apiRequest } from '../../api/client';
 import { sendSystemNotification } from '../../utils/notification';
+import { getOrGenerateUserKeys, importPublicKey, deriveSharedKey, encryptMessage, decryptMessage } from '../../utils/e2ee';
 import NavDock from '../layout/NavDock';
 import ChatSidebar from './ChatSidebar';
 import ChatWindow from './ChatWindow';
@@ -357,15 +358,98 @@ const ChatScreen = () => {
     return activeChatId ? conversations.find((c) => String(c.id) === String(activeChatId)) : null;
   }, [activeChatId, conversations]);
 
+  // E2EE Derived Shared Secret Key State
+  const [activeAESKey, setActiveAESKey] = useState(null);
+
+  // Derive Shared Key when active chat changes
+  useEffect(() => {
+    let isMounted = true;
+    const setupE2EEKey = async () => {
+      if (!user?.id || !activeChat || activeChat.isGroup) {
+        if (isMounted) setActiveAESKey(null);
+        return;
+      }
+
+      try {
+        const myKeys = await getOrGenerateUserKeys(user.id);
+        let friendPubKeyJwk = activeChat.publicKey;
+
+        if (!friendPubKeyJwk && (activeChat.contactId || activeChat.recipientId)) {
+          const contactId = activeChat.contactId || activeChat.recipientId;
+          const uRes = await apiRequest(`/users/${contactId}`);
+          if (uRes?.user?.publicKey) {
+            friendPubKeyJwk = uRes.user.publicKey;
+          }
+        }
+
+        if (friendPubKeyJwk && myKeys?.privateKey) {
+          const friendPubKey = await importPublicKey(friendPubKeyJwk);
+          if (friendPubKey) {
+            const aesKey = await deriveSharedKey(myKeys.privateKey, friendPubKey);
+            if (isMounted) setActiveAESKey(aesKey);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('E2EE key derivation error:', err);
+      }
+
+      if (isMounted) setActiveAESKey(null);
+    };
+
+    setupE2EEKey();
+    return () => { isMounted = false; };
+  }, [activeChat, user?.id]);
+
+  // Decrypt messages when activeAESKey becomes available
+  useEffect(() => {
+    if (!activeChatId || !activeAESKey) return;
+
+    let isMounted = true;
+    const decryptAll = async () => {
+      const msgs = messagesMap[activeChatId];
+      if (!Array.isArray(msgs)) return;
+
+      const hasEncrypted = msgs.some((m) => typeof m.text === 'string' && m.text.startsWith('E2EE_V1::'));
+      if (!hasEncrypted) return;
+
+      const decryptedMsgs = await Promise.all(
+        msgs.map(async (m) => {
+          if (typeof m.text === 'string' && m.text.startsWith('E2EE_V1::')) {
+            const plain = await decryptMessage(m.text, activeAESKey);
+            return { ...m, text: plain };
+          }
+          return m;
+        })
+      );
+
+      if (isMounted) {
+        setMessagesMap((prev) => ({
+          ...prev,
+          [activeChatId]: decryptedMsgs
+        }));
+      }
+    };
+
+    decryptAll();
+    return () => { isMounted = false; };
+  }, [activeChatId, activeAESKey]);
+
   const activeMessages = useMemo(() => {
     return activeChatId ? messagesMap[activeChatId] || [] : [];
   }, [activeChatId, messagesMap]);
 
-  // Handle Send Message (Persist to Backend REST + Socket.IO Broadcast)
+  // Handle Send Message (Encrypts with E2EE, then persists & broadcasts)
   const handleSendMessage = async (text, options = {}) => {
     if (!activeChatId) return;
 
     playChimeSound('send');
+
+    // Encrypt payload if E2EE shared key is available
+    let payloadText = text;
+    if (activeAESKey) {
+      payloadText = await encryptMessage(text, activeAESKey);
+    }
 
     const tempId = Date.now();
     const newMsg = {
@@ -404,8 +488,8 @@ const ChatScreen = () => {
         chatId: activeChatId,
         conversationId: activeChatId,
         recipientId: activeChat?.recipientId || activeChat?.contactId,
-        text,
-        content: text,
+        text: payloadText,
+        content: payloadText,
         replyToId: options.replyToId,
         isForwarded: options.isForwarded
       });
@@ -415,7 +499,7 @@ const ChatScreen = () => {
         const res = await apiRequest('/messages', 'POST', {
           chatId: activeChatId,
           conversationId: activeChatId,
-          content: text,
+          content: payloadText,
           replyToId: options.replyToId || null,
           isForwarded: Boolean(options.isForwarded)
         });

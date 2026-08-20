@@ -6,7 +6,8 @@ Based on the [checklist.md](file:///Users/amrith/My%20projects/Chat-App/UI/check
 
 ## 🎯 Master Phase Checklist
 
-- [ ] **Phase 1: Environment & Health Foundations**
+- [x] **Phase 0: End-to-End Encryption (E2EE) Integration** [COMPLETED ✅]
+- [x] **Phase 1: Environment & Health Foundations** [COMPLETED ✅]
 - [ ] **Phase 2: Security & Authentication Enhancements**
 - [ ] **Phase 3: Database & Maintenance Hardening**
 - [ ] **Phase 4: Advanced Real-Time Messaging & Features**
@@ -17,7 +18,26 @@ Based on the [checklist.md](file:///Users/amrith/My%20projects/Chat-App/UI/check
 
 ## 📋 Detailed Step-by-Step Implementation Roadmap
 
-### 🔹 Phase 1: Environment & Health Foundations
+### 🔹 Phase 0: End-to-End Encryption (E2EE) Integration
+
+#### **Step 0.1: Web Crypto API Cryptographic Utility (`UI/src/utils/e2ee.js`)** [COMPLETED ✅]
+- **Goal**: Client-side key pair generation, key derivation (ECDH P-256), and AES-256-GCM encryption/decryption.
+- **Tasks**:
+  1. Create `UI/src/utils/e2ee.js` using browser `window.crypto.subtle`.
+  2. Add functions: `generateKeyPair()`, `deriveSharedKey()`, `encryptText()`, `decryptText()`, and local `IndexedDB`/`localStorage` private key storage.
+
+#### **Step 0.2: Backend Public Key Storage (`users` table & endpoints)** [COMPLETED ✅]
+- **Goal**: Allow users to publish their Public Keys so friends can encrypt messages for them.
+- **Tasks**:
+  1. Add `public_key` column to `users` table in `Backend/config/db.js`.
+  2. Update auth & user controllers (`authController.js`, `userController.js`) to store & return `publicKey`.
+
+#### **Step 0.3: Transparent E2EE Encryption in Chat Components** [COMPLETED ✅]
+- **Goal**: Encrypt messages on send and decrypt on receive in `ChatScreen.jsx` & `ChatWindow.jsx`.
+- **Tasks**:
+  1. Derive shared secret key when opening a 1-on-1 conversation.
+  2. Encrypt outgoing message payloads into `AES-GCM` ciphertext.
+  3. Decrypt incoming payloads locally. Show 🔒 **E2EE Protected** security badge in `ChatWindow.jsx` header.
 
 #### **Step 1.1: Environment Variable Templates & Startup Validation** [COMPLETED ✅]
 - **Goal**: Ensure the app never boots with missing secrets or environment configs.

@@ -55,6 +55,7 @@ if (isPostgres) {
       if (key === 'lastmessage') normalized.lastMessage = row[key];
       if (key === 'lastmessagetime' || key === 'lastmsgtime') normalized.lastMessageTime = row[key];
       if (key === 'emailverified') normalized.emailVerified = row[key];
+      if (key === 'publickey') normalized.publicKey = row[key];
       if (key === 'isfavorite') normalized.isFavorite = row[key];
       if (key === 'incomingrequestid') normalized.incomingRequestId = row[key];
       if (key === 'outgoingrequestid') normalized.outgoingRequestId = row[key];
@@ -291,6 +292,7 @@ export const initDb = () => {
       const alterQueries = [
         `ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Hey there! I am using ChatApp.';`,
         `ALTER TABLE users ADD COLUMN IF NOT EXISTS emailVerified BOOLEAN DEFAULT FALSE;`,
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS publicKey TEXT;`,
         `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetToken TEXT;`,
         `ALTER TABLE users ADD COLUMN IF NOT EXISTS resetTokenExpiry BIGINT;`,
         `ALTER TABLE messages ADD COLUMN IF NOT EXISTS replyToId INTEGER;`,
@@ -487,6 +489,7 @@ export const initDb = () => {
 
       // Migrations & Columns Addition
       dbWrapper.run(`ALTER TABLE users ADD COLUMN emailVerified INTEGER DEFAULT 0`, [], () => {});
+      dbWrapper.run(`ALTER TABLE users ADD COLUMN publicKey TEXT`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN replyToId INTEGER`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN isForwarded INTEGER DEFAULT 0`, [], () => {});
       dbWrapper.run(`ALTER TABLE messages ADD COLUMN isEdited INTEGER DEFAULT 0`, [], () => {});

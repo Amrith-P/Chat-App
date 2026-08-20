@@ -105,7 +105,7 @@ export const getUserById = (req, res) => {
   const { id } = req.params;
 
   db.get(
-    'SELECT id, fullName, email, avatar, status, createdAt FROM users WHERE id = ?',
+    'SELECT id, fullName, email, avatar, status, publicKey, createdAt FROM users WHERE id = ?',
     [id],
     (err, user) => {
       if (err || !user) {
@@ -120,7 +120,7 @@ export const getUserById = (req, res) => {
 // @route   PUT /api/users/profile
 export const updateProfile = (req, res) => {
   const userId = req.user.id;
-  const { fullName, status, avatar } = req.body;
+  const { fullName, status, avatar, publicKey } = req.body;
 
   db.get('SELECT * FROM users WHERE id = ?', [userId], (err, user) => {
     if (err || !user) {
@@ -130,10 +130,11 @@ export const updateProfile = (req, res) => {
     const updatedName = fullName !== undefined ? fullName.trim() : user.fullName;
     const updatedStatus = status !== undefined ? status.trim() : user.status;
     const updatedAvatar = avatar !== undefined ? avatar.trim() : user.avatar;
+    const updatedPublicKey = publicKey !== undefined ? publicKey : user.publicKey;
 
     db.run(
-      'UPDATE users SET fullName = ?, status = ?, avatar = ? WHERE id = ?',
-      [updatedName, updatedStatus, updatedAvatar, userId],
+      'UPDATE users SET fullName = ?, status = ?, avatar = ?, publicKey = ? WHERE id = ?',
+      [updatedName, updatedStatus, updatedAvatar, updatedPublicKey, userId],
       (updateErr) => {
         if (updateErr) {
           return res.status(500).json({ message: 'Failed to update profile' });
@@ -146,7 +147,8 @@ export const updateProfile = (req, res) => {
             fullName: updatedName,
             email: user.email,
             avatar: updatedAvatar,
-            status: updatedStatus
+            status: updatedStatus,
+            publicKey: updatedPublicKey
           }
         });
       }

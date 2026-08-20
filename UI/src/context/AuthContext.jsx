@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiRequest, setAccessToken, getAccessToken } from '../api/client';
 import { requestNotificationPermission, sendSystemNotification } from '../utils/notification';
+import { getOrGenerateUserKeys } from '../utils/e2ee';
 
 const AuthContext = createContext(null);
 
@@ -140,10 +141,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateProfile = async (fullName, status, avatar) => {
+  const updateProfile = async (fullName, status, avatar, publicKey) => {
     setError(null);
     try {
-      const data = await apiRequest('/users/profile', 'PUT', { fullName, status, avatar });
+      const data = await apiRequest('/users/profile', 'PUT', { fullName, status, avatar, publicKey });
       if (data.user) {
         setUser(data.user);
       }
@@ -153,6 +154,16 @@ export const AuthProvider = ({ children }) => {
       throw err;
     }
   };
+
+  useEffect(() => {
+    if (user?.id) {
+      getOrGenerateUserKeys(user.id).then((keys) => {
+        if (keys && keys.pubJwk && !user.publicKey) {
+          updateProfile(user.fullName, user.status, user.avatar, keys.pubJwk).catch(() => {});
+        }
+      });
+    }
+  }, [user?.id]);
 
   const changePassword = async (currentPassword, newPassword) => {
     setError(null);

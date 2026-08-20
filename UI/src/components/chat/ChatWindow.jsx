@@ -18,7 +18,8 @@ import {
   FaSmile,
   FaEllipsisV,
   FaBroom,
-  FaChevronDown
+  FaChevronDown,
+  FaShieldAlt
 } from 'react-icons/fa';
 import ConfirmModal from '../common/ConfirmModal';
 import PulseLogo from '../common/PulseLogo';
@@ -188,10 +189,18 @@ const ChatWindow = ({
                   <FaStar className="text-amber-400 text-xs shrink-0 drop-shadow ml-1" title="Favorite Chat" />
                 )}
               </h3>
-              <p className="text-[11px] md:text-xs text-emerald-400 font-medium truncate">
-                {activeChat.isGroup 
-                  ? `${activeChat.memberCount || 1} members` 
-                  : (activeChat.isOnline ? 'Online • Available' : 'Last seen recently')}
+              <p className="text-[11px] md:text-xs text-emerald-400 font-medium truncate flex items-center space-x-2">
+                <span>
+                  {activeChat.isGroup 
+                    ? `${activeChat.memberCount || 1} members` 
+                    : (activeChat.isOnline ? 'Online • Available' : 'Last seen recently')}
+                </span>
+                {!activeChat.isGroup && (
+                  <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
+                    <FaShieldAlt className="text-[9px]" />
+                    <span>E2EE Protected</span>
+                  </span>
+                )}
               </p>
             </div>
           </div>
