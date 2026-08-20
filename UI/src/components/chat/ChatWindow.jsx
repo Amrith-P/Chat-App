@@ -21,6 +21,7 @@ import {
   FaChevronDown
 } from 'react-icons/fa';
 import ConfirmModal from '../common/ConfirmModal';
+import PulseLogo from '../common/PulseLogo';
 import { useCall } from '../../context/CallContext';
 import { useStarred } from '../../context/StarredContext';
 
