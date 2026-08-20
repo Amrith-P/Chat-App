@@ -31,6 +31,20 @@ const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 
+// Universal Manual CORS Header Injector (Guarantees Access-Control-Allow-Origin on all responses & preflights)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Cookie Parser Middleware
 app.use(cookieParser());
 

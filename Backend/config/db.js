@@ -133,11 +133,15 @@ if (isPostgres) {
     }
   });
 
-  // Enable WAL Mode, Foreign Keys & Busy Timeout for SQLite Production Reliability
+  // Enable Foreign Keys & Busy Timeout for SQLite Reliability
   sqliteDb.serialize(() => {
-    sqliteDb.run('PRAGMA foreign_keys = ON;');
-    sqliteDb.run('PRAGMA journal_mode = WAL;');
-    sqliteDb.run('PRAGMA busy_timeout = 5000;');
+    sqliteDb.run('PRAGMA foreign_keys = ON;', [], () => {});
+    sqliteDb.run('PRAGMA journal_mode = WAL;', [], (err) => {
+      if (err) {
+        sqliteDb.run('PRAGMA journal_mode = DELETE;', [], () => {});
+      }
+    });
+    sqliteDb.run('PRAGMA busy_timeout = 5000;', [], () => {});
   });
 
   dbWrapper = {
