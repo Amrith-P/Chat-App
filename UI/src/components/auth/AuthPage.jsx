@@ -123,62 +123,45 @@ const AuthPage = () => {
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-950 text-white font-sans overflow-hidden">
       
       {/* LEFT SECTION - Hero Presentation (Desktop Only) */}
-      <div className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 p-6 sm:p-8 lg:p-16 flex-col justify-between relative overflow-hidden shrink-0 select-none">
+      <div className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 p-8 lg:p-16 flex-col justify-between relative overflow-hidden shrink-0 select-none">
         
         {/* Glow Spheres */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Brand Header */}
-        <div className="relative z-10 flex items-center space-x-3 mb-6 md:mb-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <PulseLogo size="w-7 h-7 sm:w-8 sm:h-8" />
+        <div className="relative z-10 flex items-center space-x-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shadow-xl shadow-emerald-500/20">
+            <PulseLogo size="w-8 h-8" />
           </div>
-          <span className="text-xl sm:text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
+          <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
             Pulse-X Messenger
           </span>
         </div>
 
-        {/* Hero Middle Feature Presentation */}
-        <div className="relative z-10 my-auto py-4 sm:py-8">
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight mb-3 sm:mb-6">
-            Real-time conversations, <br className="hidden sm:block" />
+        {/* Hero Catchphrase Presentation */}
+        <div className="relative z-10 my-auto py-12 space-y-6 max-w-lg">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-widest">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Next-Gen Real-Time Engine</span>
+          </div>
+
+          <h1 className="text-4xl lg:text-6xl font-black leading-tight tracking-tight text-white">
+            Your Pulse, <br />
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-              Elevated Experience.
+              Your People.
             </span>
           </h1>
 
-          <p className="text-slate-400 text-xs sm:text-lg mb-4 sm:mb-8 max-w-md">
-            Connect instantly with friends, family, and colleagues in a modern, secure environment.
+          <p className="text-slate-300 text-base lg:text-xl font-medium leading-relaxed max-w-md">
+            The pulse that keeps you connected.
           </p>
-
-          {/* Feature List */}
-          <div className="hidden sm:space-y-4 max-w-md sm:block">
-            <div className="flex items-center space-x-4 bg-slate-900/60 backdrop-blur-md p-4 rounded-xl border border-slate-800/80">
-              <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400">
-                <FaBolt className="text-xl" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">Instant Messaging</h3>
-                <p className="text-sm text-slate-400">Powered by Socket.IO real-time websockets.</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 bg-slate-900/60 backdrop-blur-md p-4 rounded-xl border border-slate-800/80">
-              <div className="p-3 bg-teal-500/10 rounded-lg text-teal-400">
-                <FaShieldAlt className="text-xl" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">Secure JWT Authentication</h3>
-                <p className="text-sm text-slate-400">Encrypted token validation & safe passwords.</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
-        <div className="relative z-10 text-xs text-slate-500 pt-4 sm:pt-6 border-t border-slate-800/60 hidden sm:block">
-          © 2026 Pulse-X Messenger. All rights reserved.
+        <div className="relative z-10 text-xs text-slate-500 pt-6 border-t border-slate-800/60 flex items-center justify-between">
+          <span>© 2026 Pulse-X Messenger. All rights reserved.</span>
+          <span className="text-emerald-500/60 font-mono text-[11px]">v1.0.8</span>
         </div>
       </div>
 
