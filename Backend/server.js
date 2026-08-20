@@ -146,17 +146,6 @@ app.use(errorHandler);
 // Render/Local Port Handling
 const PORT = process.env.PORT || 5050;
 
-const startServer = (portToTry) => {
-  server.listen(portToTry, '0.0.0.0', () => {
-    console.log(`🚀 Server listening on port ${portToTry}`);
-  }).on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.warn(`⚠️ Port ${portToTry} is in use, retrying on port ${Number(portToTry) + 1}...`);
-      startServer(Number(portToTry) + 1);
-    } else {
-      console.error('Server error:', err);
-    }
-  });
-};
-
-startServer(PORT);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server listening on port ${PORT} [NODE_ENV=${process.env.NODE_ENV}]`);
+});
