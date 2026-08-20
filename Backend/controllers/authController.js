@@ -148,6 +148,12 @@ export const login = (req, res) => {
   });
 };
 
+const CLEAR_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none'
+};
+
 // @desc    Refresh Access Token using HttpOnly Cookie
 // @route   POST /api/auth/refresh
 export const refreshTokenHandler = (req, res) => {
@@ -165,6 +171,8 @@ export const refreshTokenHandler = (req, res) => {
       [decoded.id],
       (err, user) => {
         if (err || !user) {
+          res.clearCookie('refreshToken', CLEAR_COOKIE_OPTIONS);
+          res.clearCookie('refreshToken');
           return res.status(200).json({ authenticated: false, message: 'User session invalid' });
         }
 
@@ -187,6 +195,7 @@ export const refreshTokenHandler = (req, res) => {
       }
     );
   } catch (error) {
+    res.clearCookie('refreshToken', CLEAR_COOKIE_OPTIONS);
     res.clearCookie('refreshToken');
     return res.status(200).json({ authenticated: false, message: 'Refresh token invalid or expired' });
   }
@@ -195,6 +204,7 @@ export const refreshTokenHandler = (req, res) => {
 // @desc    Logout User & Clear Cookie
 // @route   POST /api/auth/logout
 export const logout = (req, res) => {
+  res.clearCookie('refreshToken', CLEAR_COOKIE_OPTIONS);
   res.clearCookie('refreshToken');
   res.json({ message: 'Logged out successfully' });
 };
@@ -211,6 +221,7 @@ export const revokeAllSessions = (req, res) => {
       if (err) {
         return res.status(500).json({ message: 'Failed to revoke sessions' });
       }
+      res.clearCookie('refreshToken', CLEAR_COOKIE_OPTIONS);
       res.clearCookie('refreshToken');
       res.json({ message: 'All active sessions have been revoked. Please log in again.' });
     }

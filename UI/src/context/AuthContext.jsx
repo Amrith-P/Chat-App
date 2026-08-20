@@ -44,10 +44,21 @@ export const AuthProvider = ({ children }) => {
   // Check current session on mount (attempts silent refresh first, then /me)
   useEffect(() => {
     const verifySession = async () => {
+      const storedUser = localStorage.getItem('chat_user');
+      const storedToken = getAccessToken();
+
+      // If user logged out (no stored user or token in localStorage), do not attempt session restore
+      if (!storedUser && !storedToken) {
+        updateTokenState(null);
+        setUserState(null);
+        setLoading(false);
+        return;
+      }
+
       try {
         // Attempt silent refresh via HttpOnly Cookie
         const refreshData = await apiRequest('/auth/refresh', 'POST');
-        if (refreshData && refreshData.token) {
+        if (refreshData && refreshData.authenticated && refreshData.token) {
           updateTokenState(refreshData.token);
           setUser(refreshData.user);
           setLoading(false);
@@ -66,13 +77,10 @@ export const AuthProvider = ({ children }) => {
           setUser(data.user);
           triggerWelcomeNotification(data.user);
         } catch (meErr) {
-          // If stored token is invalid and no active session
-          if (!user) {
-            updateTokenState(null);
-            setUser(null);
-          }
+          updateTokenState(null);
+          setUser(null);
         }
-      } else if (!user) {
+      } else {
         updateTokenState(null);
         setUser(null);
       }
@@ -176,7 +184,11 @@ export const AuthProvider = ({ children }) => {
       // Ignore network errors on logout
     } finally {
       updateTokenState(null);
-      setUser(null);
+      setUserState(null);
+      localStorage.removeItem('chat_user');
+      localStorage.removeItem('chat_token');
+      sessionStorage.clear();
+      setLoading(false);
     }
   };
 
