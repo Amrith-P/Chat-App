@@ -7,9 +7,32 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    success: false,
     message: 'Too many authentication attempts. Please try again after 15 minutes.',
     code: 'TOO_MANY_REQUESTS',
+  },
+});
+
+// Dedicated login brute-force protection
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 login attempts per 15 mins
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Too many login attempts from this IP. Please try again after 15 minutes.',
+    code: 'TOO_MANY_LOGIN_ATTEMPTS',
+  },
+});
+
+// Dedicated registration spam protection
+export const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 account registrations per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: 'Account registration limit reached for this IP. Please try again in an hour.',
+    code: 'TOO_MANY_REGISTRATIONS',
   },
 });
 
@@ -20,7 +43,6 @@ export const searchLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    success: false,
     message: 'Search rate limit exceeded. Please slow down your requests.',
     code: 'TOO_MANY_REQUESTS',
   },
@@ -33,7 +55,6 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    success: false,
     message: 'Too many API requests from this IP. Please try again later.',
     code: 'TOO_MANY_REQUESTS',
   },

@@ -10,14 +10,14 @@ import {
   getMe 
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, loginLimiter, registerLimiter } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validate.js';
 import { registerSchema, loginSchema } from '../validation/schemas.js';
 
 const router = express.Router();
 
-router.post('/register', authLimiter, validate(registerSchema), register);
-router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/register', registerLimiter, validate(registerSchema), register);
+router.post('/login', loginLimiter, validate(loginSchema), login);
 router.post('/refresh', refreshTokenHandler);
 router.post('/logout', logout);
 router.post('/revoke-all', protect, revokeAllSessions);
