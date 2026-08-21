@@ -27,7 +27,8 @@ const ContactDrawer = ({
   onLeaveGroup, 
   onDeleteGroup, 
   onSendFriendRequest,
-  onRemoveFriend 
+  onRemoveFriend,
+  onStartChat 
 }) => {
   const { user } = useAuth();
   const { friends, incomingRequests, outgoingRequests, sendFriendRequest } = useFriends();
