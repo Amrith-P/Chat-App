@@ -97,7 +97,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [token, user]);
+  }, [token, user?.id]);
 
   // Socket action helpers
   const emitSendMessage = (data) => {
