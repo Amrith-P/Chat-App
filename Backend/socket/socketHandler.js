@@ -11,6 +11,9 @@ export const getIO = () => ioInstance;
 
 export const initSocket = (server) => {
   const io = new Server(server, {
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    connectTimeout: 45000,
     cors: {
       origin: (origin, callback) => {
         if (!origin || origin.includes('localhost') || origin.endsWith('.vercel.app') || origin === process.env.CLIENT_URL) {
