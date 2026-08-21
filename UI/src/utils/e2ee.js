@@ -226,18 +226,19 @@ export const getOrGenerateUserKeys = async (userId) => {
  * 10. Fallback Peer Public Key Generator for users who haven't uploaded keys yet
  */
 export const getFallbackPeerPublicKey = async (peerId) => {
-  const seedString = `pulse_peer_seed_jwk_${peerId || 'default'}`;
-  // Fallback static JWK structure for peer fallback
-  const fallbackJwk = {
-    kty: 'EC',
-    crv: 'P-256',
-    x: 'f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEg',
-    y: 'x_daefwq1321dsa938dsa_dsa981dsa9813dsa9381d',
-    ext: true
-  };
+  if (!peerId) return null;
+  const storageKey = `pulse_peer_pub_${peerId}`;
 
   try {
+    const savedJwk = localStorage.getItem(storageKey);
+    if (savedJwk) {
+      const key = await importPublicKey(savedJwk);
+      if (key) return key;
+    }
+
     const keyPair = await generateECDHKeyPair();
+    const jwk = await exportPublicKey(keyPair.publicKey);
+    localStorage.setItem(storageKey, jwk);
     return keyPair.publicKey;
   } catch (err) {
     return null;

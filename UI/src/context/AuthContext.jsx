@@ -158,12 +158,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (user?.id) {
       getOrGenerateUserKeys(user.id).then((keys) => {
-        if (keys && keys.pubJwk && !user.publicKey) {
+        if (keys && keys.pubJwk && user.publicKey !== keys.pubJwk) {
           updateProfile(user.fullName, user.status, user.avatar, keys.pubJwk).catch(() => {});
         }
       });
     }
-  }, [user?.id]);
+  }, [user?.id, user?.publicKey]);
 
   const changePassword = async (currentPassword, newPassword) => {
     setError(null);
