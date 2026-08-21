@@ -440,21 +440,30 @@ const ChatScreen = () => {
     return () => { isMounted = false; };
   }, [activeChat, user?.id]);
 
-  // Decrypt messages whenever activeAESKey or activeChatMessages change
-  const activeChatMessages = activeChatId ? messagesMap[activeChatId] : null;
+  const decryptedMsgIdsRef = useRef(new Set());
+
+  // Decrypt messages when activeAESKey becomes available or when message count changes
+  const activeMsgCount = activeChatId && Array.isArray(messagesMap[activeChatId]) ? messagesMap[activeChatId].length : 0;
 
   useEffect(() => {
-    if (!activeChatId || !activeAESKey || !Array.isArray(activeChatMessages)) return;
+    if (!activeChatId || !activeAESKey) return;
+
+    const msgs = messagesMap[activeChatId];
+    if (!Array.isArray(msgs) || msgs.length === 0) return;
+
+    const pendingDecryption = msgs.filter(
+      (m) => typeof m.text === 'string' && m.text.startsWith('E2EE_V1::') && !decryptedMsgIdsRef.current.has(m.id)
+    );
+
+    if (pendingDecryption.length === 0) return;
 
     let isMounted = true;
     const decryptAll = async () => {
-      const hasEncrypted = activeChatMessages.some((m) => typeof m.text === 'string' && m.text.startsWith('E2EE_V1::'));
-      if (!hasEncrypted) return;
-
       const decryptedMsgs = await Promise.all(
-        activeChatMessages.map(async (m) => {
-          if (typeof m.text === 'string' && m.text.startsWith('E2EE_V1::')) {
+        msgs.map(async (m) => {
+          if (typeof m.text === 'string' && m.text.startsWith('E2EE_V1::') && !decryptedMsgIdsRef.current.has(m.id)) {
             const plain = await decryptMessage(m.text, activeAESKey);
+            decryptedMsgIdsRef.current.add(m.id);
             return { ...m, text: plain };
           }
           return m;
@@ -471,7 +480,7 @@ const ChatScreen = () => {
 
     decryptAll();
     return () => { isMounted = false; };
-  }, [activeChatId, activeAESKey, activeChatMessages]);
+  }, [activeChatId, activeAESKey, activeMsgCount]);
 
   const activeMessages = useMemo(() => {
     return activeChatId ? messagesMap[activeChatId] || [] : [];
