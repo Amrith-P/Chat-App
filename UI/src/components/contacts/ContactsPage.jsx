@@ -4,7 +4,8 @@ import { FaSearch, FaUserPlus, FaComment, FaPhone, FaVideo, FaEllipsisV, FaCircl
 import { useContacts } from '../../hooks/users/useContacts';
 
 const ContactsPage = () => {
-  const { onStartChat, onOpenNewChat } = useOutletContext();
+  const context = useOutletContext() || {};
+  const { onStartChat, onOpenNewChat } = context;
   const [searchTerm, setSearchTerm] = useState('');
   const { contacts, loading: isLoading } = useContacts();
 
@@ -103,7 +104,7 @@ const ContactsPage = () => {
 
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => onStartChat(contact)}
+                      onClick={() => onStartChat && onStartChat(contact)}
                       title="Send Message"
                       className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 rounded-lg text-xs font-bold transition border border-emerald-500/20 flex items-center space-x-1"
                     >

@@ -125,7 +125,7 @@ const FriendsTab = ({ friends = [], loading, onStartChat, onRemoveFriend, onOpen
               {/* Action Buttons */}
               <div className="flex items-center space-x-1.5 shrink-0">
                 <button
-                  onClick={() => onStartChat(f)}
+                  onClick={() => onStartChat && onStartChat(f)}
                   title="Message Friend"
                   className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl transition flex items-center space-x-1 shadow-sm shadow-emerald-500/20"
                 >
