@@ -196,21 +196,46 @@ const ChatScreen = () => {
     } catch (e) {}
   };
 
+  // Ref to hold active AES key for realtime event handlers without stale closures
+  const activeAESKeyRef = useRef(null);
+
   // Listen to Real-Time Socket.IO Incoming Messages
   useEffect(() => {
     if (!socket) return;
 
-    const handleReceiveMessage = (msg) => {
+    const handleReceiveMessage = async (msg) => {
       const isMyMessage = msg.senderId === user?.id;
       if (isMyMessage) return;
 
       const chatKey = msg.conversationId || msg.chatId;
-      const msgContent = msg.content || msg.text || '';
+      let msgContent = msg.content || msg.text || '';
+
+      // Decrypt incoming E2EE message payload
+      if (typeof msgContent === 'string' && msgContent.startsWith('E2EE_V1::')) {
+        let keyToUse = activeAESKeyRef.current;
+
+        if (!keyToUse && user?.id && msg.senderId) {
+          try {
+            const myKeys = await getOrGenerateUserKeys(user.id);
+            const sRes = await apiRequest(`/users/${msg.senderId}`);
+            if (sRes?.user?.publicKey && myKeys?.privateKey) {
+              const senderPubKey = await importPublicKey(sRes.user.publicKey);
+              if (senderPubKey) {
+                keyToUse = await deriveSharedKey(myKeys.privateKey, senderPubKey);
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (keyToUse) {
+          msgContent = await decryptMessage(msgContent, keyToUse);
+        }
+      }
 
       // Play short audio chime & trigger desktop notification for incoming messages
       playChimeSound('receive');
       sendSystemNotification(`New message from ${msg.senderName || 'Pulse-X User'}`, {
-        body: msgContent || 'Sent a new message'
+        body: (typeof msgContent === 'string' && msgContent.startsWith('E2EE_V1::')) ? '🔒 Encrypted message' : (msgContent || 'Sent a new message')
       });
 
       const formattedMsg = {
@@ -361,6 +386,11 @@ const ChatScreen = () => {
   // E2EE Derived Shared Secret Key State
   const [activeAESKey, setActiveAESKey] = useState(null);
 
+  // Keep ref updated for socket event handlers
+  useEffect(() => {
+    activeAESKeyRef.current = activeAESKey;
+  }, [activeAESKey]);
+
   // Derive Shared Key when active chat changes
   useEffect(() => {
     let isMounted = true;
@@ -410,20 +440,19 @@ const ChatScreen = () => {
     return () => { isMounted = false; };
   }, [activeChat, user?.id]);
 
-  // Decrypt messages when activeAESKey becomes available
+  // Decrypt messages whenever activeAESKey or activeChatMessages change
+  const activeChatMessages = activeChatId ? messagesMap[activeChatId] : null;
+
   useEffect(() => {
-    if (!activeChatId || !activeAESKey) return;
+    if (!activeChatId || !activeAESKey || !Array.isArray(activeChatMessages)) return;
 
     let isMounted = true;
     const decryptAll = async () => {
-      const msgs = messagesMap[activeChatId];
-      if (!Array.isArray(msgs)) return;
-
-      const hasEncrypted = msgs.some((m) => typeof m.text === 'string' && m.text.startsWith('E2EE_V1::'));
+      const hasEncrypted = activeChatMessages.some((m) => typeof m.text === 'string' && m.text.startsWith('E2EE_V1::'));
       if (!hasEncrypted) return;
 
       const decryptedMsgs = await Promise.all(
-        msgs.map(async (m) => {
+        activeChatMessages.map(async (m) => {
           if (typeof m.text === 'string' && m.text.startsWith('E2EE_V1::')) {
             const plain = await decryptMessage(m.text, activeAESKey);
             return { ...m, text: plain };
@@ -442,7 +471,7 @@ const ChatScreen = () => {
 
     decryptAll();
     return () => { isMounted = false; };
-  }, [activeChatId, activeAESKey]);
+  }, [activeChatId, activeAESKey, activeChatMessages]);
 
   const activeMessages = useMemo(() => {
     return activeChatId ? messagesMap[activeChatId] || [] : [];

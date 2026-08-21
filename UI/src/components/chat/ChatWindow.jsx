@@ -340,7 +340,9 @@ const ChatWindow = ({
 
             {msgs.map((msg) => {
               const isMe = msg.senderId === 'me' || msg.isMe;
-              const msgText = msg.text || '';
+              const rawMsgText = msg.text || '';
+              const isStillEncrypted = typeof rawMsgText === 'string' && rawMsgText.startsWith('E2EE_V1::');
+              const msgText = isStillEncrypted ? '🔒 [Encrypted Message]' : rawMsgText;
               
               // Find replied message text if it exists
               let repliedMsg = null;
