@@ -181,8 +181,8 @@ export const decryptMessage = async (encryptedString, aesKey) => {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedBuffer);
   } catch (err) {
-    // If decryption fails (e.g. key mismatch or legacy unencrypted text)
-    return encryptedString;
+    // Return null if key mismatch or legacy payload from an old session
+    return null;
   }
 };
 

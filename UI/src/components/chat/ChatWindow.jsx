@@ -40,12 +40,12 @@ const DecryptedMessageText = ({ text, activeAESKey }) => {
     const tryDecrypt = async () => {
       if (activeAESKey) {
         const result = await decryptMessage(text, activeAESKey);
-        if (result && !result.startsWith('E2EE_V1::')) {
+        if (result !== null && result !== undefined) {
           if (isMounted) setDecryptedText(result);
           return;
         }
       }
-      if (isMounted) setDecryptedText('🔒 [Encrypted Message]');
+      if (isMounted) setDecryptedText('🔒 [Encrypted message from previous session]');
     };
 
     tryDecrypt();
