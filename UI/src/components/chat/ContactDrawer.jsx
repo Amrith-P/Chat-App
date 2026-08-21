@@ -12,7 +12,8 @@ import {
   FaUserPlus, 
   FaUserMinus, 
   FaSignOutAlt, 
-  FaShieldVirus 
+  FaShieldVirus,
+  FaCommentDots 
 } from 'react-icons/fa';
 import ConfirmModal from '../common/ConfirmModal';
 import { useGroupChat } from '../../hooks/chat/useGroupChat';
