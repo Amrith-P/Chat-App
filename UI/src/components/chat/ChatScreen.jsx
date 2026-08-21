@@ -727,6 +727,7 @@ const ChatScreen = () => {
             <ChatWindow
               activeChat={activeChat}
               messages={activeMessages}
+              activeAESKey={activeAESKey}
               onSendMessage={handleSendMessage}
               onMessageAction={handleMessageAction}
               onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}

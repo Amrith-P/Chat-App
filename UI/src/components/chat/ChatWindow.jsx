@@ -25,6 +25,35 @@ import ConfirmModal from '../common/ConfirmModal';
 import PulseLogo from '../common/PulseLogo';
 import { useCall } from '../../context/CallContext';
 import { useStarred } from '../../context/StarredContext';
+import { decryptMessage } from '../../utils/e2ee';
+
+const DecryptedMessageText = ({ text, activeAESKey }) => {
+  const [decryptedText, setDecryptedText] = useState(text || '');
+
+  useEffect(() => {
+    if (typeof text !== 'string' || !text.startsWith('E2EE_V1::')) {
+      setDecryptedText(text || '');
+      return;
+    }
+
+    let isMounted = true;
+    const tryDecrypt = async () => {
+      if (activeAESKey) {
+        const result = await decryptMessage(text, activeAESKey);
+        if (result && !result.startsWith('E2EE_V1::')) {
+          if (isMounted) setDecryptedText(result);
+          return;
+        }
+      }
+      if (isMounted) setDecryptedText('🔒 [Encrypted Message]');
+    };
+
+    tryDecrypt();
+    return () => { isMounted = false; };
+  }, [text, activeAESKey]);
+
+  return <>{decryptedText}</>;
+};
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -40,6 +69,7 @@ const POPULAR_EMOJIS = [
 const ChatWindow = ({ 
   activeChat, 
   messages, 
+  activeAESKey,
   onSendMessage, 
   onMessageAction, 
   onToggleDrawer, 
@@ -341,8 +371,6 @@ const ChatWindow = ({
             {msgs.map((msg) => {
               const isMe = msg.senderId === 'me' || msg.isMe;
               const rawMsgText = msg.text || '';
-              const isStillEncrypted = typeof rawMsgText === 'string' && rawMsgText.startsWith('E2EE_V1::');
-              const msgText = isStillEncrypted ? '🔒 [Encrypted Message]' : rawMsgText;
               
               // Find replied message text if it exists
               let repliedMsg = null;
@@ -404,7 +432,7 @@ const ChatWindow = ({
                     {/* Main Content */}
                     <div className="px-1 pt-0.5 pb-5">
                       <p className={`leading-relaxed break-words [word-break:break-word] [overflow-wrap:anywhere] whitespace-pre-wrap text-sm ${msg.isDeleted ? 'italic opacity-60' : ''}`}>
-                        {msgText}
+                        <DecryptedMessageText text={rawMsgText} activeAESKey={activeAESKey} />
                       </p>
                     </div>
 
