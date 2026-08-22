@@ -228,7 +228,10 @@ const ChatScreen = () => {
         }
 
         if (keyToUse) {
-          msgContent = await decryptMessage(msgContent, keyToUse);
+          const decrypted = await decryptMessage(msgContent, keyToUse);
+          if (decrypted) {
+            msgContent = decrypted;
+          }
         }
       }
 
@@ -463,8 +466,10 @@ const ChatScreen = () => {
         msgs.map(async (m) => {
           if (typeof m.text === 'string' && m.text.startsWith('E2EE_V1::') && !decryptedMsgIdsRef.current.has(m.id)) {
             const plain = await decryptMessage(m.text, activeAESKey);
-            decryptedMsgIdsRef.current.add(m.id);
-            return { ...m, text: plain };
+            if (plain) {
+              decryptedMsgIdsRef.current.add(m.id);
+              return { ...m, text: plain };
+            }
           }
           return m;
         })

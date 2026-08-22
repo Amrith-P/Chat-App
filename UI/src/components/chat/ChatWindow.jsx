@@ -31,8 +31,13 @@ const DecryptedMessageText = ({ text, activeAESKey }) => {
   const [decryptedText, setDecryptedText] = useState(text || '');
 
   useEffect(() => {
-    if (typeof text !== 'string' || !text.startsWith('E2EE_V1::')) {
+    if (typeof text !== 'string') {
       setDecryptedText(text || '');
+      return;
+    }
+
+    if (!text.startsWith('E2EE_V1::')) {
+      setDecryptedText(text);
       return;
     }
 
@@ -40,19 +45,19 @@ const DecryptedMessageText = ({ text, activeAESKey }) => {
     const tryDecrypt = async () => {
       if (activeAESKey) {
         const result = await decryptMessage(text, activeAESKey);
-        if (result !== null && result !== undefined) {
+        if (result) {
           if (isMounted) setDecryptedText(result);
           return;
         }
       }
-      if (isMounted) setDecryptedText('🔒 [Encrypted message from previous session]');
+      if (isMounted) setDecryptedText('🔒 [Encrypted message]');
     };
 
     tryDecrypt();
     return () => { isMounted = false; };
   }, [text, activeAESKey]);
 
-  return <>{decryptedText}</>;
+  return <>{decryptedText || text || '🔒 [Encrypted message]'}</>;
 };
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
