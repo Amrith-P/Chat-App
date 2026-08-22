@@ -214,6 +214,19 @@ const ChatScreen = () => {
       if (typeof msgContent === 'string' && msgContent.startsWith('E2EE_V1::')) {
         let keyToUse = activeAESKeyRef.current;
 
+        // 1. Try inline senderPublicKey from real-time socket payload
+        let senderPubKeyJwk = msg.senderPublicKey || msg.senderpublickey;
+        if (!keyToUse && user?.id && senderPubKeyJwk) {
+          try {
+            const myKeys = await getOrGenerateUserKeys(user.id);
+            const senderPubKey = await importPublicKey(senderPubKeyJwk);
+            if (senderPubKey && myKeys?.privateKey) {
+              keyToUse = await deriveSharedKey(myKeys.privateKey, senderPubKey);
+            }
+          } catch (e) {}
+        }
+
+        // 2. Fallback to API user lookup
         if (!keyToUse && user?.id && msg.senderId) {
           try {
             const myKeys = await getOrGenerateUserKeys(user.id);
@@ -535,11 +548,13 @@ const ChatScreen = () => {
 
     // 1. Emit via Real-Time Socket.IO (Socket backend handles DB persistence & broadcast)
     if (socket && isConnected) {
+      const myKeys = user?.id ? await getOrGenerateUserKeys(user.id) : null;
       emitSendMessage({
         tempId: tempId,
         chatId: activeChatId,
         conversationId: activeChatId,
         recipientId: activeChat?.recipientId || activeChat?.contactId,
+        senderPublicKey: myKeys?.pubJwk,
         text: payloadText,
         content: payloadText,
         replyToId: options.replyToId,

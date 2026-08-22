@@ -170,6 +170,7 @@ export const initSocket = (server) => {
             conversationId: targetChatId,
             senderId: userId,
             senderName: socket.user.fullName,
+            senderPublicKey: data.senderPublicKey || data.senderpublickey || null,
             text: trimmedText,
             content: trimmedText,
             replyToId,
